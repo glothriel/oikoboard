@@ -1,0 +1,54 @@
+# Development: `./local-dev` (postgres + `go run` with auto-reload). Production is docker-compose.yml.
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: oiko
+      POSTGRES_PASSWORD: oiko
+      POSTGRES_DB: oiko
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oiko"]
+      interval: 2s
+      retries: 30
+
+  server:
+    image: golang:1.26
+    working_dir: /src
+    command: go run ./cmd/oikoboard
+    # run as the host user so caches and files in ./server don't end up owned by root
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    environment:
+      HOME: /tmp
+      # `go run` doesn't forward signals to the binary it spawns; tini signals the whole group
+      TINI_KILL_PROCESS_GROUP: "1"
+      GOMODCACHE: /gomod
+      GOCACHE: /gocache
+      OIKO_DATABASE_URL: postgres://oiko:oiko@postgres:5432/oiko?sslmode=disable
+      OIKO_ADDR: ":8090"
+      OIKO_SEED: "1" # sample family in an empty database
+    ports:
+      - "${OIKO_HOST_PORT:-8090}:8090"
+    volumes:
+      - ./server:/src
+      # Go caches from the host, shared with local `go build` / `go test`
+      - ${HOST_GOMODCACHE:-~/go/pkg/mod}:/gomod
+      - ${HOST_GOCACHE:-~/.cache/go-build}:/gocache
+    depends_on:
+      postgres:
+        condition: service_healthy
+    init: true
+    develop:
+      watch:
+        # source is bind-mounted, so a restart (= fresh `go run`) is enough
+        - action: restart
+          path: ./server
+          ignore:
+            - oikoboard
+            - "**/*_test.go"
+
+volumes:
+  pgdata:

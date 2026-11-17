@@ -1,0 +1,237 @@
+#!/usr/bin/env python3
+"""Local development environment (a Makefile-style wrapper).
+
+    ./local-dev                # = start
+    ./local-dev start          # postgres + Go server (go run, auto-reload on changes in ./server)
+    ./local-dev prod           # the production image locally (docker compose up --build, web app on :8090)
+    ./local-dev app            # Flutter app on the host (Chrome, talks to localhost:8090)
+    ./local-dev app --mock     # Flutter app without a server (in-memory data)
+    ./local-dev app -d emulator-5554   # Android (sets up `adb reverse` for the API port)
+"""
+import argparse
+import json
+import os
+import shutil
+import subprocess
+import sys
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+APP = ROOT / "app"
+API_PORT = 8090
+HEALTH_URL = f"http://localhost:{API_PORT}/api/v1/health"
+
+
+# --- output helpers ---------------------------------------------------------
+
+def info(msg: str) -> None:
+    print(f"\033[36m›\033[0m {msg}", flush=True)
+
+
+def ok(msg: str) -> None:
+    print(f"\033[32m✓\033[0m {msg}", flush=True)
+
+
+def fail(msg: str, hint: str = "") -> int:
+    print(f"\033[31m✗\033[0m {msg}", file=sys.stderr)
+    if hint:
+        print(f"  {hint}", file=sys.stderr)
+    return 1
+
+
+# --- start: docker compose --------------------------------------------------
+
+def go_env(key: str, default: Path) -> str:
+    if shutil.which("go"):
+        out = subprocess.run(["go", "env", key], capture_output=True, text=True)
+        if out.returncode == 0 and out.stdout.strip():
+            return out.stdout.strip()
+    return str(default)
+
+
+def compose_env() -> dict:
+    env = dict(os.environ)
+    env.setdefault("HOST_UID", str(os.getuid()))
+    env.setdefault("HOST_GID", str(os.getgid()))
+    env.setdefault("HOST_GOMODCACHE", go_env("GOMODCACHE", Path.home() / "go/pkg/mod"))
+    env.setdefault("HOST_GOCACHE", go_env("GOCACHE", Path.home() / ".cache/go-build"))
+    # docker would create a missing bind-mount source owned by root
+    for key in ("HOST_GOMODCACHE", "HOST_GOCACHE"):
+        Path(env[key]).mkdir(parents=True, exist_ok=True)
+    return env
+
+
+def compose(*args: str, file: str = "docker-compose.dev.yml") -> int:
+    cmd = ["docker", "compose", "-f", file, *args]
+    print("+", " ".join(cmd), flush=True)
+    try:
+        return subprocess.call(cmd, cwd=ROOT, env=compose_env())
+    except KeyboardInterrupt:
+        return 130
+
+
+def cmd_start(args) -> int:
+    """postgres + Go server with auto-reload"""
+    if not shutil.which("docker"):
+        return fail("docker not found on PATH")
+    return compose("up", "--watch")
+
+
+def cmd_prod(args) -> int:
+    """the production setup locally: built image (Go binary + web app) on :8090"""
+    if not shutil.which("docker"):
+        return fail("docker not found on PATH")
+    return compose("up", "--build", file="docker-compose.yml")
+
+
+# --- app: flutter on the host -----------------------------------------------
+
+def is_web_device(device: str) -> bool:
+    return device in ("chrome", "web-server", "edge")
+
+
+def check_flutter() -> bool:
+    if shutil.which("flutter"):
+        ok(f"flutter: {shutil.which('flutter')}")
+        return True
+    sdk = Path.home() / "sdks/flutter/bin"
+    hint = (f'add it to PATH: export PATH="{sdk}:$PATH"' if (sdk / "flutter").exists()
+            else "install the Flutter SDK (see README → Environment)")
+    fail("flutter not found on PATH", hint)
+    return False
+
+
+def check_chrome() -> bool:
+    exe = os.environ.get("CHROME_EXECUTABLE")
+    if exe and Path(exe).exists():
+        ok(f"chrome: {exe} (CHROME_EXECUTABLE)")
+        return True
+    for name in ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser"):
+        if path := shutil.which(name):
+            ok(f"chrome: {path}")
+            return True
+    fail("no Chrome/Chromium found",
+         "install one, set CHROME_EXECUTABLE, or use `-d web-server` and open the URL yourself")
+    return False
+
+
+def check_android(device: str, use_api: bool) -> bool:
+    if not shutil.which("adb"):
+        fail("adb not found on PATH", "add $ANDROID_HOME/platform-tools to PATH (see README)")
+        return False
+    out = subprocess.run(["adb", "devices"], capture_output=True, text=True).stdout
+    devices = [l.split()[0] for l in out.splitlines()[1:] if l.strip().endswith("device")]
+    if device not in devices:
+        fail(f"Android device {device!r} not connected (adb sees: {', '.join(devices) or 'nothing'})",
+             "start an emulator: `flutter emulators --launch <name>`")
+        return False
+    ok(f"android device: {device}")
+    if use_api:
+        # localhost inside the device → the host's API port
+        r = subprocess.run(["adb", "-s", device, "reverse", f"tcp:{API_PORT}", f"tcp:{API_PORT}"],
+                           capture_output=True, text=True)
+        if r.returncode != 0:
+            fail("adb reverse failed", r.stderr.strip())
+            return False
+        ok(f"adb reverse tcp:{API_PORT} → host")
+    return True
+
+
+def check_api() -> bool:
+    try:
+        with urllib.request.urlopen(HEALTH_URL, timeout=2) as resp:
+            if resp.status == 200 and json.load(resp).get("ok"):
+                ok(f"API up: {HEALTH_URL}")
+                return True
+    except (urllib.error.URLError, OSError, ValueError):
+        pass
+    fail(f"API not reachable at {HEALTH_URL}",
+         "run `./local-dev start` in another terminal, or use `./local-dev app --mock`")
+    return False
+
+
+def ensure_pub_get() -> bool:
+    config = APP / ".dart_tool/package_config.json"
+    newest = max((APP / f).stat().st_mtime for f in ("pubspec.yaml", "pubspec.lock")
+                 if (APP / f).exists())
+    if config.exists() and config.stat().st_mtime >= newest:
+        ok("dependencies up to date")
+        return True
+    info("dependencies changed — running `flutter pub get`")
+    if subprocess.call(["flutter", "pub", "get"], cwd=APP) != 0:
+        fail("flutter pub get failed")
+        return False
+    return True
+
+
+def cmd_app(args) -> int:
+    """Flutter app on the host (checks tooling + API first)"""
+    use_api = not args.mock
+    web = is_web_device(args.device)
+
+    if not check_flutter():
+        return 1
+    if not args.skip_checks:
+        checks = []
+        if args.device == "chrome":
+            checks.append(check_chrome)
+        elif not web:
+            checks.append(lambda: check_android(args.device, use_api))
+        if use_api:
+            checks.append(check_api)
+        if not all([c() for c in checks]):  # run all, report every problem at once
+            return 1
+    if not ensure_pub_get():
+        return 1
+
+    cmd = ["flutter", "run", "-d", args.device]
+    if web:
+        cmd += ["--web-port", str(args.web_port)]
+    if args.mock:
+        cmd += ["--dart-define=OIKO_API=mock"]
+    cmd += args.flutter_args
+    print("+", " ".join(cmd), flush=True)
+    os.chdir(APP)
+    os.execvp(cmd[0], cmd)  # hand the terminal over so r / R / q work
+
+
+def app_parser(p: argparse.ArgumentParser) -> None:
+    p.add_argument("-d", "--device", default="chrome",
+                   help="flutter device id (default: chrome; e.g. web-server, emulator-5554)")
+    p.add_argument("--mock", action="store_true", help="no server, in-memory data (+ ⚡ simulator)")
+    p.add_argument("--web-port", type=int, default=5555, help="port for web devices (default: 5555)")
+    p.add_argument("--skip-checks", action="store_true", help="skip the pre-flight checks")
+    p.add_argument("flutter_args", nargs=argparse.REMAINDER,
+                   help="extra args passed to `flutter run` (after `--`)")
+
+
+# --- CLI ---------------------------------------------------------------------
+
+# name → (handler, optional function adding the command's arguments)
+COMMANDS = {
+    "start": (cmd_start, None),
+    "prod": (cmd_prod, None),
+    "app": (cmd_app, app_parser),
+}
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(prog="local-dev", description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = parser.add_subparsers(dest="command", metavar="COMMAND")
+    for name, (fn, configure) in COMMANDS.items():
+        p = sub.add_parser(name, help=fn.__doc__, description=fn.__doc__)
+        if configure:
+            configure(p)
+    args = parser.parse_args()
+    if args.command is None:
+        args = parser.parse_args(["start"])
+    if getattr(args, "flutter_args", None) and args.flutter_args[0] == "--":
+        args.flutter_args = args.flutter_args[1:]
+    return COMMANDS[args.command][0](args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

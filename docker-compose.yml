@@ -1,0 +1,38 @@
+# Production: `docker compose up -d --build` — postgres + the server image
+# (Go binary + the built web app on one origin). Development is docker-compose.dev.yml (`./local-dev`).
+#
+# Server config: server/.env (see server/cmd/oikoboard/main.go). Compose variables (root .env or the
+# environment): OIKO_BIND, OIKO_HOST_PORT, POSTGRES_PASSWORD.
+name: oikoboard-prod # COMPOSE_PROJECT_NAME overrides it
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: oiko
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-oiko}
+      POSTGRES_DB: oiko
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oiko"]
+      interval: 2s
+      retries: 30
+    restart: unless-stopped
+
+  server:
+    build: .
+    env_file:
+      - path: server/.env
+        required: false
+    environment:
+      OIKO_DATABASE_URL: postgres://oiko:${POSTGRES_PASSWORD:-oiko}@postgres:5432/oiko?sslmode=disable
+    ports:
+      - "${OIKO_BIND:-0.0.0.0}:${OIKO_HOST_PORT:-8090}:8090"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
