@@ -1,0 +1,435 @@
+{
+  "@@locale": "en",
+  "appName": "Oikoboard",
+  "commonCancel": "Cancel",
+  "commonSave": "Save",
+  "commonClose": "Close",
+  "commonDelete": "Delete",
+  "commonNext": "Next",
+  "commonLogOut": "Log out",
+  "commonTryAgain": "Try again",
+  "commonCopy": "Copy",
+  "commonOpen": "Open",
+  "commonConnect": "Connect",
+  "commonNobody": "Nobody",
+  "commonReadOnly": "read-only",
+  "commonError": "Error",
+  "commonNoServerConnection": "No connection to the server",
+  "commonSomeone": "Someone",
+  "navWall": "Wall",
+  "dateToday": "Today",
+  "dateTomorrow": "Tomorrow",
+  "dateYesterday": "Yesterday",
+  "serverTitle": "Family server",
+  "serverIntro": "Enter the address of your family’s Oikoboard server (e.g. oiko.example.com).",
+  "serverAddressLabel": "Server address",
+  "serverNotAnAddress": "That doesn’t look like a server address.",
+  "serverNotOikoboard": "No Oikoboard server responds at {url}.",
+  "@serverNotOikoboard": {
+    "description": "url: the address the user entered, as a string",
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "loginInviteBanner": "You have a family invitation — log in to join.",
+  "loginTagline": "The family’s shared board.",
+  "loginServerUnreachable": "Can’t connect to the server.",
+  "loginServerUnreachableAt": "Can’t connect to the server ({url}).",
+  "@loginServerUnreachableAt": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "loginWithGoogle": "Log in with Google",
+  "loginNoGoogle": "The server has no login configured (OIKO_GOOGLE_CLIENT_ID).",
+  "loginDevMode": "Developer mode",
+  "loginEmailField": "Email (unverified)",
+  "loginEnter": "Enter",
+  "loginServerChange": "Server: {host} — change",
+  "@loginServerChange": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "loginWhoAreYou": "Who are you? (mock mode)",
+  "loginErrorStale": "The login started in another window — try again.",
+  "loginErrorCancelled": "Login cancelled.",
+  "loginErrorFailed": "Couldn’t log in with Google.",
+  "onboardingHiNoName": "Hi!",
+  "onboardingHiName": "Hi, {name}!",
+  "@onboardingHiName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingCreateFamily": "Create a family",
+  "onboardingCreateFamilyHint": "You’ll invite the rest of the household with a link later.",
+  "onboardingFamilyName": "Family name",
+  "onboardingFamilyNameHint": "e.g. Smiths",
+  "onboardingMyName": "What should we call you in the family?",
+  "onboardingMyNameHint": "e.g. Dad",
+  "onboardingMyNameHintDefault": "e.g. Dad (default: {name})",
+  "@onboardingMyNameHintDefault": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingCreate": "Create",
+  "onboardingHaveInvite": "Have an invitation?",
+  "onboardingInviteHint": "Open the link from a household member or paste it here.",
+  "onboardingInviteLink": "Invitation link",
+  "onboardingNotInviteLink": "This doesn’t look like an invitation link.",
+  "onboardingBackTo": "Back to: {family}",
+  "@onboardingBackTo": {
+    "placeholders": {
+      "family": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingDecline": "Decline",
+  "onboardingInvitation": "Invitation",
+  "onboardingInviteCheckFailed": "Couldn’t check the invitation.",
+  "onboardingFamilyInvitation": "Family invitation",
+  "onboardingInvitedBy": "Invited by: {name}",
+  "@onboardingInvitedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingJoinAs": "You’ll join as: {name}",
+  "@onboardingJoinAs": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingAlreadyMember": "You already belong to this family.",
+  "onboardingGoTo": "Go to family",
+  "onboardingJoin": "Join",
+  "inviteTitle": "Invite to: {family}",
+  "@inviteTitle": {
+    "placeholders": {
+      "family": {
+        "type": "String"
+      }
+    }
+  },
+  "inviteWhom": "Who are you inviting?",
+  "inviteNewPerson": "A new person",
+  "inviteNewPersonHint": "They’ll choose their own name",
+  "inviteMemberNoAccount": "Already in the family, no account",
+  "inviteSendLink": "Send this link to the household member. It works once, for 7 days.",
+  "inviteCreateLink": "Create link",
+  "inviteLinkCopied": "Link copied",
+  "shellSimulatorStop": "Stop family simulation",
+  "shellSimulatorStart": "Simulate changes from the family",
+  "shellAiChat": "AI chat (MCP)",
+  "shellInviteToFamily": "Invite to family",
+  "shellOffline": "No connection — reconnecting…",
+  "shellChangeNotice": "{who}: {what}",
+  "@shellChangeNotice": {
+    "description": "who: the member who made the change; what: the change description",
+    "placeholders": {
+      "who": {
+        "type": "String"
+      },
+      "what": {
+        "type": "String"
+      }
+    }
+  },
+  "wallGreetingMorning": "Good morning",
+  "wallGreetingDay": "Hi",
+  "wallGreetingEvening": "Good evening",
+  "wallGreeting": "{greeting}, {name}!",
+  "@wallGreeting": {
+    "placeholders": {
+      "greeting": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiTitle": "ChatGPT, Claude and others",
+  "aiDescription": "You can also connect your family’s tasks and calendar to your own AI chat. Add a connector (MCP) with this address there — you’ll log in with your Oikoboard account, and changes will be saved as yours.",
+  "aiCopyAddress": "Copy address",
+  "aiAddressCopied": "Address copied",
+  "aiNothingConnected": "Nothing is connected.",
+  "aiNotUsedYet": "Not used yet",
+  "aiLastUsed": "Last used: {when}",
+  "@aiLastUsed": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "aiDisconnect": "Disconnect",
+  "changeListCreated": "new list “{name}”",
+  "@changeListCreated": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "changeListUpdated": "changed list “{name}”",
+  "@changeListUpdated": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "changeListDeleted": "deleted list “{name}”",
+  "@changeListDeleted": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "changeTaskAdded": "added “{title}”",
+  "@changeTaskAdded": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "changeTaskChecked": "checked off “{title}” ✓",
+  "@changeTaskChecked": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "changeTaskChanged": "changed “{title}”",
+  "@changeTaskChanged": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "changeTaskDeleted": "deleted “{title}”",
+  "@changeTaskDeleted": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "changeCalendarConnected": "connected calendar “{name}”",
+  "@changeCalendarConnected": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "changeCalendarDisconnected": "disconnected calendar “{name}”",
+  "@changeCalendarDisconnected": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "changeEventCreated": "new event “{title}”",
+  "@changeEventCreated": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "changeEventUpdated": "changed event “{title}”",
+  "@changeEventUpdated": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "changeEventDeleted": "deleted event “{title}”",
+  "@changeEventDeleted": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "todoModuleTitle": "Lists",
+  "todoError": "Error: {error}",
+  "@todoError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "todoNoLists": "No lists — add the first one.",
+  "todoNewList": "New list",
+  "todoListChip": "List",
+  "todoRename": "Rename",
+  "todoDeleteList": "Delete list",
+  "todoName": "Name",
+  "todoAddTo": "Add to “{list}”…",
+  "@todoAddTo": {
+    "placeholders": {
+      "list": {
+        "type": "String"
+      }
+    }
+  },
+  "todoAllDone": "All done 🎉",
+  "todoDoneSection": "Done ({count})",
+  "@todoDoneSection": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "todoOverdueSection": "Overdue ({count})",
+  "@todoOverdueSection": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "todoOpenCount": "{count, plural, one{{count} to do} other{{count} to do}}",
+  "@todoOpenCount": {
+    "description": "Number of open tasks in a list",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "todoDue": "due: {day}",
+  "@todoDue": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "todoDueLabel": "Due: {day}",
+  "@todoDueLabel": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "todoTask": "Task",
+  "todoWhoDoesIt": "Who will do it?",
+  "todoSetDue": "Set due date",
+  "todoRemoveDue": "Remove due date",
+  "calendarModuleTitle": "Calendar",
+  "calendarViewDay": "Day",
+  "calendarViewThreeDays": "3 days",
+  "calendarViewWeek": "Week",
+  "calendarViewMonth": "Month",
+  "calendarViewTooltip": "View",
+  "calendarsTooltip": "Calendars",
+  "calendarPrevDay": "Previous day",
+  "calendarPrevPeriod": "Previous period",
+  "calendarPrevMonth": "Previous month",
+  "calendarNextDay": "Next day",
+  "calendarNextPeriod": "Next period",
+  "calendarNextMonth": "Next month",
+  "calendarNewEvent": "New event",
+  "calendarEvent": "Event",
+  "calendarConnectPrompt": "Connect a Google calendar — events will sync both ways.",
+  "calendarConnectAction": "Connect calendar",
+  "calendarNoEvents": "No events",
+  "calendarSoon": "Coming up",
+  "calendarWeekdayMon": "Mon",
+  "calendarWeekdayTue": "Tue",
+  "calendarWeekdayWed": "Wed",
+  "calendarWeekdayThu": "Thu",
+  "calendarWeekdayFri": "Fri",
+  "calendarWeekdaySat": "Sat",
+  "calendarWeekdaySun": "Sun",
+  "calendarAllDay": "All day",
+  "calendarAllDaySpan": "{days, plural, one{All day · {days} day} other{All day · {days} days}}",
+  "@calendarAllDaySpan": {
+    "description": "days > 1",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "calendarReadOnlyNotice": "Calendar “{name}” is read-only.",
+  "@calendarReadOnlyNotice": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "calendarTitleField": "Title",
+  "calendarLabel": "Calendar",
+  "calendarRepeatField": "Repeat",
+  "calendarPlaceField": "Place",
+  "calendarDescriptionField": "Description",
+  "calendarWhoField": "Who",
+  "calendarRecurringChange": "Change recurring event",
+  "calendarRecurringDelete": "Delete recurring event",
+  "calendarRecurringThisOnly": "This event only",
+  "calendarRecurringSeries": "All events in the series",
+  "calendarConnectCancelled": "Calendar connection cancelled.",
+  "calendarConnectFailed": "Couldn’t connect the calendar.",
+  "repeatNone": "Doesn’t repeat",
+  "repeatDaily": "Daily",
+  "repeatWeekdays": "Weekdays",
+  "repeatWeekly": "Weekly",
+  "repeatMonthly": "Monthly",
+  "repeatYearly": "Yearly",
+  "repeatCustom": "Custom",
+  "todoDaySheetTitle": "Tasks · {date}",
+  "@todoDaySheetTitle": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "todoDayEmpty": "No tasks for this day",
+  "calendarsTitle": "Family calendars",
+  "calendarsIntro": "Events are saved to the connected calendars (e.g. Google) — changes work both ways. Tasks with a due date go into the calendar marked ✓ as one entry per day.",
+  "calendarsNoneConnected": "No calendar is connected yet.",
+  "calendarsTodoTag": "tasks with a due date",
+  "calendarsTodoTargetOn": "Tasks with a due date go here",
+  "calendarsTodoTargetOff": "Show tasks with a due date here",
+  "calendarsSyncNow": "Sync now",
+  "calendarsRemoveFromFamily": "Remove from family",
+  "calendarsYourAccounts": "Your accounts",
+  "calendarsConnectGoogle": "Connect Google account",
+  "calendarsAccessRevoked": "Access revoked — connect the account again",
+  "calendarsTestAccount": "test account (mock)",
+  "calendarsLoadFailed": "Couldn’t fetch the list of calendars.",
+  "calendarsDisconnectAccount": "Disconnect account (removes its calendars)"
+}

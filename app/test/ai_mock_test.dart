@@ -9,6 +9,14 @@ import 'package:oikoboard/core/session.dart';
 
 /// The AI screen in mock mode: lists connected apps and disconnects one.
 void main() {
+  // The UI tests assert the Polish texts: the device locale is Polish here.
+  setUp(() {
+    TestWidgetsFlutterBinding.ensureInitialized()
+        .platformDispatcher
+        .localesTestValue = const [
+      Locale('pl'),
+    ];
+  });
   testWidgets('connected AI apps in mock mode', (tester) async {
     final onError = FlutterError.onError;
     FlutterError.onError = (d) {

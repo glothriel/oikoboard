@@ -4,38 +4,41 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'change.dart';
+import 'l10n.dart';
 import 'mock/mock_store.dart';
 
-/// Kontrakt modułu („widoku”) aplikacji. Nowa funkcja = nowa implementacja
-/// tej klasy + dopisanie jej do `modules/registry.dart`. Nawigacja, ściana,
-/// powiadomienia o zmianach i symulator budują się z listy modułów.
+/// Contract of an app module (a “view”). A new feature = a new implementation
+/// of this class + registering it in `modules/registry.dart`. Navigation, the
+/// wall, change notices and the simulator are built from the module list.
 abstract class FamilyModule {
   const FamilyModule();
 
   String get id;
-  String get title;
+
+  /// Localized name, shown in navigation and on the wall.
+  String title(AppLocalizations l);
   IconData get icon;
   IconData get selectedIcon;
   String get path => '/$id';
 
-  /// Główny ekran modułu.
+  /// The module's main screen.
   Widget buildScreen(BuildContext context);
 
-  /// Dodatkowe ekrany pod [path] (np. szczegóły).
+  /// Extra screens under [path] (e.g. details).
   List<RouteBase> get subRoutes => const [];
 
-  /// Kafelek na ekranie głównym („ścianie”), opcjonalny.
+  /// Optional tile on the home screen (the “wall”).
   Widget? buildWallTile(BuildContext context) => null;
 
-  /// Opis zmiany od innej osoby (do powiadomienia), albo null jeśli
-  /// zmiana nie dotyczy tego modułu.
-  String? describeChange(Change change) => null;
+  /// Description of a change made by another member (for a notice), or null
+  /// if the change doesn't concern this module.
+  String? describeChange(AppLocalizations l, Change change) => null;
 
-  // --- tylko na czas mocka ---
+  // --- mock only ---
 
-  /// Dane przykładowe.
+  /// Sample data.
   void seedMock(MockStore store) {}
 
-  /// Jedna losowa akcja „innego członka rodziny” (do testowania realtime).
+  /// One random action of “another family member” (for testing realtime).
   Future<void> simulate(MockStore store, Random random, String actorId) async {}
 }

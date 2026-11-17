@@ -1,0 +1,1238 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:intl/intl.dart' as intl;
+
+import 'app_localizations_en.dart';
+import 'app_localizations_pl.dart';
+
+// ignore_for_file: type=lint
+
+/// Callers can lookup localized strings with an instance of AppLocalizations
+/// returned by `AppLocalizations.of(context)`.
+///
+/// Applications need to include `AppLocalizations.delegate()` in their app's
+/// `localizationDelegates` list, and the locales they support in the app's
+/// `supportedLocales` list. For example:
+///
+/// ```dart
+/// import 'l10n/app_localizations.dart';
+///
+/// return MaterialApp(
+///   localizationsDelegates: AppLocalizations.localizationsDelegates,
+///   supportedLocales: AppLocalizations.supportedLocales,
+///   home: MyApplicationHome(),
+/// );
+/// ```
+///
+/// ## Update pubspec.yaml
+///
+/// Please make sure to update your pubspec.yaml to include the following
+/// packages:
+///
+/// ```yaml
+/// dependencies:
+///   # Internationalization support.
+///   flutter_localizations:
+///     sdk: flutter
+///   intl: any # Use the pinned version from flutter_localizations
+///
+///   # Rest of dependencies
+/// ```
+///
+/// ## iOS Applications
+///
+/// iOS applications define key application metadata, including supported
+/// locales, in an Info.plist file that is built into the application bundle.
+/// To configure the locales supported by your app, you’ll need to edit this
+/// file.
+///
+/// First, open your project’s ios/Runner.xcworkspace Xcode workspace file.
+/// Then, in the Project Navigator, open the Info.plist file under the Runner
+/// project’s Runner folder.
+///
+/// Next, select the Information Property List item, select Add Item from the
+/// Editor menu, then select Localizations from the pop-up menu.
+///
+/// Select and expand the newly-created Localizations item then, for each
+/// locale your application supports, add a new item and select the locale
+/// you wish to add from the pop-up menu in the Value field. This list should
+/// be consistent with the languages listed in the AppLocalizations.supportedLocales
+/// property.
+abstract class AppLocalizations {
+  AppLocalizations(String locale)
+    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+
+  final String localeName;
+
+  static AppLocalizations of(BuildContext context) {
+    return Localizations.of<AppLocalizations>(context, AppLocalizations)!;
+  }
+
+  static const LocalizationsDelegate<AppLocalizations> delegate =
+      _AppLocalizationsDelegate();
+
+  /// A list of this localizations delegate along with the default localizations
+  /// delegates.
+  ///
+  /// Returns a list of localizations delegates containing this delegate along with
+  /// GlobalMaterialLocalizations.delegate, GlobalCupertinoLocalizations.delegate,
+  /// and GlobalWidgetsLocalizations.delegate.
+  ///
+  /// Additional delegates can be added by appending to this list in
+  /// MaterialApp. This list does not have to be used at all if a custom list
+  /// of delegates is preferred or required.
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
+      <LocalizationsDelegate<dynamic>>[
+        delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ];
+
+  /// A list of this localizations delegate's supported locales.
+  static const List<Locale> supportedLocales = <Locale>[
+    Locale('en'),
+    Locale('pl'),
+  ];
+
+  /// No description provided for @appName.
+  ///
+  /// In en, this message translates to:
+  /// **'Oikoboard'**
+  String get appName;
+
+  /// No description provided for @commonCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get commonCancel;
+
+  /// No description provided for @commonSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get commonSave;
+
+  /// No description provided for @commonClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get commonClose;
+
+  /// No description provided for @commonDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get commonDelete;
+
+  /// No description provided for @commonNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get commonNext;
+
+  /// No description provided for @commonLogOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Log out'**
+  String get commonLogOut;
+
+  /// No description provided for @commonTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get commonTryAgain;
+
+  /// No description provided for @commonCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get commonCopy;
+
+  /// No description provided for @commonOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get commonOpen;
+
+  /// No description provided for @commonConnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect'**
+  String get commonConnect;
+
+  /// No description provided for @commonNobody.
+  ///
+  /// In en, this message translates to:
+  /// **'Nobody'**
+  String get commonNobody;
+
+  /// No description provided for @commonReadOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'read-only'**
+  String get commonReadOnly;
+
+  /// No description provided for @commonError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get commonError;
+
+  /// No description provided for @commonNoServerConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'No connection to the server'**
+  String get commonNoServerConnection;
+
+  /// No description provided for @commonSomeone.
+  ///
+  /// In en, this message translates to:
+  /// **'Someone'**
+  String get commonSomeone;
+
+  /// No description provided for @navWall.
+  ///
+  /// In en, this message translates to:
+  /// **'Wall'**
+  String get navWall;
+
+  /// No description provided for @dateToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get dateToday;
+
+  /// No description provided for @dateTomorrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Tomorrow'**
+  String get dateTomorrow;
+
+  /// No description provided for @dateYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get dateYesterday;
+
+  /// No description provided for @serverTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Family server'**
+  String get serverTitle;
+
+  /// No description provided for @serverIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the address of your family’s Oikoboard server (e.g. oiko.example.com).'**
+  String get serverIntro;
+
+  /// No description provided for @serverAddressLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Server address'**
+  String get serverAddressLabel;
+
+  /// No description provided for @serverNotAnAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'That doesn’t look like a server address.'**
+  String get serverNotAnAddress;
+
+  /// url: the address the user entered, as a string
+  ///
+  /// In en, this message translates to:
+  /// **'No Oikoboard server responds at {url}.'**
+  String serverNotOikoboard(String url);
+
+  /// No description provided for @loginInviteBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'You have a family invitation — log in to join.'**
+  String get loginInviteBanner;
+
+  /// No description provided for @loginTagline.
+  ///
+  /// In en, this message translates to:
+  /// **'The family’s shared board.'**
+  String get loginTagline;
+
+  /// No description provided for @loginServerUnreachable.
+  ///
+  /// In en, this message translates to:
+  /// **'Can’t connect to the server.'**
+  String get loginServerUnreachable;
+
+  /// No description provided for @loginServerUnreachableAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Can’t connect to the server ({url}).'**
+  String loginServerUnreachableAt(String url);
+
+  /// No description provided for @loginWithGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Log in with Google'**
+  String get loginWithGoogle;
+
+  /// No description provided for @loginNoGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'The server has no login configured (OIKO_GOOGLE_CLIENT_ID).'**
+  String get loginNoGoogle;
+
+  /// No description provided for @loginDevMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Developer mode'**
+  String get loginDevMode;
+
+  /// No description provided for @loginEmailField.
+  ///
+  /// In en, this message translates to:
+  /// **'Email (unverified)'**
+  String get loginEmailField;
+
+  /// No description provided for @loginEnter.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter'**
+  String get loginEnter;
+
+  /// No description provided for @loginServerChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Server: {host} — change'**
+  String loginServerChange(String host);
+
+  /// No description provided for @loginWhoAreYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Who are you? (mock mode)'**
+  String get loginWhoAreYou;
+
+  /// No description provided for @loginErrorStale.
+  ///
+  /// In en, this message translates to:
+  /// **'The login started in another window — try again.'**
+  String get loginErrorStale;
+
+  /// No description provided for @loginErrorCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Login cancelled.'**
+  String get loginErrorCancelled;
+
+  /// No description provided for @loginErrorFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t log in with Google.'**
+  String get loginErrorFailed;
+
+  /// No description provided for @onboardingHiNoName.
+  ///
+  /// In en, this message translates to:
+  /// **'Hi!'**
+  String get onboardingHiNoName;
+
+  /// No description provided for @onboardingHiName.
+  ///
+  /// In en, this message translates to:
+  /// **'Hi, {name}!'**
+  String onboardingHiName(String name);
+
+  /// No description provided for @onboardingCreateFamily.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a family'**
+  String get onboardingCreateFamily;
+
+  /// No description provided for @onboardingCreateFamilyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You’ll invite the rest of the household with a link later.'**
+  String get onboardingCreateFamilyHint;
+
+  /// No description provided for @onboardingFamilyName.
+  ///
+  /// In en, this message translates to:
+  /// **'Family name'**
+  String get onboardingFamilyName;
+
+  /// No description provided for @onboardingFamilyNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Smiths'**
+  String get onboardingFamilyNameHint;
+
+  /// No description provided for @onboardingMyName.
+  ///
+  /// In en, this message translates to:
+  /// **'What should we call you in the family?'**
+  String get onboardingMyName;
+
+  /// No description provided for @onboardingMyNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Dad'**
+  String get onboardingMyNameHint;
+
+  /// No description provided for @onboardingMyNameHintDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Dad (default: {name})'**
+  String onboardingMyNameHintDefault(String name);
+
+  /// No description provided for @onboardingCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get onboardingCreate;
+
+  /// No description provided for @onboardingHaveInvite.
+  ///
+  /// In en, this message translates to:
+  /// **'Have an invitation?'**
+  String get onboardingHaveInvite;
+
+  /// No description provided for @onboardingInviteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the link from a household member or paste it here.'**
+  String get onboardingInviteHint;
+
+  /// No description provided for @onboardingInviteLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitation link'**
+  String get onboardingInviteLink;
+
+  /// No description provided for @onboardingNotInviteLink.
+  ///
+  /// In en, this message translates to:
+  /// **'This doesn’t look like an invitation link.'**
+  String get onboardingNotInviteLink;
+
+  /// No description provided for @onboardingBackTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to: {family}'**
+  String onboardingBackTo(String family);
+
+  /// No description provided for @onboardingDecline.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline'**
+  String get onboardingDecline;
+
+  /// No description provided for @onboardingInvitation.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitation'**
+  String get onboardingInvitation;
+
+  /// No description provided for @onboardingInviteCheckFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t check the invitation.'**
+  String get onboardingInviteCheckFailed;
+
+  /// No description provided for @onboardingFamilyInvitation.
+  ///
+  /// In en, this message translates to:
+  /// **'Family invitation'**
+  String get onboardingFamilyInvitation;
+
+  /// No description provided for @onboardingInvitedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Invited by: {name}'**
+  String onboardingInvitedBy(String name);
+
+  /// No description provided for @onboardingJoinAs.
+  ///
+  /// In en, this message translates to:
+  /// **'You’ll join as: {name}'**
+  String onboardingJoinAs(String name);
+
+  /// No description provided for @onboardingAlreadyMember.
+  ///
+  /// In en, this message translates to:
+  /// **'You already belong to this family.'**
+  String get onboardingAlreadyMember;
+
+  /// No description provided for @onboardingGoTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to family'**
+  String get onboardingGoTo;
+
+  /// No description provided for @onboardingJoin.
+  ///
+  /// In en, this message translates to:
+  /// **'Join'**
+  String get onboardingJoin;
+
+  /// No description provided for @inviteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite to: {family}'**
+  String inviteTitle(String family);
+
+  /// No description provided for @inviteWhom.
+  ///
+  /// In en, this message translates to:
+  /// **'Who are you inviting?'**
+  String get inviteWhom;
+
+  /// No description provided for @inviteNewPerson.
+  ///
+  /// In en, this message translates to:
+  /// **'A new person'**
+  String get inviteNewPerson;
+
+  /// No description provided for @inviteNewPersonHint.
+  ///
+  /// In en, this message translates to:
+  /// **'They’ll choose their own name'**
+  String get inviteNewPersonHint;
+
+  /// No description provided for @inviteMemberNoAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Already in the family, no account'**
+  String get inviteMemberNoAccount;
+
+  /// No description provided for @inviteSendLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Send this link to the household member. It works once, for 7 days.'**
+  String get inviteSendLink;
+
+  /// No description provided for @inviteCreateLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Create link'**
+  String get inviteCreateLink;
+
+  /// No description provided for @inviteLinkCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Link copied'**
+  String get inviteLinkCopied;
+
+  /// No description provided for @shellSimulatorStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop family simulation'**
+  String get shellSimulatorStop;
+
+  /// No description provided for @shellSimulatorStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Simulate changes from the family'**
+  String get shellSimulatorStart;
+
+  /// No description provided for @shellAiChat.
+  ///
+  /// In en, this message translates to:
+  /// **'AI chat (MCP)'**
+  String get shellAiChat;
+
+  /// No description provided for @shellInviteToFamily.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite to family'**
+  String get shellInviteToFamily;
+
+  /// No description provided for @shellOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'No connection — reconnecting…'**
+  String get shellOffline;
+
+  /// who: the member who made the change; what: the change description
+  ///
+  /// In en, this message translates to:
+  /// **'{who}: {what}'**
+  String shellChangeNotice(String who, String what);
+
+  /// No description provided for @wallGreetingMorning.
+  ///
+  /// In en, this message translates to:
+  /// **'Good morning'**
+  String get wallGreetingMorning;
+
+  /// No description provided for @wallGreetingDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Hi'**
+  String get wallGreetingDay;
+
+  /// No description provided for @wallGreetingEvening.
+  ///
+  /// In en, this message translates to:
+  /// **'Good evening'**
+  String get wallGreetingEvening;
+
+  /// No description provided for @wallGreeting.
+  ///
+  /// In en, this message translates to:
+  /// **'{greeting}, {name}!'**
+  String wallGreeting(String greeting, String name);
+
+  /// No description provided for @aiTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'ChatGPT, Claude and others'**
+  String get aiTitle;
+
+  /// No description provided for @aiDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'You can also connect your family’s tasks and calendar to your own AI chat. Add a connector (MCP) with this address there — you’ll log in with your Oikoboard account, and changes will be saved as yours.'**
+  String get aiDescription;
+
+  /// No description provided for @aiCopyAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy address'**
+  String get aiCopyAddress;
+
+  /// No description provided for @aiAddressCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Address copied'**
+  String get aiAddressCopied;
+
+  /// No description provided for @aiNothingConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing is connected.'**
+  String get aiNothingConnected;
+
+  /// No description provided for @aiNotUsedYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not used yet'**
+  String get aiNotUsedYet;
+
+  /// No description provided for @aiLastUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Last used: {when}'**
+  String aiLastUsed(String when);
+
+  /// No description provided for @aiDisconnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect'**
+  String get aiDisconnect;
+
+  /// No description provided for @changeListCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'new list “{name}”'**
+  String changeListCreated(String name);
+
+  /// No description provided for @changeListUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'changed list “{name}”'**
+  String changeListUpdated(String name);
+
+  /// No description provided for @changeListDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'deleted list “{name}”'**
+  String changeListDeleted(String name);
+
+  /// No description provided for @changeTaskAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'added “{title}”'**
+  String changeTaskAdded(String title);
+
+  /// No description provided for @changeTaskChecked.
+  ///
+  /// In en, this message translates to:
+  /// **'checked off “{title}” ✓'**
+  String changeTaskChecked(String title);
+
+  /// No description provided for @changeTaskChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'changed “{title}”'**
+  String changeTaskChanged(String title);
+
+  /// No description provided for @changeTaskDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'deleted “{title}”'**
+  String changeTaskDeleted(String title);
+
+  /// No description provided for @changeCalendarConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'connected calendar “{name}”'**
+  String changeCalendarConnected(String name);
+
+  /// No description provided for @changeCalendarDisconnected.
+  ///
+  /// In en, this message translates to:
+  /// **'disconnected calendar “{name}”'**
+  String changeCalendarDisconnected(String name);
+
+  /// No description provided for @changeEventCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'new event “{title}”'**
+  String changeEventCreated(String title);
+
+  /// No description provided for @changeEventUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'changed event “{title}”'**
+  String changeEventUpdated(String title);
+
+  /// No description provided for @changeEventDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'deleted event “{title}”'**
+  String changeEventDeleted(String title);
+
+  /// No description provided for @todoModuleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Lists'**
+  String get todoModuleTitle;
+
+  /// No description provided for @todoError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error: {error}'**
+  String todoError(String error);
+
+  /// No description provided for @todoNoLists.
+  ///
+  /// In en, this message translates to:
+  /// **'No lists — add the first one.'**
+  String get todoNoLists;
+
+  /// No description provided for @todoNewList.
+  ///
+  /// In en, this message translates to:
+  /// **'New list'**
+  String get todoNewList;
+
+  /// No description provided for @todoListChip.
+  ///
+  /// In en, this message translates to:
+  /// **'List'**
+  String get todoListChip;
+
+  /// No description provided for @todoRename.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get todoRename;
+
+  /// No description provided for @todoDeleteList.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete list'**
+  String get todoDeleteList;
+
+  /// No description provided for @todoName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get todoName;
+
+  /// No description provided for @todoAddTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to “{list}”…'**
+  String todoAddTo(String list);
+
+  /// No description provided for @todoAllDone.
+  ///
+  /// In en, this message translates to:
+  /// **'All done 🎉'**
+  String get todoAllDone;
+
+  /// No description provided for @todoDoneSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Done ({count})'**
+  String todoDoneSection(int count);
+
+  /// No description provided for @todoOverdueSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue ({count})'**
+  String todoOverdueSection(int count);
+
+  /// Number of open tasks in a list
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} to do} other{{count} to do}}'**
+  String todoOpenCount(int count);
+
+  /// No description provided for @todoDue.
+  ///
+  /// In en, this message translates to:
+  /// **'due: {day}'**
+  String todoDue(String day);
+
+  /// No description provided for @todoDueLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Due: {day}'**
+  String todoDueLabel(String day);
+
+  /// No description provided for @todoTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Task'**
+  String get todoTask;
+
+  /// No description provided for @todoWhoDoesIt.
+  ///
+  /// In en, this message translates to:
+  /// **'Who will do it?'**
+  String get todoWhoDoesIt;
+
+  /// No description provided for @todoSetDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Set due date'**
+  String get todoSetDue;
+
+  /// No description provided for @todoRemoveDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove due date'**
+  String get todoRemoveDue;
+
+  /// No description provided for @calendarModuleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar'**
+  String get calendarModuleTitle;
+
+  /// No description provided for @calendarViewDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Day'**
+  String get calendarViewDay;
+
+  /// No description provided for @calendarViewThreeDays.
+  ///
+  /// In en, this message translates to:
+  /// **'3 days'**
+  String get calendarViewThreeDays;
+
+  /// No description provided for @calendarViewWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Week'**
+  String get calendarViewWeek;
+
+  /// No description provided for @calendarViewMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Month'**
+  String get calendarViewMonth;
+
+  /// No description provided for @calendarViewTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'View'**
+  String get calendarViewTooltip;
+
+  /// No description provided for @calendarsTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Calendars'**
+  String get calendarsTooltip;
+
+  /// No description provided for @calendarPrevDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous day'**
+  String get calendarPrevDay;
+
+  /// No description provided for @calendarPrevPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous period'**
+  String get calendarPrevPeriod;
+
+  /// No description provided for @calendarPrevMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous month'**
+  String get calendarPrevMonth;
+
+  /// No description provided for @calendarNextDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Next day'**
+  String get calendarNextDay;
+
+  /// No description provided for @calendarNextPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Next period'**
+  String get calendarNextPeriod;
+
+  /// No description provided for @calendarNextMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Next month'**
+  String get calendarNextMonth;
+
+  /// No description provided for @calendarNewEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'New event'**
+  String get calendarNewEvent;
+
+  /// No description provided for @calendarEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Event'**
+  String get calendarEvent;
+
+  /// No description provided for @calendarConnectPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect a Google calendar — events will sync both ways.'**
+  String get calendarConnectPrompt;
+
+  /// No description provided for @calendarConnectAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect calendar'**
+  String get calendarConnectAction;
+
+  /// No description provided for @calendarNoEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'No events'**
+  String get calendarNoEvents;
+
+  /// No description provided for @calendarSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Coming up'**
+  String get calendarSoon;
+
+  /// No description provided for @calendarWeekdayMon.
+  ///
+  /// In en, this message translates to:
+  /// **'Mon'**
+  String get calendarWeekdayMon;
+
+  /// No description provided for @calendarWeekdayTue.
+  ///
+  /// In en, this message translates to:
+  /// **'Tue'**
+  String get calendarWeekdayTue;
+
+  /// No description provided for @calendarWeekdayWed.
+  ///
+  /// In en, this message translates to:
+  /// **'Wed'**
+  String get calendarWeekdayWed;
+
+  /// No description provided for @calendarWeekdayThu.
+  ///
+  /// In en, this message translates to:
+  /// **'Thu'**
+  String get calendarWeekdayThu;
+
+  /// No description provided for @calendarWeekdayFri.
+  ///
+  /// In en, this message translates to:
+  /// **'Fri'**
+  String get calendarWeekdayFri;
+
+  /// No description provided for @calendarWeekdaySat.
+  ///
+  /// In en, this message translates to:
+  /// **'Sat'**
+  String get calendarWeekdaySat;
+
+  /// No description provided for @calendarWeekdaySun.
+  ///
+  /// In en, this message translates to:
+  /// **'Sun'**
+  String get calendarWeekdaySun;
+
+  /// No description provided for @calendarAllDay.
+  ///
+  /// In en, this message translates to:
+  /// **'All day'**
+  String get calendarAllDay;
+
+  /// days > 1
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, one{All day · {days} day} other{All day · {days} days}}'**
+  String calendarAllDaySpan(int days);
+
+  /// No description provided for @calendarReadOnlyNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar “{name}” is read-only.'**
+  String calendarReadOnlyNotice(String name);
+
+  /// No description provided for @calendarTitleField.
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get calendarTitleField;
+
+  /// No description provided for @calendarLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar'**
+  String get calendarLabel;
+
+  /// No description provided for @calendarRepeatField.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat'**
+  String get calendarRepeatField;
+
+  /// No description provided for @calendarPlaceField.
+  ///
+  /// In en, this message translates to:
+  /// **'Place'**
+  String get calendarPlaceField;
+
+  /// No description provided for @calendarDescriptionField.
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get calendarDescriptionField;
+
+  /// No description provided for @calendarWhoField.
+  ///
+  /// In en, this message translates to:
+  /// **'Who'**
+  String get calendarWhoField;
+
+  /// No description provided for @calendarRecurringChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Change recurring event'**
+  String get calendarRecurringChange;
+
+  /// No description provided for @calendarRecurringDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete recurring event'**
+  String get calendarRecurringDelete;
+
+  /// No description provided for @calendarRecurringThisOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'This event only'**
+  String get calendarRecurringThisOnly;
+
+  /// No description provided for @calendarRecurringSeries.
+  ///
+  /// In en, this message translates to:
+  /// **'All events in the series'**
+  String get calendarRecurringSeries;
+
+  /// No description provided for @calendarConnectCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar connection cancelled.'**
+  String get calendarConnectCancelled;
+
+  /// No description provided for @calendarConnectFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t connect the calendar.'**
+  String get calendarConnectFailed;
+
+  /// No description provided for @repeatNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Doesn’t repeat'**
+  String get repeatNone;
+
+  /// No description provided for @repeatDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily'**
+  String get repeatDaily;
+
+  /// No description provided for @repeatWeekdays.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekdays'**
+  String get repeatWeekdays;
+
+  /// No description provided for @repeatWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly'**
+  String get repeatWeekly;
+
+  /// No description provided for @repeatMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly'**
+  String get repeatMonthly;
+
+  /// No description provided for @repeatYearly.
+  ///
+  /// In en, this message translates to:
+  /// **'Yearly'**
+  String get repeatYearly;
+
+  /// No description provided for @repeatCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get repeatCustom;
+
+  /// No description provided for @todoDaySheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tasks · {date}'**
+  String todoDaySheetTitle(String date);
+
+  /// No description provided for @todoDayEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No tasks for this day'**
+  String get todoDayEmpty;
+
+  /// No description provided for @calendarsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Family calendars'**
+  String get calendarsTitle;
+
+  /// No description provided for @calendarsIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Events are saved to the connected calendars (e.g. Google) — changes work both ways. Tasks with a due date go into the calendar marked ✓ as one entry per day.'**
+  String get calendarsIntro;
+
+  /// No description provided for @calendarsNoneConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'No calendar is connected yet.'**
+  String get calendarsNoneConnected;
+
+  /// No description provided for @calendarsTodoTag.
+  ///
+  /// In en, this message translates to:
+  /// **'tasks with a due date'**
+  String get calendarsTodoTag;
+
+  /// No description provided for @calendarsTodoTargetOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Tasks with a due date go here'**
+  String get calendarsTodoTargetOn;
+
+  /// No description provided for @calendarsTodoTargetOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Show tasks with a due date here'**
+  String get calendarsTodoTargetOff;
+
+  /// No description provided for @calendarsSyncNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync now'**
+  String get calendarsSyncNow;
+
+  /// No description provided for @calendarsRemoveFromFamily.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from family'**
+  String get calendarsRemoveFromFamily;
+
+  /// No description provided for @calendarsYourAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Your accounts'**
+  String get calendarsYourAccounts;
+
+  /// No description provided for @calendarsConnectGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect Google account'**
+  String get calendarsConnectGoogle;
+
+  /// No description provided for @calendarsAccessRevoked.
+  ///
+  /// In en, this message translates to:
+  /// **'Access revoked — connect the account again'**
+  String get calendarsAccessRevoked;
+
+  /// No description provided for @calendarsTestAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'test account (mock)'**
+  String get calendarsTestAccount;
+
+  /// No description provided for @calendarsLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t fetch the list of calendars.'**
+  String get calendarsLoadFailed;
+
+  /// No description provided for @calendarsDisconnectAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect account (removes its calendars)'**
+  String get calendarsDisconnectAccount;
+}
+
+class _AppLocalizationsDelegate
+    extends LocalizationsDelegate<AppLocalizations> {
+  const _AppLocalizationsDelegate();
+
+  @override
+  Future<AppLocalizations> load(Locale locale) {
+    return SynchronousFuture<AppLocalizations>(lookupAppLocalizations(locale));
+  }
+
+  @override
+  bool isSupported(Locale locale) =>
+      <String>['en', 'pl'].contains(locale.languageCode);
+
+  @override
+  bool shouldReload(_AppLocalizationsDelegate old) => false;
+}
+
+AppLocalizations lookupAppLocalizations(Locale locale) {
+  // Lookup logic when only language code is specified.
+  switch (locale.languageCode) {
+    case 'en':
+      return AppLocalizationsEn();
+    case 'pl':
+      return AppLocalizationsPl();
+  }
+
+  throw FlutterError(
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.',
+  );
+}

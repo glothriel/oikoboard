@@ -11,7 +11,9 @@ for what the project is, its architecture and how to run it; design docs are in 
   but whatever you write into files is English.
 - Some older files still have Polish comments/docs/log messages. When you touch such code,
   translate the parts you change (or the whole file if it's small); don't add new Polish text.
-- User-facing UI strings in the app are product copy, not code — keep them as they are unless asked.
+- User-facing app strings live only in `app/lib/l10n/*.arb`: English in `app_en.arb` is the source, and every
+  key also gets a Polish translation in `app_pl.arb`. Never hard-code UI text in Dart — use `context.l10n.<key>`.
+  Interpolation uses ARB placeholders and counts use ICU plurals; never concatenate translated fragments.
 
 ## Layout
 

@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../api/api_client.dart';
+import '../l10n.dart';
 import 'repository.dart';
 
-/// "AI": connect your own AI chat (ChatGPT, Claude…) over MCP + OAuth, and
+/// “AI”: connect your own AI chat (ChatGPT, Claude…) over MCP + OAuth, and
 /// see or disconnect the apps you connected.
 Future<void> openAiScreen(BuildContext context) =>
     Navigator.of(context)
@@ -16,7 +17,7 @@ class AiScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('ChatGPT, Claude i inne')),
+    appBar: AppBar(title: Text(context.l10n.aiTitle)),
     body: Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 640),
@@ -56,19 +57,14 @@ class _ConnectedAppsState extends ConsumerState<_ConnectedApps> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final url = ref.watch(aiRepositoryProvider).mcpUrl;
+    final l = context.l10n;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Twoje zadania i kalendarz rodziny możesz podłączyć też do '
-              'własnego czatu AI. Dodaj w nim konektor (MCP) z tym adresem — '
-              'zalogujesz się kontem Oikoboard, a zmiany będą zapisywane '
-              'jako Twoje.',
-              style: theme.textTheme.bodySmall,
-            ),
+            Text(l.aiDescription, style: theme.textTheme.bodySmall),
             if (url != null) ...[
               const SizedBox(height: 8),
               Row(
@@ -80,13 +76,13 @@ class _ConnectedAppsState extends ConsumerState<_ConnectedApps> {
                     ),
                   ),
                   IconButton(
-                    tooltip: 'Kopiuj adres',
+                    tooltip: l.aiCopyAddress,
                     icon: const Icon(Icons.copy, size: 18),
                     onPressed: () async {
                       await Clipboard.setData(ClipboardData(text: url));
                       if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Skopiowano adres')),
+                        SnackBar(content: Text(l.aiAddressCopied)),
                       );
                     },
                   ),
@@ -101,7 +97,7 @@ class _ConnectedAppsState extends ConsumerState<_ConnectedApps> {
                 if (apps.isEmpty) {
                   return Text(
                     snap.connectionState == ConnectionState.done
-                        ? 'Nic nie jest podłączone.'
+                        ? l.aiNothingConnected
                         : '…',
                     style: theme.textTheme.bodySmall,
                   );
@@ -115,12 +111,12 @@ class _ConnectedAppsState extends ConsumerState<_ConnectedApps> {
                         title: Text(a.client),
                         subtitle: Text(
                           a.lastUsedAt == null
-                              ? 'Jeszcze nieużywane'
-                              : 'Ostatnio: ${_when(a.lastUsedAt!)}',
+                              ? l.aiNotUsedYet
+                              : l.aiLastUsed(_when(a.lastUsedAt!)),
                         ),
                         trailing: TextButton(
                           onPressed: () => _disconnect(a),
-                          child: const Text('Odłącz'),
+                          child: Text(l.aiDisconnect),
                         ),
                       ),
                   ],

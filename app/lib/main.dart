@@ -1,12 +1,11 @@
 import 'package:flutter/foundation.dart' show kIsWeb, kReleaseMode;
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/date_symbol_data_local.dart';
-import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'app.dart';
-import 'core/api/api_client.dart';
 import 'core/backend.dart';
+import 'core/l10n.dart';
 import 'core/mock/mock_store.dart';
 import 'core/platform/browser.dart';
 import 'core/session.dart';
@@ -41,8 +40,8 @@ Backend? _fixedBackend() {
   return null;
 }
 
-/// Web: link z zaproszeniem (?invite=) i powrót z logowania (?code=,
-/// ?error=). Zapamiętuje/obsługuje je i czyści pasek adresu.
+/// Web: an invitation link (?invite=) and the return from login (?code=,
+/// ?error=). Remembers/handles them and cleans up the address bar.
 Future<void> _handleStartUrl(ProviderContainer c) async {
   final invites = c.read(pendingInviteProvider.notifier);
   await invites.set(await PendingInvite.load());
@@ -59,9 +58,7 @@ Future<void> _handleStartUrl(ProviderContainer c) async {
       final s = await c.read(authApiProvider).completeRedirect(url);
       c.read(sessionProvider.notifier).set(s);
     } catch (e) {
-      c
-          .read(loginMessageProvider.notifier)
-          .set(e is ApiException ? e.message : '$e');
+      c.read(loginMessageProvider.notifier).set(e);
     }
   }
   const handled = {'invite', 'code', 'error', calendarConnectParam};
@@ -78,8 +75,9 @@ Future<void> _handleStartUrl(ProviderContainer c) async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('pl');
-  Intl.defaultLocale = 'pl';
+  await initAppFormatting(
+    resolveAppLocale(WidgetsBinding.instance.platformDispatcher.locales),
+  );
 
   final fixed = _fixedBackend();
   final container = ProviderContainer(
@@ -101,14 +99,14 @@ Future<void> main() async {
       throw StateError('no server yet'); // the server screen comes first
     }
     await _handleStartUrl(container);
-    // Zalogowany wcześniej? (token zapisany lokalnie)
+    // Already logged in before? (token saved locally)
     if (container.read(sessionProvider) == null) {
       container
           .read(sessionProvider.notifier)
           .set(await container.read(authApiProvider).restore());
     }
   } catch (_) {
-    // serwer niedostępny — pokażemy ekran logowania z komunikatem
+    // server unreachable — the login screen will show the error
   }
 
   runApp(

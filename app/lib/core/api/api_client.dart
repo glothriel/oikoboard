@@ -15,7 +15,15 @@ class ApiException implements Exception {
   String toString() => 'ApiException($status): $message';
 }
 
-/// Cienka warstwa nad REST-em (zapisy). Odczyty idą przez [SyncClient].
+/// The server didn't answer at all.
+class ConnectionException implements Exception {
+  const ConnectionException();
+
+  @override
+  String toString() => 'ConnectionException';
+}
+
+/// Thin layer over the REST API (writes). Reads go through [SyncClient].
 class ApiClient {
   ApiClient(this.baseUri, {this.token, this.onUnauthorized});
 
@@ -24,8 +32,8 @@ class ApiClient {
   final void Function()? onUnauthorized;
   final _http = http.Client();
 
-  /// Błędy zapisów do pokazania w UI (snackbar w shellu).
-  static final errors = StreamController<String>.broadcast();
+  /// Failed writes to show in the UI (a snackbar in the shell).
+  static final errors = StreamController<Exception>.broadcast();
 
   Future<dynamic> get(String path) => _send('GET', path);
   Future<dynamic> post(String path, Object body) => _send('POST', path, body);
@@ -35,7 +43,7 @@ class ApiClient {
   Future<dynamic> _send(String method, String path, [Object? body]) async {
     final req = http.Request(method, baseUri.resolve('/api/v1$path'));
     req.headers['Content-Type'] = 'application/json';
-    // Id operacji — wraca w zmianie przez WebSocket (potwierdzenie).
+    // Operation id — comes back in the change over the WebSocket (confirmation).
     req.headers['X-Mutation-Id'] = uuid.v4();
     if (token != null) req.headers['Authorization'] = 'Bearer $token';
     if (body != null) req.body = jsonEncode(body);
@@ -44,19 +52,20 @@ class ApiClient {
     try {
       res = await http.Response.fromStream(await _http.send(req));
     } catch (e) {
-      errors.add('Brak połączenia z serwerem');
+      errors.add(const ConnectionException());
       rethrow;
     }
     if (res.statusCode == 401) onUnauthorized?.call();
     if (res.statusCode >= 400) {
-      var msg = res.reasonPhrase ?? 'błąd';
+      var msg = res.reasonPhrase ?? '';
       try {
         msg =
             (jsonDecode(utf8.decode(res.bodyBytes)) as Map)['message']
                 as String;
       } catch (_) {}
-      errors.add(msg);
-      throw ApiException(res.statusCode, msg);
+      final error = ApiException(res.statusCode, msg);
+      errors.add(error);
+      throw error;
     }
     if (res.bodyBytes.isEmpty) return null;
     return jsonDecode(utf8.decode(res.bodyBytes));

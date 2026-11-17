@@ -78,6 +78,17 @@ List<CalendarEvent> _sorted(Iterable<CalendarEvent> e) =>
 /// Web: the app URL the connect flow returns to is marked with this.
 const calendarConnectParam = 'calendar_connect';
 
+/// Why connecting a calendar account failed; the calendar screen shows it.
+enum CalendarConnectFailure { cancelled, failed }
+
+class CalendarConnectError implements Exception {
+  const CalendarConnectError(this.failure);
+  final CalendarConnectFailure failure;
+
+  @override
+  String toString() => 'CalendarConnectError(${failure.name})';
+}
+
 class ApiCalendarRepository implements CalendarRepository {
   ApiCalendarRepository(this.api, this.sync);
   final ApiClient api;
@@ -188,11 +199,10 @@ class ApiCalendarRepository implements CalendarRepository {
   Future<String> _complete(Uri url, String verifier) async {
     final q = url.queryParameters;
     if (q['error'] != null) {
-      throw ApiException(
-        400,
+      throw CalendarConnectError(
         q['error'] == 'access_denied'
-            ? 'Anulowano podłączanie kalendarza.'
-            : 'Nie udało się podłączyć kalendarza.',
+            ? CalendarConnectFailure.cancelled
+            : CalendarConnectFailure.failed,
       );
     }
     final res = await api.post('/calendar/connections/complete', {
@@ -338,7 +348,7 @@ class MockCalendarRepository implements CalendarRepository {
   bool get canConnect => false;
 
   Never _unsupported() =>
-      throw UnsupportedError('niedostępne w trybie mock bez serwera');
+      throw UnsupportedError('not available in mock mode without a server');
 
   @override
   Future<List<CalendarConnection>> connections() async => const [];

@@ -12,6 +12,7 @@ import 'change.dart';
 import 'data.dart';
 import 'family.dart';
 import 'invite_dialog.dart';
+import 'l10n.dart';
 import 'mock/simulator.dart';
 import 'session.dart';
 
@@ -22,8 +23,8 @@ class _Destination {
   final IconData selectedIcon;
 }
 
-/// Wspólna rama aplikacji: pasek nawigacji (dół na telefonie, bok na
-/// szerokim ekranie), app bar i powiadomienia o zmianach od innych osób.
+/// Shared frame of the app: the navigation bar (bottom on a phone, side on a
+/// wide screen), the app bar and notices about changes by other members.
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key, required this.navigationShell});
   final StatefulNavigationShell navigationShell;
@@ -33,20 +34,26 @@ class AppShell extends ConsumerStatefulWidget {
 }
 
 class _AppShellState extends ConsumerState<AppShell> {
-  StreamSubscription<String>? _errors;
+  StreamSubscription<Exception>? _errors;
 
-  final _destinations = [
-    const _Destination('Ściana', Icons.dashboard_outlined, Icons.dashboard),
-    for (final m in modules) _Destination(m.title, m.icon, m.selectedIcon),
+  List<_Destination> _destinations(AppLocalizations l) => [
+    _Destination(l.navWall, Icons.dashboard_outlined, Icons.dashboard),
+    for (final m in modules) _Destination(m.title(l), m.icon, m.selectedIcon),
   ];
 
   @override
   void initState() {
     super.initState();
-    _errors = ApiClient.errors.stream.listen((msg) {
+    _errors = ApiClient.errors.stream.listen((error) {
       if (!mounted) return;
+      final l = context.l10n;
+      final text = switch (error) {
+        ApiException(:final message) =>
+          message.isEmpty ? l.commonError : message,
+        _ => l.commonNoServerConnection,
+      };
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(behavior: SnackBarBehavior.floating, content: Text(msg)),
+        SnackBar(behavior: SnackBarBehavior.floating, content: Text(text)),
       );
     });
   }
@@ -59,8 +66,9 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   void _onChange(Change change) {
     if (!mounted || change.actorId == ref.read(currentMemberProvider)) return;
+    final l = context.l10n;
     final text = modules
-        .map((m) => m.describeChange(change))
+        .map((m) => m.describeChange(l, change))
         .nonNulls
         .firstOrNull;
     if (text == null) return;
@@ -76,7 +84,11 @@ class _AppShellState extends ConsumerState<AppShell> {
               if (member != null) MemberAvatar(member, radius: 12),
               const SizedBox(width: 12),
               // not a current member (e.g. removed since)
-              Expanded(child: Text('${member?.name ?? 'Ktoś'}: $text')),
+              Expanded(
+                child: Text(
+                  l.shellChangeNotice(member?.name ?? l.commonSomeone, text),
+                ),
+              ),
             ],
           ),
         ),
@@ -95,9 +107,12 @@ class _AppShellState extends ConsumerState<AppShell> {
     });
     final index = widget.navigationShell.currentIndex;
     final width = MediaQuery.sizeOf(context).width;
+    final destinations = _destinations(context.l10n);
 
     final appBar = AppBar(
-      title: Text(index == 0 ? 'Oikoboard' : _destinations[index].title),
+      title: Text(
+        index == 0 ? context.l10n.appName : destinations[index].title,
+      ),
       actions: const [
         _OfflineBadge(),
         _SimulatorButton(),
@@ -114,7 +129,7 @@ class _AppShellState extends ConsumerState<AppShell> {
           selectedIndex: index,
           onDestinationSelected: _go,
           destinations: [
-            for (final d in _destinations)
+            for (final d in destinations)
               NavigationDestination(
                 icon: Icon(d.icon),
                 selectedIcon: Icon(d.selectedIcon),
@@ -145,7 +160,7 @@ class _AppShellState extends ConsumerState<AppShell> {
               ),
             ),
             destinations: [
-              for (final d in _destinations)
+              for (final d in destinations)
                 NavigationRailDestination(
                   icon: Icon(d.icon),
                   selectedIcon: Icon(d.selectedIcon),
@@ -172,7 +187,9 @@ class _SimulatorButton extends ConsumerWidget {
     final on = ref.watch(simulatorProvider);
     return IconButton(
       isSelected: on,
-      tooltip: on ? 'Zatrzymaj symulację rodziny' : 'Symuluj zmiany od rodziny',
+      tooltip: on
+          ? context.l10n.shellSimulatorStop
+          : context.l10n.shellSimulatorStart,
       icon: const Icon(Icons.bolt_outlined),
       selectedIcon: const Icon(Icons.bolt),
       onPressed: () => ref.read(simulatorProvider.notifier).toggle(),
@@ -180,8 +197,8 @@ class _SimulatorButton extends ConsumerWidget {
   }
 }
 
-/// Avatar w rogu: kto jest zalogowany, zaproszenia, przełączanie rodzin
-/// (gdy konto jest w kilku) i wylogowanie. W trybie mock — wybór osoby.
+/// Avatar in the corner: who is logged in, invitations, switching families
+/// (when the account is in several) and logging out. In mock mode — picking a member.
 class _AccountMenu extends ConsumerWidget {
   const _AccountMenu();
 
@@ -198,7 +215,7 @@ class _AccountMenu extends ConsumerWidget {
             .switchMember(session, memberId);
         ref.read(sessionProvider.notifier).set(s);
       } catch (_) {
-        // komunikat pokazuje shell (ApiClient.errors)
+        // the shell shows the message (ApiClient.errors)
       }
     }
 
@@ -248,32 +265,32 @@ class _AccountMenu extends ConsumerWidget {
         const PopupMenuDivider(),
         PopupMenuItem(
           value: () => openAiScreen(context),
-          child: const Row(
+          child: Row(
             children: [
               Icon(Icons.smart_toy_outlined, size: 20),
               SizedBox(width: 12),
-              Text('Czat AI (MCP)'),
+              Text(context.l10n.shellAiChat),
             ],
           ),
         ),
         if (!mock)
           PopupMenuItem(
             value: () => showInviteDialog(context),
-            child: const Row(
+            child: Row(
               children: [
                 Icon(Icons.person_add_alt, size: 20),
                 SizedBox(width: 12),
-                Text('Zaproś do rodziny'),
+                Text(context.l10n.shellInviteToFamily),
               ],
             ),
           ),
         PopupMenuItem(
           value: () => ref.read(sessionProvider.notifier).logout(),
-          child: const Row(
+          child: Row(
             children: [
               Icon(Icons.logout, size: 20),
               SizedBox(width: 12),
-              Text('Wyloguj'),
+              Text(context.l10n.commonLogOut),
             ],
           ),
         ),
@@ -286,7 +303,7 @@ class _AccountMenu extends ConsumerWidget {
   }
 }
 
-/// Ikonka, gdy nie ma połączenia z serwerem (dane mogą być nieaktualne).
+/// Icon shown when there is no connection to the server (data may be stale).
 class _OfflineBadge extends ConsumerWidget {
   const _OfflineBadge();
 
@@ -295,7 +312,7 @@ class _OfflineBadge extends ConsumerWidget {
     final online = ref.watch(onlineProvider).value ?? true;
     if (online) return const SizedBox();
     return Tooltip(
-      message: 'Brak połączenia — łączę ponownie…',
+      message: context.l10n.shellOffline,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8),
         child: Icon(

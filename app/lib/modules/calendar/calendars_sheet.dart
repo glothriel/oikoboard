@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/l10n.dart';
 import '../../core/widgets.dart';
 import 'models.dart';
 import 'repository.dart';
@@ -47,6 +48,7 @@ class _CalendarsSheetState extends ConsumerState<_CalendarsSheet> {
     final theme = Theme.of(context);
     final repo = ref.watch(calendarRepositoryProvider);
     final calendars = ref.watch(calendarsProvider).value ?? const [];
+    final l = context.l10n;
 
     return DraggableScrollableSheet(
       expand: false,
@@ -56,19 +58,14 @@ class _CalendarsSheetState extends ConsumerState<_CalendarsSheet> {
         controller: scroll,
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
         children: [
-          Text('Kalendarze rodziny', style: theme.textTheme.titleLarge),
+          Text(l.calendarsTitle, style: theme.textTheme.titleLarge),
           const SizedBox(height: 4),
-          Text(
-            'Wydarzenia są zapisywane w podłączonych kalendarzach '
-            '(np. Google) — zmiany działają w obie strony. Zadania z terminem '
-            'trafiają jako jeden wpis na dzień do kalendarza oznaczonego ✓.',
-            style: theme.textTheme.bodySmall,
-          ),
+          Text(l.calendarsIntro, style: theme.textTheme.bodySmall),
           const SizedBox(height: 8),
           if (calendars.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: Text('Żaden kalendarz nie jest jeszcze podłączony.'),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(l.calendarsNoneConnected),
             ),
           for (final c in calendars)
             ListTile(
@@ -78,8 +75,8 @@ class _CalendarsSheetState extends ConsumerState<_CalendarsSheet> {
               subtitle: Text(
                 [
                   if (c.account.isNotEmpty) c.account,
-                  if (!c.writable) 'tylko odczyt',
-                  if (c.todoTarget) 'zadania z terminem',
+                  if (!c.writable) l.commonReadOnly,
+                  if (c.todoTarget) l.calendarsTodoTag,
                   if (c.syncError.isNotEmpty) '⚠ ${c.syncError}',
                 ].join(' · '),
               ),
@@ -88,8 +85,8 @@ class _CalendarsSheetState extends ConsumerState<_CalendarsSheet> {
                 children: [
                   IconButton(
                     tooltip: c.todoTarget
-                        ? 'Tu trafiają zadania z terminem'
-                        : 'Pokazuj tu zadania z terminem',
+                        ? l.calendarsTodoTargetOn
+                        : l.calendarsTodoTargetOff,
                     isSelected: c.todoTarget,
                     icon: const Icon(Icons.checklist),
                     selectedIcon: Icon(
@@ -101,12 +98,12 @@ class _CalendarsSheetState extends ConsumerState<_CalendarsSheet> {
                         : () => repo.setTodoTarget(c.id),
                   ),
                   IconButton(
-                    tooltip: 'Synchronizuj teraz',
+                    tooltip: l.calendarsSyncNow,
                     icon: const Icon(Icons.sync),
                     onPressed: () => repo.syncNow(c.id),
                   ),
                   IconButton(
-                    tooltip: 'Odłącz od rodziny',
+                    tooltip: l.calendarsRemoveFromFamily,
                     icon: const Icon(Icons.link_off),
                     onPressed: () => repo.unlink(c.id),
                   ),
@@ -115,7 +112,7 @@ class _CalendarsSheetState extends ConsumerState<_CalendarsSheet> {
             ),
           if (repo.canConnect) ...[
             const Divider(height: 32),
-            Text('Twoje konta', style: theme.textTheme.titleMedium),
+            Text(l.calendarsYourAccounts, style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
             FutureBuilder(
               future: _connections,
@@ -139,7 +136,7 @@ class _CalendarsSheetState extends ConsumerState<_CalendarsSheet> {
             FilledButton.tonalIcon(
               onPressed: _connecting ? null : _connect,
               icon: const Icon(Icons.add_link),
-              label: const Text('Podłącz konto Google'),
+              label: Text(l.calendarsConnectGoogle),
             ),
           ],
         ],
@@ -213,9 +210,9 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
         title: Text(conn.account.isEmpty ? conn.provider : conn.account),
         subtitle: Text(
           conn.revoked
-              ? 'Dostęp cofnięty — podłącz konto ponownie'
+              ? context.l10n.calendarsAccessRevoked
               : conn.provider == 'mock'
-              ? 'konto testowe (mock)'
+              ? context.l10n.calendarsTestAccount
               : 'Google',
         ),
         children: [
@@ -223,9 +220,9 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
             future: _remote,
             builder: (context, snap) {
               if (snap.hasError) {
-                return const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text('Nie udało się pobrać listy kalendarzy.'),
+                return Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(context.l10n.calendarsLoadFailed),
                 );
               }
               if (!snap.hasData) {
@@ -240,7 +237,9 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
                     SwitchListTile(
                       secondary: ColorDot(rc.color, size: 12),
                       title: Text(rc.name),
-                      subtitle: rc.writable ? null : const Text('tylko odczyt'),
+                      subtitle: rc.writable
+                          ? null
+                          : Text(context.l10n.commonReadOnly),
                       value: rc.linked,
                       onChanged: (v) => _toggle(rc, v),
                     ),
@@ -252,7 +251,7 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
                       widget.onChanged();
                     },
                     icon: const Icon(Icons.logout),
-                    label: const Text('Odłącz konto (usuwa jego kalendarze)'),
+                    label: Text(context.l10n.calendarsDisconnectAccount),
                   ),
                 ],
               );

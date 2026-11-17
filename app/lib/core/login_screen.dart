@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'api/api_client.dart';
 import 'backend.dart';
 import 'family.dart';
+import 'l10n.dart';
 import 'mock/mock_auth_api.dart';
 import 'server_screen.dart';
 import 'session.dart';
@@ -11,8 +13,19 @@ final _optionsProvider = FutureProvider.autoDispose<AuthOptions>(
   (ref) => ref.watch(authApiProvider).options(),
 );
 
-/// Ekran logowania: Google (+ logowanie e-mailem w trybie dev, wybór
-/// osoby w trybie mock).
+/// The text for a login error shown on the screen.
+String _loginErrorText(AppLocalizations l, Object error) => switch (error) {
+  LoginError(:final failure) => switch (failure) {
+    LoginFailure.staleAttempt => l.loginErrorStale,
+    LoginFailure.cancelled => l.loginErrorCancelled,
+    LoginFailure.failed => l.loginErrorFailed,
+  },
+  ApiException(:final message) => message,
+  _ => '$error',
+};
+
+/// Login screen: Google (+ login by email in dev mode, picking a member in
+/// mock mode).
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -37,7 +50,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final s = await login(ref.read(authApiProvider));
       if (s != null) ref.read(sessionProvider.notifier).set(s);
     } catch (e) {
-      ref.read(loginMessageProvider.notifier).set('$e');
+      ref.read(loginMessageProvider.notifier).set(e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -51,6 +64,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final message = ref.watch(loginMessageProvider);
     final invite = ref.watch(pendingInviteProvider);
     final serverChoice = ref.watch(serverChoiceProvider);
+    final l = context.l10n;
 
     return Scaffold(
       body: Center(
@@ -72,15 +86,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Oikoboard',
+                l.appName,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.headlineMedium,
               ),
               const SizedBox(height: 8),
               Text(
-                invite != null
-                    ? 'Masz zaproszenie do rodziny — zaloguj się, żeby dołączyć.'
-                    : 'Wspólna tablica rodziny.',
+                invite != null ? l.loginInviteBanner : l.loginTagline,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyLarge,
               ),
@@ -91,7 +103,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: Padding(
                     padding: const EdgeInsets.all(12),
                     child: Text(
-                      message,
+                      _loginErrorText(l, message),
                       style: TextStyle(
                         color: theme.colorScheme.onErrorContainer,
                       ),
@@ -106,15 +118,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ],
                 error: (e, _) => [
                   Text(
-                    'Nie mogę połączyć się z serwerem'
-                    '${backend is ApiBackend ? ' (${backend.baseUri})' : ''}.',
+                    backend is ApiBackend
+                        ? l.loginServerUnreachableAt('${backend.baseUri}')
+                        : l.loginServerUnreachable,
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 12),
                   Center(
                     child: FilledButton.tonal(
                       onPressed: () => ref.invalidate(_optionsProvider),
-                      child: const Text('Spróbuj ponownie'),
+                      child: Text(l.commonTryAgain),
                     ),
                   ),
                 ],
@@ -130,23 +143,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.login),
-                      label: const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        child: Text('Zaloguj się przez Google'),
+                      label: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Text(l.loginWithGoogle),
                       ),
                     ),
                   if (!o.google && !o.devLogin && !o.mock)
-                    const Text(
-                      'Serwer nie ma skonfigurowanego logowania '
-                      '(OIKO_GOOGLE_CLIENT_ID).',
-                      textAlign: TextAlign.center,
-                    ),
+                    Text(l.loginNoGoogle, textAlign: TextAlign.center),
                   if (o.devLogin) ...[
                     const SizedBox(height: 32),
-                    Text(
-                      'Tryb deweloperski',
-                      style: theme.textTheme.labelLarge,
-                    ),
+                    Text(l.loginDevMode, style: theme.textTheme.labelLarge),
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -154,8 +160,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           child: TextField(
                             controller: _email,
                             keyboardType: TextInputType.emailAddress,
-                            decoration: const InputDecoration(
-                              labelText: 'E-mail (bez weryfikacji)',
+                            decoration: InputDecoration(
+                              labelText: l.loginEmailField,
                               border: OutlineInputBorder(),
                               isDense: true,
                             ),
@@ -165,12 +171,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const SizedBox(width: 8),
                         OutlinedButton(
                           onPressed: _busy ? null : _devLogin,
-                          child: const Text('Wejdź'),
+                          child: Text(l.loginEnter),
                         ),
                       ],
                     ),
                   ],
-                  if (o.mock) ..._mockPicker(theme),
+                  if (o.mock) ..._mockPicker(theme, l),
                 ],
               ),
               if (serverChoice && backend is ApiBackend) ...[
@@ -178,7 +184,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Center(
                   child: TextButton.icon(
                     icon: const Icon(Icons.dns_outlined, size: 18),
-                    label: Text('Serwer: ${backend.baseUri.host} — zmień'),
+                    label: Text(l.loginServerChange(backend.baseUri.host)),
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const ServerScreen()),
                     ),
@@ -198,9 +204,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _run((api) => api.devLogin(email));
   }
 
-  List<Widget> _mockPicker(ThemeData theme) => [
+  List<Widget> _mockPicker(ThemeData theme, AppLocalizations l) => [
     Text(
-      'Kim jesteś? (tryb mock)',
+      l.loginWhoAreYou,
       textAlign: TextAlign.center,
       style: theme.textTheme.titleMedium,
     ),

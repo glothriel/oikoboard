@@ -7,6 +7,7 @@ import '../../core/api/api_client.dart' show toApiDate;
 import '../../core/change.dart';
 import '../../core/family.dart';
 import '../../core/format.dart';
+import '../../core/l10n.dart';
 import '../../core/mock/mock_store.dart';
 import '../../core/module.dart';
 import '../../core/widgets.dart';
@@ -20,7 +21,7 @@ class TodoModule extends FamilyModule {
   @override
   String get id => 'todo';
   @override
-  String get title => 'Listy';
+  String title(AppLocalizations l) => l.todoModuleTitle;
   @override
   IconData get icon => Icons.checklist_outlined;
   @override
@@ -31,29 +32,31 @@ class TodoModule extends FamilyModule {
 
   @override
   Widget? buildWallTile(BuildContext context) => WallCard(
-    title: title,
+    title: title(context.l10n),
     icon: selectedIcon,
     path: path,
     child: const _TodoWallTile(),
   );
 
   @override
-  String? describeChange(Change change) {
+  String? describeChange(AppLocalizations l, Change change) {
     if (change.collection == listsEntity) {
-      final name = change.data['name'];
+      final name = '${change.data['name']}';
       return switch (change.op) {
-        ChangeOp.created => 'nowa lista „$name”',
-        ChangeOp.updated => 'zmieniona lista „$name”',
-        ChangeOp.deleted => 'usunięta lista „$name”',
+        ChangeOp.created => l.changeListCreated(name),
+        ChangeOp.updated => l.changeListUpdated(name),
+        ChangeOp.deleted => l.changeListDeleted(name),
       };
     }
     if (change.collection != itemsEntity) return null;
-    final t = change.data['title'];
+    final t = '${change.data['title']}';
     return switch (change.op) {
-      ChangeOp.created => 'dodano „$t”',
+      ChangeOp.created => l.changeTaskAdded(t),
       ChangeOp.updated =>
-        change.data['done'] == true ? 'odhaczono „$t” ✓' : 'zmieniono „$t”',
-      ChangeOp.deleted => 'usunięto „$t”',
+        change.data['done'] == true
+            ? l.changeTaskChecked(t)
+            : l.changeTaskChanged(t),
+      ChangeOp.deleted => l.changeTaskDeleted(t),
     };
   }
 
@@ -157,6 +160,7 @@ class _TodoWallTile extends ConsumerWidget {
     final items = ref.watch(todoOpenItemsProvider).value ?? const <TodoItem>[];
     final family = ref.watch(familyProvider);
     final me = ref.watch(currentMemberProvider);
+    final l10n = context.l10n;
 
     final open = items.where((i) => !i.done).toList();
     // Overdue first, all of them, oldest first.
@@ -187,7 +191,7 @@ class _TodoWallTile extends ConsumerWidget {
       subtitle: i.due == null
           ? null
           : Text(
-              'termin: ${relativeDay(i.due!)}',
+              l10n.todoDue(relativeDay(l10n, i.due!)),
               style: TextStyle(
                 color: i.overdue ? theme.colorScheme.error : null,
               ),
@@ -211,7 +215,9 @@ class _TodoWallTile extends ConsumerWidget {
                 const SizedBox(width: 8),
                 Expanded(child: Text(l.name)),
                 Text(
-                  '${open.where((i) => i.listId == l.id).length} do zrobienia',
+                  l10n.todoOpenCount(
+                    open.where((i) => i.listId == l.id).length,
+                  ),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.outline,
                   ),
@@ -222,7 +228,7 @@ class _TodoWallTile extends ConsumerWidget {
         if (overdue.isNotEmpty) ...[
           const Divider(height: 20),
           Text(
-            'Zaległe (${overdue.length})',
+            l10n.todoOverdueSection(overdue.length),
             style: theme.textTheme.labelLarge?.copyWith(
               color: theme.colorScheme.error,
             ),

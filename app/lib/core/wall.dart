@@ -5,17 +5,18 @@ import 'package:material_ui/material_ui.dart';
 import '../modules/registry.dart';
 import 'family.dart';
 import 'format.dart';
+import 'l10n.dart';
 import 'session.dart';
 
-/// Ekran główny — „ściana” z kafelkami wszystkich modułów.
+/// Home screen — the “wall” with a tile for each module.
 class WallScreen extends ConsumerWidget {
   const WallScreen({super.key});
 
-  String _greeting() {
+  String _greeting(AppLocalizations l) {
     final h = DateTime.now().hour;
-    if (h < 11) return 'Dzień dobry';
-    if (h < 18) return 'Cześć';
-    return 'Dobry wieczór';
+    if (h < 11) return l.wallGreetingMorning;
+    if (h < 18) return l.wallGreetingDay;
+    return l.wallGreetingEvening;
   }
 
   @override
@@ -23,6 +24,7 @@ class WallScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final session = ref.watch(sessionProvider)!;
     final me = session.me;
+    final l = context.l10n;
     final tiles = [for (final m in modules) ?m.buildWallTile(context)];
 
     return LayoutBuilder(
@@ -41,7 +43,7 @@ class WallScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(pad),
           children: [
             Text(
-              '${_greeting()}, ${me.name}!',
+              l.wallGreeting(_greeting(l), me.name),
               style: theme.textTheme.headlineSmall,
             ),
             const SizedBox(height: 2),

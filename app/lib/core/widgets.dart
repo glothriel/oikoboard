@@ -1,7 +1,9 @@
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
-/// Karta modułu na ekranie głównym.
+import 'l10n.dart';
+
+/// A module's card on the home screen.
 class WallCard extends StatelessWidget {
   const WallCard({
     super.key,
@@ -40,7 +42,7 @@ class WallCard extends StatelessWidget {
                 ),
                 TextButton(
                   onPressed: () => context.go(path),
-                  child: const Text('Otwórz'),
+                  child: Text(context.l10n.commonOpen),
                 ),
               ],
             ),

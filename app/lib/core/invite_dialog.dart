@@ -4,9 +4,10 @@ import 'package:material_ui/material_ui.dart';
 
 import 'api/api_client.dart';
 import 'family.dart';
+import 'l10n.dart';
 import 'session.dart';
 
-/// „Zaproś do rodziny”: link dla nowej osoby albo dla członka bez konta.
+/// “Invite to family”: a link for a new person, or for a member without an account.
 Future<void> showInviteDialog(BuildContext context) =>
     showDialog(context: context, builder: (_) => const _InviteDialog());
 
@@ -18,7 +19,7 @@ class _InviteDialog extends ConsumerStatefulWidget {
 }
 
 class _InviteDialogState extends ConsumerState<_InviteDialog> {
-  String? _memberId; // null = nowa osoba
+  String? _memberId; // null = a new person
   bool _busy = false;
   CreatedInvite? _invite;
 
@@ -30,7 +31,7 @@ class _InviteDialogState extends ConsumerState<_InviteDialog> {
           .createInvite(ref.read(sessionProvider)!, memberId: _memberId);
       setState(() => _invite = inv);
     } on ApiException {
-      // komunikat pokazuje shell (ApiClient.errors)
+      // the shell shows the message (ApiClient.errors)
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -41,9 +42,10 @@ class _InviteDialogState extends ConsumerState<_InviteDialog> {
     final session = ref.watch(sessionProvider)!;
     final withoutAccount = session.members.where((m) => !m.hasAccount).toList();
     final invite = _invite;
+    final l = context.l10n;
 
     return AlertDialog(
-      title: Text('Zaproś do: ${session.householdName}'),
+      title: Text(l.inviteTitle(session.householdName ?? '')),
       content: SizedBox(
         width: 420,
         child: invite == null
@@ -51,26 +53,24 @@ class _InviteDialogState extends ConsumerState<_InviteDialog> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Kogo zapraszasz?'),
+                  Text(l.inviteWhom),
                   const SizedBox(height: 8),
                   RadioGroup<String?>(
                     groupValue: _memberId,
                     onChanged: (v) => setState(() => _memberId = v),
                     child: Column(
                       children: [
-                        const RadioListTile<String?>(
+                        RadioListTile<String?>(
                           value: null,
-                          title: Text('Nową osobę'),
-                          subtitle: Text('Sama wybierze, jak ją nazywać'),
+                          title: Text(l.inviteNewPerson),
+                          subtitle: Text(l.inviteNewPersonHint),
                         ),
                         for (final Member m in withoutAccount)
                           RadioListTile<String?>(
                             value: m.id,
                             secondary: MemberAvatar(m, radius: 14),
                             title: Text(m.name),
-                            subtitle: const Text(
-                              'Jest w rodzinie, nie ma konta',
-                            ),
+                            subtitle: Text(l.inviteMemberNoAccount),
                           ),
                       ],
                     ),
@@ -81,9 +81,7 @@ class _InviteDialogState extends ConsumerState<_InviteDialog> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
-                    'Wyślij ten link domownikowi. Działa raz, przez 7 dni.',
-                  ),
+                  Text(l.inviteSendLink),
                   const SizedBox(height: 12),
                   SelectableText(
                     invite.link,
@@ -96,27 +94,27 @@ class _InviteDialogState extends ConsumerState<_InviteDialog> {
           ? [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Anuluj'),
+                child: Text(l.commonCancel),
               ),
               FilledButton(
                 onPressed: _busy ? null : _create,
-                child: const Text('Utwórz link'),
+                child: Text(l.inviteCreateLink),
               ),
             ]
           : [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Zamknij'),
+                child: Text(l.commonClose),
               ),
               FilledButton.icon(
                 icon: const Icon(Icons.copy, size: 18),
-                label: const Text('Kopiuj'),
+                label: Text(l.commonCopy),
                 onPressed: () async {
                   await Clipboard.setData(ClipboardData(text: invite.link));
                   if (!context.mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Skopiowano link')),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(l.inviteLinkCopied)));
                 },
               ),
             ],

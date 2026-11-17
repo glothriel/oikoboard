@@ -4,16 +4,15 @@ import '../../core/api/api_client.dart' show fromApiTime, toApiTime;
 
 /// How the calendar screen shows time.
 enum CalendarView {
-  day('day', 'Dzień', 1),
-  threeDays('3days', '3 dni', 3),
-  week('week', 'Tydzień', 7),
-  month('month', 'Miesiąc', 0);
+  day('day', 1),
+  threeDays('3days', 3),
+  week('week', 7),
+  month('month', 0);
 
-  const CalendarView(this.param, this.label, this.days);
+  const CalendarView(this.param, this.days);
 
   /// Name in the API.
   final String param;
-  final String label;
 
   /// Days shown side by side; 0 for the month grid.
   final int days;
@@ -247,17 +246,16 @@ class RemoteCalendar {
 
 /// Simple repeat choices offered in the editor (anything else is kept as-is).
 enum Repeat {
-  none(null, 'Nie powtarza się'),
-  daily('RRULE:FREQ=DAILY', 'Codziennie'),
-  weekdays('RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR', 'W dni robocze'),
-  weekly('RRULE:FREQ=WEEKLY', 'Co tydzień'),
-  monthly('RRULE:FREQ=MONTHLY', 'Co miesiąc'),
-  yearly('RRULE:FREQ=YEARLY', 'Co rok'),
-  custom(null, 'Niestandardowo');
+  none(null),
+  daily('RRULE:FREQ=DAILY'),
+  weekdays('RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR'),
+  weekly('RRULE:FREQ=WEEKLY'),
+  monthly('RRULE:FREQ=MONTHLY'),
+  yearly('RRULE:FREQ=YEARLY'),
+  custom(null);
 
-  const Repeat(this.rule, this.label);
+  const Repeat(this.rule);
   final String? rule;
-  final String label;
 
   static Repeat of(List<String> recurrence) {
     if (recurrence.isEmpty) return Repeat.none;

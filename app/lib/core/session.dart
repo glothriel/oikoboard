@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'backend.dart';
 import 'family.dart';
 
-/// Zalogowane konto (osoba z e-mailem). Członek rodziny to osobna rzecz.
+/// The signed-in account (a person with an email). A family member is a separate thing.
 class Account {
   const Account({required this.id, required this.email, required this.name});
   final String id;
@@ -18,7 +18,7 @@ class Account {
   );
 }
 
-/// Rodzina, do której należy konto.
+/// The family the account belongs to.
 class Membership {
   const Membership(this.memberId, this.householdId, this.householdName);
   final String memberId;
@@ -46,7 +46,7 @@ class Session {
   final String token;
   final Account user;
 
-  /// null = konto jeszcze bez rodziny (ekran „załóż / dołącz”).
+  /// null = the account has no family yet (the “create / join” screen).
   final String? memberId;
   final String? householdId;
   final String? householdName;
@@ -65,10 +65,10 @@ class AuthOptions {
   });
   final bool google;
 
-  /// Logowanie samym e-mailem — tylko lokalnie (OIKO_DEV_LOGIN=1).
+  /// Email-only login — local only (OIKO_DEV_LOGIN=1).
   final bool devLogin;
 
-  /// Tryb bez serwera: wybór członka rodziny z mocka.
+  /// No-server mode: picking a family member from the mock.
   final bool mock;
 }
 
@@ -81,7 +81,7 @@ class InvitePreview {
   });
   final String householdName;
 
-  /// Zaproszenie dla konkretnego członka (np. „Kuba”), albo null = nowa osoba.
+  /// An invitation for a specific member (e.g. “Kuba”), or null = a new person.
   final String? memberName;
   final String? invitedBy;
   final bool alreadyMember;
@@ -97,19 +97,19 @@ class CreatedInvite {
 abstract interface class AuthApi {
   Future<AuthOptions> options();
 
-  /// Przywraca zapisaną sesję (np. po odświeżeniu strony), albo null.
+  /// Restores the saved session (e.g. after a page reload), or null.
   Future<Session?> restore();
 
-  /// Web: przekierowuje całą stronę do Google (wynik odbiera
-  /// [completeRedirect] po powrocie). Android: zwraca sesję.
+  /// Web: redirects the whole page to Google (the result is picked up by
+  /// [completeRedirect] after returning). Android: returns the session.
   Future<Session?> loginWithGoogle();
 
-  /// Web: dokończenie logowania, gdy adres zawiera `?code=` / `?error=`.
+  /// Web: finishes the login when the address contains `?code=` / `?error=`.
   Future<Session?> completeRedirect(Uri url);
 
   Future<Session> devLogin(String email);
 
-  /// Mock: zalogowanie jako członek rodziny z mocka.
+  /// Mock: logs in as a family member from the mock.
   Future<Session> mockLogin(String memberId);
 
   Future<Session> reload(Session s);
@@ -121,11 +121,14 @@ abstract interface class AuthApi {
   Future<void> logout(Session s);
 }
 
+/// Why a login failed; the login screen shows the matching message.
+enum LoginFailure { staleAttempt, cancelled, failed }
+
 class LoginError implements Exception {
-  const LoginError(this.message);
-  final String message;
+  const LoginError(this.failure);
+  final LoginFailure failure;
   @override
-  String toString() => message;
+  String toString() => 'LoginError(${failure.name})';
 }
 
 final authApiProvider = Provider<AuthApi>(
@@ -149,8 +152,8 @@ final sessionProvider = NotifierProvider<SessionNotifier, Session?>(
   SessionNotifier.new,
 );
 
-/// Token z linku zaproszenia, czekający na zalogowanie / decyzję.
-/// Trzymany też w pamięci przeglądarki — przeżywa przekierowanie do Google.
+/// Token from an invitation link, waiting for login / a decision.
+/// Also kept in browser storage — survives the redirect to Google.
 class PendingInvite extends Notifier<String?> {
   static const _key = 'oiko.invite';
 
@@ -173,7 +176,7 @@ final pendingInviteProvider = NotifierProvider<PendingInvite, String?>(
   PendingInvite.new,
 );
 
-/// Token zaproszenia z wklejonego linku (`...?invite=XYZ`) albo gołego tokena.
+/// Invitation token from a pasted link (`...?invite=XYZ`) or a bare token.
 String? parseInvite(String text) {
   final t = text.trim();
   if (t.isEmpty) return null;
@@ -183,13 +186,14 @@ String? parseInvite(String text) {
   return RegExp(r'^[A-Za-z0-9_-]{20,}$').hasMatch(t) ? t : null;
 }
 
-/// Błąd logowania do pokazania na ekranie logowania (np. po powrocie z Google).
-class LoginMessage extends Notifier<String?> {
+/// Login error to show on the login screen (e.g. after returning from
+/// Google): a [LoginError], an [ApiException] or any other error.
+class LoginMessage extends Notifier<Object?> {
   @override
-  String? build() => null;
-  void set(String? m) => state = m;
+  Object? build() => null;
+  void set(Object? error) => state = error;
 }
 
-final loginMessageProvider = NotifierProvider<LoginMessage, String?>(
+final loginMessageProvider = NotifierProvider<LoginMessage, Object?>(
   LoginMessage.new,
 );

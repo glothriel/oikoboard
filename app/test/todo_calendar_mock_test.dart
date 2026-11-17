@@ -14,6 +14,14 @@ import 'package:oikoboard/modules/todo/repository.dart';
 /// Due tasks show in the calendar as one chip per day; the chip opens the
 /// day's tasks, and ticking the last one removes the chip.
 void main() {
+  // The UI tests assert the Polish texts: the device locale is Polish here.
+  setUp(() {
+    TestWidgetsFlutterBinding.ensureInitialized()
+        .platformDispatcher
+        .localesTestValue = const [
+      Locale('pl'),
+    ];
+  });
   testWidgets('due tasks in the calendar (mock)', (tester) async {
     await initializeDateFormatting('pl');
     Intl.defaultLocale = 'pl';

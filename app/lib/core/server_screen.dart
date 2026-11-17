@@ -4,10 +4,11 @@ import 'package:http/http.dart' as http;
 import 'package:material_ui/material_ui.dart';
 
 import 'backend.dart';
+import 'l10n.dart';
 import 'session.dart';
 
 /// First start on Android/desktop: which server (the family's own instance).
-/// Also reachable from the login screen ("Zmień serwer").
+/// Also reachable from the login screen (“change server”).
 class ServerScreen extends ConsumerStatefulWidget {
   const ServerScreen({super.key});
 
@@ -33,7 +34,7 @@ class _ServerScreenState extends ConsumerState<ServerScreen> {
   Future<void> _connect() async {
     final url = parseServerUrl(_url.text);
     if (url == null) {
-      setState(() => _error = 'To nie wygląda na adres serwera.');
+      setState(() => _error = context.l10n.serverNotAnAddress);
       return;
     }
     setState(() {
@@ -51,7 +52,7 @@ class _ServerScreenState extends ConsumerState<ServerScreen> {
       if (mounted) {
         setState(() {
           _busy = false;
-          _error = 'Pod adresem $url nie odpowiada serwer Oikoboard.';
+          _error = context.l10n.serverNotOikoboard('$url');
         });
       }
       return;
@@ -81,14 +82,13 @@ class _ServerScreenState extends ConsumerState<ServerScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Serwer rodziny',
+                context.l10n.serverTitle,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.headlineMedium,
               ),
               const SizedBox(height: 8),
               Text(
-                'Podaj adres serwera Oikoboard Twojej rodziny '
-                '(np. oiko.example.com).',
+                context.l10n.serverIntro,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyLarge,
               ),
@@ -99,7 +99,7 @@ class _ServerScreenState extends ConsumerState<ServerScreen> {
                 keyboardType: TextInputType.url,
                 autocorrect: false,
                 decoration: InputDecoration(
-                  labelText: 'Adres serwera',
+                  labelText: context.l10n.serverAddressLabel,
                   errorText: _error,
                   errorMaxLines: 3,
                 ),
@@ -115,7 +115,7 @@ class _ServerScreenState extends ConsumerState<ServerScreen> {
                           dimension: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Połącz'),
+                      : Text(context.l10n.commonConnect),
                 ),
               ),
             ],

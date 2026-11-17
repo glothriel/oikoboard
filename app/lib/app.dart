@@ -1,10 +1,9 @@
-import 'package:flutter_localizations/flutter_localizations.dart'
-    show GlobalWidgetsLocalizations;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'core/backend.dart';
+import 'core/l10n.dart';
 import 'core/login_screen.dart';
 import 'core/onboarding_screen.dart';
 import 'core/server_screen.dart';
@@ -45,13 +44,15 @@ class OikoboardApp extends ConsumerWidget {
         !session.hasHousehold ||
         invite != null) {
       return MaterialApp(
-        title: 'Oikoboard',
+        onGenerateTitle: (context) => context.l10n.appName,
         debugShowCheckedModeBanner: false,
         theme: _theme(Brightness.light),
         darkTheme: _theme(Brightness.dark),
-        locale: _locale,
-        supportedLocales: const [_locale],
-        localizationsDelegates: _delegates,
+        localeResolutionCallback: (_, _) => resolveAppLocale(
+          WidgetsBinding.instance.platformDispatcher.locales,
+        ),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: appLocalizationsDelegates,
         home: noServer
             ? const ServerScreen()
             : session == null
@@ -59,7 +60,7 @@ class OikoboardApp extends ConsumerWidget {
             : const OnboardingScreen(),
       );
     }
-    // Inna osoba lub inna rodzina = nowy router od ekranu głównego.
+    // Another person or family = a new router from the home screen.
     return _LoggedInApp(key: ValueKey('${session.token}/${session.memberId}'));
   }
 }
@@ -83,23 +84,18 @@ class _LoggedInAppState extends State<_LoggedInApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Oikoboard',
+      onGenerateTitle: (context) => context.l10n.appName,
       debugShowCheckedModeBanner: false,
       routerConfig: _router,
       theme: _theme(Brightness.light),
       darkTheme: _theme(Brightness.dark),
-      locale: _locale,
-      supportedLocales: const [_locale],
-      localizationsDelegates: _delegates,
+      localeResolutionCallback: (_, _) =>
+          resolveAppLocale(WidgetsBinding.instance.platformDispatcher.locales),
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: appLocalizationsDelegates,
     );
   }
 }
-
-const _locale = Locale('pl');
-const _delegates = [
-  GlobalMaterialLocalizations.delegate,
-  GlobalWidgetsLocalizations.delegate,
-];
 
 GoRouter _buildRouter() => GoRouter(
   initialLocation: '/',

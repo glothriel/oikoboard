@@ -10,10 +10,10 @@ import '../session.dart';
 import 'api_client.dart';
 import 'pkce.dart';
 
-/// Logowanie przez backend (Google OIDC). Przebieg — docs/auth.md:
-/// aplikacja otwiera /auth/google/start z adresem powrotu i PKCE
-/// challenge, wraca z jednorazowym kodem i wymienia go (z verifierem)
-/// na token sesji.
+/// Login through the backend (Google OIDC). Flow — docs/auth.md: the app
+/// opens /auth/google/start with a return address and a PKCE challenge,
+/// comes back with a one-time code and exchanges it (with the verifier)
+/// for a session token.
 class HttpAuthApi implements AuthApi {
   HttpAuthApi(this.baseUri);
   final Uri baseUri;
@@ -72,7 +72,7 @@ class HttpAuthApi implements AuthApi {
         callbackUrlScheme: 'oikoboard',
       );
     } catch (_) {
-      return null; // zamknięte okno logowania
+      return null; // the login window was closed
     }
     return _finish(Uri.parse(result), verifier);
   }
@@ -85,9 +85,7 @@ class HttpAuthApi implements AuthApi {
     final verifier = prefs.getString(_verifierKey);
     await prefs.remove(_verifierKey);
     if (verifier == null) {
-      throw const LoginError(
-        'Logowanie zaczęło się w innym oknie — spróbuj ponownie.',
-      );
+      throw const LoginError(LoginFailure.staleAttempt);
     }
     return _finish(url, verifier);
   }
@@ -95,10 +93,11 @@ class HttpAuthApi implements AuthApi {
   Future<Session> _finish(Uri url, String verifier) async {
     final q = url.queryParameters;
     if (q['error'] != null) {
-      throw LoginError(switch (q['error']) {
-        'access_denied' => 'Logowanie anulowane.',
-        _ => 'Nie udało się zalogować przez Google.',
-      });
+      throw LoginError(
+        q['error'] == 'access_denied'
+            ? LoginFailure.cancelled
+            : LoginFailure.failed,
+      );
     }
     final res = await _client().post('/auth/exchange', {
       'code': q['code'],
@@ -116,7 +115,7 @@ class HttpAuthApi implements AuthApi {
 
   @override
   Future<Session> mockLogin(String memberId) =>
-      throw UnsupportedError('tylko mock');
+      throw UnsupportedError('mock login is only available in mock mode');
 
   Future<Session> _store(String token) async {
     final session = await _me(token);
@@ -168,8 +167,8 @@ class HttpAuthApi implements AuthApi {
     final j =
         await _client(s).post('/invites', {'member_id': ?memberId}) as Map;
     final token = j['token'] as String;
-    // Link do aplikacji webowej: na webie — ten sam adres, na którym
-    // jesteśmy; poza webem — z konfiguracji serwera (OIKO_APP_URL).
+    // Link to the web app: on the web, the same address we are on; elsewhere,
+    // from the server configuration (OIKO_APP_URL).
     final link = kIsWeb
         ? Uri.parse(webAppUrl)
               .replace(queryParameters: {'invite': token})

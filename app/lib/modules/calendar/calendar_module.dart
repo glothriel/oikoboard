@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/change.dart';
 import '../../core/format.dart';
+import '../../core/l10n.dart';
 import '../../core/mock/mock_store.dart';
 import '../../core/module.dart';
 import '../../core/widgets.dart';
@@ -18,7 +19,7 @@ class CalendarModule extends FamilyModule {
   @override
   String get id => 'calendar';
   @override
-  String get title => 'Kalendarz';
+  String title(AppLocalizations l) => l.calendarModuleTitle;
   @override
   IconData get icon => Icons.calendar_month_outlined;
   @override
@@ -29,28 +30,28 @@ class CalendarModule extends FamilyModule {
 
   @override
   Widget? buildWallTile(BuildContext context) => WallCard(
-    title: title,
+    title: title(context.l10n),
     icon: selectedIcon,
     path: path,
     child: const _CalendarWallTile(),
   );
 
   @override
-  String? describeChange(Change change) {
+  String? describeChange(AppLocalizations l, Change change) {
     if (change.collection == calendarsEntity) {
-      final n = change.data['name'];
+      final n = '${change.data['name']}';
       return switch (change.op) {
-        ChangeOp.created => 'podłączony kalendarz „$n”',
-        ChangeOp.deleted => 'odłączony kalendarz „$n”',
+        ChangeOp.created => l.changeCalendarConnected(n),
+        ChangeOp.deleted => l.changeCalendarDisconnected(n),
         ChangeOp.updated => null,
       };
     }
     if (change.collection != eventsEntity) return null;
-    final t = change.data['title'];
+    final t = '${change.data['title']}';
     return switch (change.op) {
-      ChangeOp.created => 'nowe wydarzenie „$t”',
-      ChangeOp.updated => 'zmienione wydarzenie „$t”',
-      ChangeOp.deleted => 'usunięte wydarzenie „$t”',
+      ChangeOp.created => l.changeEventCreated(t),
+      ChangeOp.updated => l.changeEventUpdated(t),
+      ChangeOp.deleted => l.changeEventDeleted(t),
     };
   }
 
@@ -195,6 +196,7 @@ class _CalendarWallTile extends ConsumerWidget {
             .value ??
         const <CalendarEvent>[];
     final tomorrow = today.add(const Duration(days: 1));
+    final l = context.l10n;
     final soon = events
         .where(
           (e) =>
@@ -238,7 +240,7 @@ class _CalendarWallTile extends ConsumerWidget {
                 ),
                 Text(
                   [
-                    if (showDay) relativeDay(e.start),
+                    if (showDay) relativeDay(l, e.start),
                     if (!e.allDay) hm(e.start),
                   ].join(' '),
                   style: theme.textTheme.bodySmall,
@@ -252,9 +254,9 @@ class _CalendarWallTile extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        section('Dziś', eventsOn(events, today)),
-        section('Jutro', eventsOn(events, tomorrow)),
-        if (soon.isNotEmpty) section('Wkrótce', soon, showDay: true),
+        section(l.dateToday, eventsOn(events, today)),
+        section(l.dateTomorrow, eventsOn(events, tomorrow)),
+        if (soon.isNotEmpty) section(l.calendarSoon, soon, showDay: true),
       ],
     );
   }

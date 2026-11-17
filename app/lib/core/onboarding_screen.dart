@@ -2,10 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'api/api_client.dart';
+import 'l10n.dart';
 import 'session.dart';
 
-/// Po zalogowaniu, gdy konto nie ma jeszcze rodziny (albo przyszło
-/// z linkiem zaproszenia): dołącz do rodziny albo załóż nową.
+/// After logging in, when the account has no family yet (or came with an
+/// invitation link): join a family or create a new one.
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -63,7 +64,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final token = parseInvite(_link.text);
     setState(
       () => _linkError = token == null
-          ? 'To nie wygląda na link z zaproszeniem'
+          ? context.l10n.onboardingNotInviteLink
           : null,
     );
     if (token != null) ref.read(pendingInviteProvider.notifier).set(token);
@@ -75,6 +76,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final session = ref.watch(sessionProvider)!;
     final invite = ref.watch(pendingInviteProvider);
     final firstName = session.user.name.split(' ').first;
+    final l = context.l10n;
 
     return Scaffold(
       body: Center(
@@ -85,7 +87,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             padding: const EdgeInsets.all(24),
             children: [
               Text(
-                firstName.isEmpty ? 'Cześć!' : 'Cześć, $firstName!',
+                firstName.isEmpty
+                    ? l.onboardingHiNoName
+                    : l.onboardingHiName(firstName),
                 style: theme.textTheme.headlineMedium,
               ),
               const SizedBox(height: 4),
@@ -102,7 +106,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   TextButton(
                     onPressed: () =>
                         ref.read(sessionProvider.notifier).logout(),
-                    child: const Text('Wyloguj'),
+                    child: Text(l.commonLogOut),
                   ),
                 ],
               ),
@@ -129,19 +133,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          'Załóż rodzinę',
+                          l.onboardingCreateFamily,
                           style: theme.textTheme.titleMedium,
                         ),
                         const SizedBox(height: 4),
-                        const Text(
-                          'Potem zaprosisz resztę domowników linkiem.',
-                        ),
+                        Text(l.onboardingCreateFamilyHint),
                         const SizedBox(height: 16),
                         TextField(
                           controller: _family,
-                          decoration: const InputDecoration(
-                            labelText: 'Nazwa rodziny',
-                            hintText: 'np. Kowalscy',
+                          decoration: InputDecoration(
+                            labelText: l.onboardingFamilyName,
+                            hintText: l.onboardingFamilyNameHint,
                             border: OutlineInputBorder(),
                           ),
                         ),
@@ -149,10 +151,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         TextField(
                           controller: _me,
                           decoration: InputDecoration(
-                            labelText: 'Jak cię nazywać w rodzinie?',
+                            labelText: l.onboardingMyName,
                             hintText: firstName.isEmpty
-                                ? 'np. Tata'
-                                : 'np. Tata (domyślnie: $firstName)',
+                                ? l.onboardingMyNameHint
+                                : l.onboardingMyNameHintDefault(firstName),
                             border: const OutlineInputBorder(),
                           ),
                           onSubmitted: (_) => _create(),
@@ -162,7 +164,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           alignment: Alignment.centerRight,
                           child: FilledButton(
                             onPressed: _busy ? null : _create,
-                            child: const Text('Załóż'),
+                            child: Text(l.onboardingCreate),
                           ),
                         ),
                       ],
@@ -177,18 +179,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          'Masz zaproszenie?',
+                          l.onboardingHaveInvite,
                           style: theme.textTheme.titleMedium,
                         ),
                         const SizedBox(height: 4),
-                        const Text(
-                          'Otwórz link od domownika albo wklej go tutaj.',
-                        ),
+                        Text(l.onboardingInviteHint),
                         const SizedBox(height: 16),
                         TextField(
                           controller: _link,
                           decoration: InputDecoration(
-                            labelText: 'Link z zaproszeniem',
+                            labelText: l.onboardingInviteLink,
                             border: const OutlineInputBorder(),
                             errorText: _linkError,
                           ),
@@ -199,7 +199,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           alignment: Alignment.centerRight,
                           child: FilledButton.tonal(
                             onPressed: _busy ? null : _useLink,
-                            child: const Text('Dalej'),
+                            child: Text(l.commonNext),
                           ),
                         ),
                       ],
@@ -240,9 +240,10 @@ class _InviteCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final preview = ref.watch(_invitePreviewProvider(token));
     final session = ref.watch(sessionProvider)!;
+    final l = context.l10n;
     final dismissLabel = session.hasHousehold
-        ? 'Wróć do: ${session.householdName}'
-        : 'Odrzuć';
+        ? l.onboardingBackTo(session.householdName ?? '')
+        : l.onboardingDecline;
 
     return Card(
       child: Padding(
@@ -252,12 +253,10 @@ class _InviteCard extends ConsumerWidget {
           error: (e, _) => Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Zaproszenie', style: theme.textTheme.titleMedium),
+              Text(l.onboardingInvitation, style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
               Text(
-                e is ApiException
-                    ? e.message
-                    : 'Nie udało się sprawdzić zaproszenia.',
+                e is ApiException ? e.message : l.onboardingInviteCheckFailed,
               ),
               const SizedBox(height: 16),
               Align(
@@ -272,12 +271,16 @@ class _InviteCard extends ConsumerWidget {
           data: (p) => Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Zaproszenie do rodziny', style: theme.textTheme.labelLarge),
+              Text(
+                l.onboardingFamilyInvitation,
+                style: theme.textTheme.labelLarge,
+              ),
               Text(p.householdName, style: theme.textTheme.headlineSmall),
               const SizedBox(height: 8),
-              if (p.invitedBy != null) Text('Zaprasza: ${p.invitedBy}'),
-              if (p.memberName != null) Text('Dołączysz jako: ${p.memberName}'),
-              if (p.alreadyMember) const Text('Już należysz do tej rodziny.'),
+              if (p.invitedBy != null)
+                Text(l.onboardingInvitedBy(p.invitedBy!)),
+              if (p.memberName != null) Text(l.onboardingJoinAs(p.memberName!)),
+              if (p.alreadyMember) Text(l.onboardingAlreadyMember),
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -286,7 +289,9 @@ class _InviteCard extends ConsumerWidget {
                   const SizedBox(width: 8),
                   FilledButton(
                     onPressed: busy ? null : onAccept,
-                    child: Text(p.alreadyMember ? 'Przejdź' : 'Dołącz'),
+                    child: Text(
+                      p.alreadyMember ? l.onboardingGoTo : l.onboardingJoin,
+                    ),
                   ),
                 ],
               ),

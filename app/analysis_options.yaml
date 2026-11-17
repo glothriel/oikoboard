@@ -5,3 +5,6 @@ analyzer:
     - build/**
     - android/**
     - web/**
+    # gen_l10n output (regenerated, not hand-written) uses flutter_localizations
+    # names that are deprecated in the SDK.
+    - lib/l10n/app_localizations*.dart

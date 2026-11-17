@@ -16,6 +16,14 @@ import 'package:oikoboard/modules/registry.dart';
 /// The calendar works in the in-memory mock: linked calendars, adding an
 /// event through the editor (with a calendar and repeat choice).
 void main() {
+  // The UI tests assert the Polish texts: the device locale is Polish here.
+  setUp(() {
+    TestWidgetsFlutterBinding.ensureInitialized()
+        .platformDispatcher
+        .localesTestValue = const [
+      Locale('pl'),
+    ];
+  });
   testWidgets('calendar screen and editor in mock mode', (tester) async {
     await initializeDateFormatting('pl');
     Intl.defaultLocale = 'pl';

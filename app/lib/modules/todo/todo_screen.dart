@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/family.dart';
 import '../../core/format.dart';
+import '../../core/l10n.dart';
 import '../../core/widgets.dart';
 import 'models.dart';
 import 'repository.dart';
@@ -22,13 +23,13 @@ class TodoScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final listsAsync = ref.watch(todoListsProvider);
-    // liczniki przy listach liczymy z niezrobionych zadań (widok todo.open)
+    // list counters count the open (not done) tasks (the todo.open view)
     final items = ref.watch(todoOpenItemsProvider).value ?? const <TodoItem>[];
     final lists = listsAsync.value;
     if (lists == null) {
       return Center(
         child: listsAsync.hasError
-            ? Text('Błąd: ${listsAsync.error}')
+            ? Text(context.l10n.todoError('${listsAsync.error}'))
             : const CircularProgressIndicator(),
       );
     }
@@ -38,7 +39,7 @@ class TodoScreen extends ConsumerWidget {
         lists.where((l) => l.id == selectedId).firstOrNull ?? lists.firstOrNull;
 
     final pane = selected == null
-        ? const Center(child: Text('Brak list — dodaj pierwszą.'))
+        ? Center(child: Text(context.l10n.todoNoLists))
         : TodoItemsPane(key: ValueKey(selected.id), list: selected);
 
     return LayoutBuilder(
@@ -75,7 +76,7 @@ int _openCount(List<TodoItem> items, String listId) =>
     items.where((i) => i.listId == listId && !i.done).length;
 
 Future<void> _addList(BuildContext context, WidgetRef ref, int count) async {
-  final name = await _askForName(context, title: 'Nowa lista');
+  final name = await _askForName(context, title: context.l10n.todoNewList);
   if (name == null) return;
   final list = await ref
       .read(todoRepositoryProvider)
@@ -102,15 +103,15 @@ Future<String?> _askForName(
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: const InputDecoration(labelText: 'Nazwa'),
+          decoration: InputDecoration(labelText: context.l10n.todoName),
           onSubmitted: (_) => submit(),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Anuluj'),
+            child: Text(context.l10n.commonCancel),
           ),
-          FilledButton(onPressed: submit, child: const Text('Zapisz')),
+          FilledButton(onPressed: submit, child: Text(context.l10n.commonSave)),
         ],
       );
     },
@@ -150,7 +151,7 @@ class _ListsPanel extends ConsumerWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           leading: const Icon(Icons.add),
-          title: const Text('Nowa lista'),
+          title: Text(context.l10n.todoNewList),
           onTap: () => _addList(context, ref, lists.length),
         ),
       ],
@@ -191,7 +192,7 @@ class _ListChips extends ConsumerWidget {
             ),
           ActionChip(
             avatar: const Icon(Icons.add, size: 18),
-            label: const Text('Lista'),
+            label: Text(context.l10n.todoListChip),
             onPressed: () => _addList(context, ref, lists.length),
           ),
         ],
@@ -213,7 +214,7 @@ class _TodoItemsPaneState extends ConsumerState<TodoItemsPane> {
   final _controller = TextEditingController();
   final _focus = FocusNode();
 
-  /// Usunięte swipe'em — chowamy od razu, nie czekając na „serwer”.
+  /// Swiped away — hidden right away, without waiting for the server.
   final _hidden = <String>{};
 
   @override
@@ -237,7 +238,7 @@ class _TodoItemsPaneState extends ConsumerState<TodoItemsPane> {
       case 'rename':
         final name = await _askForName(
           context,
-          title: 'Zmień nazwę',
+          title: context.l10n.todoRename,
           initial: widget.list.name,
         );
         if (name != null) {
@@ -252,6 +253,7 @@ class _TodoItemsPaneState extends ConsumerState<TodoItemsPane> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l = context.l10n;
     final items =
         ref.watch(todoListItemsProvider(widget.list.id)).value ??
         const <TodoItem>[];
@@ -284,9 +286,9 @@ class _TodoItemsPaneState extends ConsumerState<TodoItemsPane> {
             ),
             PopupMenuButton<String>(
               onSelected: _onMenu,
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'rename', child: Text('Zmień nazwę')),
-                PopupMenuItem(value: 'delete', child: Text('Usuń listę')),
+              itemBuilder: (_) => [
+                PopupMenuItem(value: 'rename', child: Text(l.todoRename)),
+                PopupMenuItem(value: 'delete', child: Text(l.todoDeleteList)),
               ],
             ),
           ],
@@ -298,7 +300,7 @@ class _TodoItemsPaneState extends ConsumerState<TodoItemsPane> {
           textInputAction: TextInputAction.done,
           onSubmitted: _add,
           decoration: InputDecoration(
-            hintText: 'Dodaj do „${widget.list.name}”…',
+            hintText: l.todoAddTo(widget.list.name),
             prefixIcon: const Icon(Icons.add),
             filled: true,
             border: OutlineInputBorder(
@@ -313,7 +315,7 @@ class _TodoItemsPaneState extends ConsumerState<TodoItemsPane> {
             padding: const EdgeInsets.symmetric(vertical: 24),
             child: Center(
               child: Text(
-                'Wszystko zrobione 🎉',
+                l.todoAllDone,
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: theme.colorScheme.outline,
                 ),
@@ -325,7 +327,7 @@ class _TodoItemsPaneState extends ConsumerState<TodoItemsPane> {
           ExpansionTile(
             tilePadding: EdgeInsets.zero,
             shape: const Border(),
-            title: Text('Zrobione (${done.length})'),
+            title: Text(l.todoDoneSection(done.length)),
             children: [for (final i in done) tile(i)],
           ),
       ],
@@ -379,7 +381,7 @@ class TodoItemTile extends ConsumerWidget {
         subtitle: item.due == null
             ? null
             : Text(
-                'termin: ${relativeDay(item.due!)}',
+                context.l10n.todoDue(relativeDay(context.l10n, item.due!)),
                 style: TextStyle(
                   color: item.overdue ? theme.colorScheme.error : null,
                 ),
@@ -464,18 +466,18 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
         children: [
           TextField(
             controller: _title,
-            decoration: const InputDecoration(labelText: 'Zadanie'),
+            decoration: InputDecoration(labelText: context.l10n.todoTask),
             onSubmitted: (_) => _save(),
           ),
           const SizedBox(height: 20),
-          Text('Kto się tym zajmie?', style: theme.textTheme.labelLarge),
+          Text(context.l10n.todoWhoDoesIt, style: theme.textTheme.labelLarge),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
               ChoiceChip(
-                label: const Text('Nikt'),
+                label: Text(context.l10n.commonNobody),
                 selected: _assignee == null,
                 onSelected: (_) => setState(() => _assignee = null),
               ),
@@ -498,13 +500,15 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
                 onPressed: _pickDue,
                 child: Text(
                   _due == null
-                      ? 'Ustaw termin'
-                      : 'Termin: ${relativeDay(_due!)}',
+                      ? context.l10n.todoSetDue
+                      : context.l10n.todoDueLabel(
+                          relativeDay(context.l10n, _due!),
+                        ),
                 ),
               ),
               if (_due != null)
                 IconButton(
-                  tooltip: 'Usuń termin',
+                  tooltip: context.l10n.todoRemoveDue,
                   icon: const Icon(Icons.close),
                   onPressed: () => setState(() => _due = null),
                 ),
@@ -516,13 +520,16 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
               TextButton.icon(
                 onPressed: _delete,
                 icon: const Icon(Icons.delete_outline),
-                label: const Text('Usuń'),
+                label: Text(context.l10n.commonDelete),
                 style: TextButton.styleFrom(
                   foregroundColor: theme.colorScheme.error,
                 ),
               ),
               const Spacer(),
-              FilledButton(onPressed: _save, child: const Text('Zapisz')),
+              FilledButton(
+                onPressed: _save,
+                child: Text(context.l10n.commonSave),
+              ),
             ],
           ),
         ],

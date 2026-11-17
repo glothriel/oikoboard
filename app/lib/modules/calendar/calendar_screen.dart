@@ -5,11 +5,33 @@ import 'package:material_ui/material_ui.dart';
 import '../../core/api/api_client.dart';
 import '../../core/family.dart';
 import '../../core/format.dart';
+import '../../core/l10n.dart';
 import 'calendars_sheet.dart';
 import 'models.dart';
 import 'repository.dart';
 import 'time_grid.dart';
 import 'todo_day_sheet.dart';
+
+extension CalendarViewLabel on CalendarView {
+  String label(AppLocalizations l) => switch (this) {
+    CalendarView.day => l.calendarViewDay,
+    CalendarView.threeDays => l.calendarViewThreeDays,
+    CalendarView.week => l.calendarViewWeek,
+    CalendarView.month => l.calendarViewMonth,
+  };
+}
+
+extension RepeatLabel on Repeat {
+  String label(AppLocalizations l) => switch (this) {
+    Repeat.none => l.repeatNone,
+    Repeat.daily => l.repeatDaily,
+    Repeat.weekdays => l.repeatWeekdays,
+    Repeat.weekly => l.repeatWeekly,
+    Repeat.monthly => l.repeatMonthly,
+    Repeat.yearly => l.repeatYearly,
+    Repeat.custom => l.repeatCustom,
+  };
+}
 
 /// Linked calendars where there's no `ref` (doesn't subscribe).
 List<FamilyCalendar> calendarsOf(BuildContext context) =>
@@ -28,10 +50,10 @@ Color eventColor(CalendarEvent e, BuildContext context) =>
     calendarOf(context, e.calendarId)?.color ??
     Theme.of(context).colorScheme.primary;
 
-String eventTimeLabel(CalendarEvent e) {
+String eventTimeLabel(AppLocalizations l, CalendarEvent e) {
   if (e.allDay) {
     final days = e.end.difference(e.start).inDays;
-    return days > 1 ? 'Cały dzień · $days dni' : 'Cały dzień';
+    return days > 1 ? l.calendarAllDaySpan(days) : l.calendarAllDay;
   }
   if (isSameDay(e.start, e.end)) return '${hm(e.start)} – ${hm(e.end)}';
   final f = DateFormat('d MMM HH:mm');
@@ -136,15 +158,28 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(e.message)));
       }
+    } on CalendarConnectError catch (e) {
+      if (mounted) {
+        final l = context.l10n;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(switch (e.failure) {
+              CalendarConnectFailure.cancelled => l.calendarConnectCancelled,
+              CalendarConnectFailure.failed => l.calendarConnectFailed,
+            }),
+          ),
+        );
+      }
     }
   }
 
   Widget _header(CalendarView view, {required bool wide}) {
     final theme = Theme.of(context);
-    final unit = switch (view) {
-      CalendarView.day => 'dzień',
-      CalendarView.month => 'miesiąc',
-      _ => 'okres',
+    final l = context.l10n;
+    final (previous, next) = switch (view) {
+      CalendarView.day => (l.calendarPrevDay, l.calendarNextDay),
+      CalendarView.month => (l.calendarPrevMonth, l.calendarNextMonth),
+      _ => (l.calendarPrevPeriod, l.calendarNextPeriod),
     };
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 8, 4),
@@ -166,7 +201,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 style: const ButtonStyle(visualDensity: VisualDensity.compact),
                 segments: [
                   for (final v in CalendarView.values)
-                    ButtonSegment(value: v, label: Text(v.label)),
+                    ButtonSegment(value: v, label: Text(v.label(l))),
                 ],
                 selected: {view},
                 onSelectionChanged: (s) => _setView(s.single),
@@ -174,7 +209,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             )
           else
             PopupMenuButton<CalendarView>(
-              tooltip: 'Widok',
+              tooltip: l.calendarViewTooltip,
               initialValue: view,
               onSelected: _setView,
               icon: Icon(_viewIcon(view)),
@@ -185,27 +220,27 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                     child: ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: Icon(_viewIcon(v)),
-                      title: Text(v.label),
+                      title: Text(v.label(l)),
                     ),
                   ),
               ],
             ),
           TextButton(
             onPressed: () => _select(dateOnly(DateTime.now())),
-            child: const Text('Dziś'),
+            child: Text(l.dateToday),
           ),
           IconButton(
-            tooltip: 'Kalendarze',
+            tooltip: l.calendarsTooltip,
             onPressed: () => showCalendarsSheet(context),
             icon: const Icon(Icons.tune),
           ),
           IconButton(
-            tooltip: 'Poprzedni $unit',
+            tooltip: previous,
             onPressed: () => _shift(view, -1),
             icon: const Icon(Icons.chevron_left),
           ),
           IconButton(
-            tooltip: 'Następny $unit',
+            tooltip: next,
             onPressed: () => _shift(view, 1),
             icon: const Icon(Icons.chevron_right),
           ),
@@ -228,6 +263,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     final view = viewPref.value!;
+    final l = context.l10n;
     // Subscribes the calendar.range view to what's on screen. While a new
     // range loads, the previous events stay.
     final events =
@@ -240,7 +276,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     return Scaffold(
       floatingActionButton: canAdd
           ? FloatingActionButton(
-              tooltip: 'Nowe wydarzenie',
+              tooltip: l.calendarNewEvent,
               onPressed: () => showEventEditor(context, day: _selected),
               child: const Icon(Icons.add),
             )
@@ -340,16 +376,12 @@ class _ConnectPrompt extends StatelessWidget {
             color: Theme.of(context).colorScheme.primary,
           ),
           const SizedBox(height: 12),
-          const Text(
-            'Podłącz kalendarz Google — wydarzenia będą się '
-            'synchronizować w obie strony.',
-            textAlign: TextAlign.center,
-          ),
+          Text(context.l10n.calendarConnectPrompt, textAlign: TextAlign.center),
           const SizedBox(height: 12),
           FilledButton.icon(
             onPressed: () => showCalendarsSheet(context),
             icon: const Icon(Icons.add_link),
-            label: const Text('Podłącz kalendarz'),
+            label: Text(context.l10n.calendarConnectAction),
           ),
         ],
       ),
@@ -384,11 +416,19 @@ class MonthGrid extends StatelessWidget {
   /// true: the grid fills the available space and shows event titles.
   final bool expand;
 
-  static const _weekdays = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l = context.l10n;
+    final weekdays = [
+      l.calendarWeekdayMon,
+      l.calendarWeekdayTue,
+      l.calendarWeekdayWed,
+      l.calendarWeekdayThu,
+      l.calendarWeekdayFri,
+      l.calendarWeekdaySat,
+      l.calendarWeekdaySun,
+    ];
     final offset = DateTime(month.year, month.month, 1).weekday - 1;
     var days = List.generate(
       42,
@@ -418,7 +458,7 @@ class MonthGrid extends StatelessWidget {
     final rows = days.length ~/ 7;
     final weekHeader = Row(
       children: [
-        for (final w in _weekdays)
+        for (final w in weekdays)
           Expanded(
             child: Center(
               child: Text(
@@ -662,7 +702,7 @@ class DayAgenda extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Text(
-              'Brak wydarzeń',
+              context.l10n.calendarNoEvents,
               style: TextStyle(color: theme.colorScheme.outline),
             ),
           ),
@@ -734,7 +774,7 @@ class EventCard extends StatelessWidget {
                       else
                         Text(
                           [
-                            eventTimeLabel(event),
+                            eventTimeLabel(context.l10n, event),
                             if (event.location.isNotEmpty) event.location,
                             ?calendarOf(context, event.calendarId)?.name,
                           ].join(' · '),
@@ -786,22 +826,25 @@ Future<void> showEventEditor(
 }
 
 /// For an occurrence of a series: change just it or the whole series?
-Future<EditScope?> _askScope(BuildContext context, String action) =>
+Future<EditScope?> _askScope(BuildContext context, {required String title}) =>
     showDialog<EditScope>(
       context: context,
-      builder: (context) => SimpleDialog(
-        title: Text('$action wydarzenie cykliczne'),
-        children: [
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(context, EditScope.occurrence),
-            child: const Text('Tylko to wydarzenie'),
-          ),
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(context, EditScope.series),
-            child: const Text('Wszystkie wydarzenia z serii'),
-          ),
-        ],
-      ),
+      builder: (context) {
+        final l = context.l10n;
+        return SimpleDialog(
+          title: Text(title),
+          children: [
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, EditScope.occurrence),
+              child: Text(l.calendarRecurringThisOnly),
+            ),
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, EditScope.series),
+              child: Text(l.calendarRecurringSeries),
+            ),
+          ],
+        );
+      },
     );
 
 class _EventEditor extends ConsumerStatefulWidget {
@@ -930,7 +973,10 @@ class _EventEditorState extends ConsumerState<_EventEditor> {
       // Changing the repeat rule always applies to the whole series.
       final picked = _repeat != Repeat.of(old.recurrence)
           ? EditScope.series
-          : await _askScope(context, 'Zmień');
+          : await _askScope(
+              context,
+              title: context.l10n.calendarRecurringChange,
+            );
       if (picked == null || !mounted) return;
       scope = picked;
     }
@@ -954,7 +1000,10 @@ class _EventEditorState extends ConsumerState<_EventEditor> {
     final event = widget.event!;
     var scope = EditScope.series;
     if (event.originalStart != null) {
-      final picked = await _askScope(context, 'Usuń');
+      final picked = await _askScope(
+        context,
+        title: context.l10n.calendarRecurringDelete,
+      );
       if (picked == null || !mounted) return;
       scope = picked;
     }
@@ -973,9 +1022,10 @@ class _EventEditorState extends ConsumerState<_EventEditor> {
     final writable = calendars.where((c) => c.writable).toList();
     _calendarId ??= widget.event?.calendarId ?? writable.firstOrNull?.id;
     final existing = widget.event != null;
+    final l = context.l10n;
 
     return AlertDialog(
-      title: Text(existing ? 'Wydarzenie' : 'Nowe wydarzenie'),
+      title: Text(existing ? l.calendarEvent : l.calendarNewEvent),
       content: SizedBox(
         width: 420,
         child: SingleChildScrollView(
@@ -987,7 +1037,7 @@ class _EventEditorState extends ConsumerState<_EventEditor> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Text(
-                    'Kalendarz „${current.name}” jest tylko do odczytu.',
+                    l.calendarReadOnlyNotice(current.name),
                     style: theme.textTheme.bodySmall,
                   ),
                 ),
@@ -995,7 +1045,7 @@ class _EventEditorState extends ConsumerState<_EventEditor> {
                 controller: _title,
                 enabled: !readOnly,
                 autofocus: !existing,
-                decoration: const InputDecoration(labelText: 'Tytuł'),
+                decoration: InputDecoration(labelText: l.calendarTitleField),
                 onSubmitted: (_) => _save(),
               ),
               const SizedBox(height: 8),
@@ -1007,12 +1057,12 @@ class _EventEditorState extends ConsumerState<_EventEditor> {
                     size: 14,
                     color: current?.color ?? theme.colorScheme.outline,
                   ),
-                  title: Text(current?.name ?? 'Kalendarz'),
+                  title: Text(current?.name ?? l.calendarLabel),
                 )
               else
                 DropdownButtonFormField<String>(
                   initialValue: _calendarId,
-                  decoration: const InputDecoration(labelText: 'Kalendarz'),
+                  decoration: InputDecoration(labelText: l.calendarLabel),
                   items: [
                     for (final c in writable)
                       DropdownMenuItem(
@@ -1030,7 +1080,7 @@ class _EventEditorState extends ConsumerState<_EventEditor> {
                 ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Cały dzień'),
+                title: Text(l.calendarAllDay),
                 value: _allDay,
                 onChanged: readOnly ? null : (v) => setState(() => _allDay = v),
               ),
@@ -1067,14 +1117,14 @@ class _EventEditorState extends ConsumerState<_EventEditor> {
               const SizedBox(height: 8),
               DropdownButtonFormField<Repeat>(
                 initialValue: _repeat,
-                decoration: const InputDecoration(
-                  labelText: 'Powtarzanie',
-                  prefixIcon: Icon(Icons.repeat),
+                decoration: InputDecoration(
+                  labelText: l.calendarRepeatField,
+                  prefixIcon: const Icon(Icons.repeat),
                 ),
                 items: [
                   for (final r in Repeat.values)
                     if (r != Repeat.custom || _repeat == Repeat.custom)
-                      DropdownMenuItem(value: r, child: Text(r.label)),
+                      DropdownMenuItem(value: r, child: Text(r.label(l))),
                 ],
                 onChanged: readOnly
                     ? null
@@ -1083,9 +1133,9 @@ class _EventEditorState extends ConsumerState<_EventEditor> {
               TextField(
                 controller: _location,
                 enabled: !readOnly,
-                decoration: const InputDecoration(
-                  labelText: 'Miejsce',
-                  prefixIcon: Icon(Icons.place_outlined),
+                decoration: InputDecoration(
+                  labelText: l.calendarPlaceField,
+                  prefixIcon: const Icon(Icons.place_outlined),
                 ),
               ),
               TextField(
@@ -1093,13 +1143,13 @@ class _EventEditorState extends ConsumerState<_EventEditor> {
                 enabled: !readOnly,
                 minLines: 1,
                 maxLines: 4,
-                decoration: const InputDecoration(
-                  labelText: 'Opis',
-                  prefixIcon: Icon(Icons.notes),
+                decoration: InputDecoration(
+                  labelText: l.calendarDescriptionField,
+                  prefixIcon: const Icon(Icons.notes),
                 ),
               ),
               const SizedBox(height: 16),
-              Text('Kto', style: theme.textTheme.labelLarge),
+              Text(l.calendarWhoField, style: theme.textTheme.labelLarge),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
@@ -1132,14 +1182,14 @@ class _EventEditorState extends ConsumerState<_EventEditor> {
             style: TextButton.styleFrom(
               foregroundColor: theme.colorScheme.error,
             ),
-            child: const Text('Usuń'),
+            child: Text(l.commonDelete),
           ),
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text(readOnly ? 'Zamknij' : 'Anuluj'),
+          child: Text(readOnly ? l.commonClose : l.commonCancel),
         ),
         if (!readOnly)
-          FilledButton(onPressed: _save, child: const Text('Zapisz')),
+          FilledButton(onPressed: _save, child: Text(l.commonSave)),
       ],
     );
   }

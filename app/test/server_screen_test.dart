@@ -10,6 +10,14 @@ import 'package:oikoboard/core/backend.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  // The UI tests assert the Polish texts: the device locale is Polish here.
+  setUp(() {
+    TestWidgetsFlutterBinding.ensureInitialized()
+        .platformDispatcher
+        .localesTestValue = const [
+      Locale('pl'),
+    ];
+  });
   test('server addresses are normalized', () {
     expect(
       parseServerUrl('oiko.example.com/app')?.toString(),

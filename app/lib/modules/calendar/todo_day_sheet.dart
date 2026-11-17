@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/family.dart';
 import '../../core/format.dart';
+import '../../core/l10n.dart';
 import '../../core/widgets.dart';
 import '../todo/models.dart';
 import '../todo/repository.dart';
@@ -39,6 +40,7 @@ class _TodoDaySheetState extends ConsumerState<_TodoDaySheet> {
         l.id: l,
     };
     final family = ref.watch(familyProvider);
+    final l = context.l10n;
     for (final i in open.where((i) => i.dueOn(widget.day))) {
       _shown[i.id] = i;
     }
@@ -53,7 +55,9 @@ class _TodoDaySheetState extends ConsumerState<_TodoDaySheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Zadania · ${capitalize(DateFormat('EEEE, d MMMM').format(widget.day))}',
+              l.todoDaySheetTitle(
+                capitalize(DateFormat('EEEE, d MMMM').format(widget.day)),
+              ),
               style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
@@ -61,7 +65,7 @@ class _TodoDaySheetState extends ConsumerState<_TodoDaySheet> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Text(
-                  'Brak zadań na ten dzień',
+                  l.todoDayEmpty,
                   style: TextStyle(color: theme.colorScheme.outline),
                 ),
               ),

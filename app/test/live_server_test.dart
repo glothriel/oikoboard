@@ -1,7 +1,7 @@
-// Test warstwy danych na żywym serwerze z logowaniem dev:
+// Data-layer test against a live server with dev login:
 //   OIKO_DEV_LOGIN=1 go run ./cmd/oikoboard
 //   flutter test test/live_server_test.dart
-// Pomijany, jeśli serwer nie odpowiada albo nie ma logowania dev.
+// Skipped if the server doesn't answer or has no dev login.
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -42,76 +42,73 @@ void main() {
     }
   });
 
-  test(
-    'zmiana Taty dociera na żywo do Oli, tylko do właściwych widoków',
-    () async {
-      if (!up) {
-        markTestSkipped('serwer niedostępny albo bez OIKO_DEV_LOGIN=1');
-        return;
-      }
-      // Tata zakłada nową rodzinę i zaprasza Olę linkiem.
-      final ts = DateTime.now().millisecondsSinceEpoch;
-      final tataToken = await devLogin('tata-$ts@example.test');
-      final tataApi = ApiClient(base, token: tataToken);
-      await tataApi.post('/households', {
-        'name': 'Test $ts',
-        'member_name': 'Tata',
-      });
-      final invite = await tataApi.post('/invites', {}) as Map;
-      final olaToken = await devLogin('ola-$ts@example.test');
-      await ApiClient(
-        base,
-        token: olaToken,
-      ).post('/invites/${invite['token']}/accept', {'name': 'Ola'});
+  test("Dad's change reaches Ola live, only in the right views", () async {
+    if (!up) {
+      markTestSkipped('serwer niedostępny albo bez OIKO_DEV_LOGIN=1');
+      return;
+    }
+    // Dad creates a new family and invites Ola with a link.
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    final tataToken = await devLogin('tata-$ts@example.test');
+    final tataApi = ApiClient(base, token: tataToken);
+    await tataApi.post('/households', {
+      'name': 'Test $ts',
+      'member_name': 'Tata',
+    });
+    final invite = await tataApi.post('/invites', {}) as Map;
+    final olaToken = await devLogin('ola-$ts@example.test');
+    await ApiClient(
+      base,
+      token: olaToken,
+    ).post('/invites/${invite['token']}/accept', {'name': 'Ola'});
 
-      final tata = repoFor(tataToken);
-      final ola = repoFor(olaToken);
-      await tata.addList('Zakupy', color: 0xFF4CAF50);
+    final tata = repoFor(tataToken);
+    final ola = repoFor(olaToken);
+    await tata.addList('Zakupy', color: 0xFF4CAF50);
 
-      final lists = await firstWhere<List<TodoList>>(
-        ola.watchLists(),
-        (l) => l.any((l) => l.name == 'Zakupy'),
-      );
-      final zakupy = lists.firstWhere((l) => l.name == 'Zakupy');
+    final lists = await firstWhere<List<TodoList>>(
+      ola.watchLists(),
+      (l) => l.any((l) => l.name == 'Zakupy'),
+    );
+    final zakupy = lists.firstWhere((l) => l.name == 'Zakupy');
 
-      // Ola ma otwarte: listę zakupów i „niezrobione”.
-      final olaList = ola.watchListItems(zakupy.id).asBroadcastStream();
-      final olaOpen = ola.watchOpenItems().asBroadcastStream();
-      await olaList.first; // snapshoty
-      await olaOpen.first;
+    // Ola has open: the shopping list and “not done”.
+    final olaList = ola.watchListItems(zakupy.id).asBroadcastStream();
+    final olaOpen = ola.watchOpenItems().asBroadcastStream();
+    await olaList.first; // snapshoty
+    await olaOpen.first;
 
-      final title = 'Test ${DateTime.now().millisecondsSinceEpoch}';
-      final listSeen = firstWhere<List<TodoItem>>(
-        olaList,
-        (l) => l.any((i) => i.title == title),
-      );
-      final openSeen = firstWhere<List<TodoItem>>(
-        olaOpen,
-        (l) => l.any((i) => i.title == title),
-      );
-      final item = await tata.addItem(zakupy.id, title);
-      await listSeen;
-      await openSeen;
+    final title = 'Test ${DateTime.now().millisecondsSinceEpoch}';
+    final listSeen = firstWhere<List<TodoItem>>(
+      olaList,
+      (l) => l.any((i) => i.title == title),
+    );
+    final openSeen = firstWhere<List<TodoItem>>(
+      olaOpen,
+      (l) => l.any((i) => i.title == title),
+    );
+    final item = await tata.addItem(zakupy.id, title);
+    await listSeen;
+    await openSeen;
 
-      // Odhaczenie: na liście zostaje jako zrobione, z „niezrobionych” znika.
-      final doneSeen = firstWhere<List<TodoItem>>(
-        olaList,
-        (l) => l.any((i) => i.id == item.id && i.done),
-      );
-      final goneFromOpen = firstWhere<List<TodoItem>>(
-        olaOpen,
-        (l) => l.every((i) => i.id != item.id),
-      );
-      await tata.updateItem(item.toggled());
-      await doneSeen;
-      await goneFromOpen;
+    // Checking off: it stays in the list as done and disappears from “not done”.
+    final doneSeen = firstWhere<List<TodoItem>>(
+      olaList,
+      (l) => l.any((i) => i.id == item.id && i.done),
+    );
+    final goneFromOpen = firstWhere<List<TodoItem>>(
+      olaOpen,
+      (l) => l.every((i) => i.id != item.id),
+    );
+    await tata.updateItem(item.toggled());
+    await doneSeen;
+    await goneFromOpen;
 
-      final deleted = firstWhere<List<TodoItem>>(
-        olaList,
-        (l) => l.every((i) => i.id != item.id),
-      );
-      await tata.deleteItem(item.id);
-      await deleted;
-    },
-  );
+    final deleted = firstWhere<List<TodoItem>>(
+      olaList,
+      (l) => l.every((i) => i.id != item.id),
+    );
+    await tata.deleteItem(item.id);
+    await deleted;
+  });
 }
