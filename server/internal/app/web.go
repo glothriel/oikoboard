@@ -26,11 +26,9 @@ func (a *App) ServeWeb(dir string) {
 		if st, err := os.Stat(filepath.Join(dir, filepath.FromSlash(clean))); err != nil || st.IsDir() {
 			clean = "/index.html"
 		}
-		h := c.Writer.Header()
-		if clean == "/index.html" || strings.HasSuffix(clean, "flutter_service_worker.js") ||
-			strings.HasSuffix(clean, "flutter_bootstrap.js") || strings.HasSuffix(clean, "version.json") {
-			h.Set("Cache-Control", "no-cache") // new deploys show up on reload
-		}
+		// Flutter's file names aren't content-hashed (main.dart.js, icons): browsers and
+		// proxies (Cloudflare) must revalidate every file, or a new release isn't seen.
+		c.Header("Cache-Control", "no-cache")
 		// ServeContent, not http.FileServer: that one redirects /index.html → ./ (a loop
 		// behind proxies that ask for /index.html).
 		f, err := os.Open(filepath.Join(dir, filepath.FromSlash(clean)))

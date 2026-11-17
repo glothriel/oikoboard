@@ -27,7 +27,7 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <!-- Powrót z logowania Google (oikoboard://auth?code=...). -->
+        <!-- Return from Google sign-in (oikoboard://auth?code=...). -->
         <activity
             android:name="com.linusu.flutter_web_auth_2.CallbackActivity"
             android:exported="true"

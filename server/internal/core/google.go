@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -129,6 +130,38 @@ func returnAllowed(raw string, patterns []string) bool {
 	}
 	return false
 }
+
+// returnTo sends the browser back to where sign-in started. A web URL is a plain
+// redirect; an app's custom scheme (oikoboard://auth) gets a page that opens it:
+// a bare 302 to a custom scheme is sometimes not followed by Chrome Custom Tabs,
+// which then show a dead "Found" link. On Android the button uses an intent://
+// URL naming the app's package, which Chrome resolves reliably.
+func returnTo(c *gin.Context, target string) {
+	u, err := url.Parse(target)
+	if err != nil || u.Scheme == "http" || u.Scheme == "https" || u.Scheme == "" {
+		c.Redirect(http.StatusFound, target)
+		return
+	}
+	intent := "intent://" + u.Host + u.EscapedPath() + "?" + u.RawQuery +
+		"#Intent;scheme=" + u.Scheme + ";package=" + androidPackage + ";end"
+	c.Header("Cache-Control", "no-store")
+	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(fmt.Sprintf(returnPage,
+		jsString(target), html.EscapeString(intent), html.EscapeString(target))))
+}
+
+// androidPackage is the Android app's applicationId (intent:// links).
+const androidPackage = "dev.oikoboard.oikoboard"
+
+func jsString(s string) string { b, _ := json.Marshal(s); return string(b) }
+
+const returnPage = `<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Oikoboard</title>
+<style>body{font-family:system-ui,sans-serif;text-align:center;padding:48px 16px;color:#1b1b1f}
+a.b{display:inline-block;margin-top:16px;padding:12px 24px;border-radius:24px;background:#03347F;color:#fff;text-decoration:none}</style>
+</head><body><p>Signed in. Returning to the app…</p>
+<a class="b" id="open" href="%[2]s">Open Oikoboard</a>
+<p><small><a href="%[3]s">alternative link</a></small></p>
+<script>location.href=%[1]s;</script></body></html>`
 
 func withQuery(raw string, kv ...string) string {
 	u, _ := url.Parse(raw)
@@ -352,7 +385,7 @@ func (a *Auth) googleCallback(c *gin.Context) {
 	fail := func(code string, err error) {
 		slog.Warn("google callback", "purpose", flow.Purpose, "err", err)
 		a.DB.WithContext(ctx).Exec("DELETE FROM auth_flows WHERE state_hash = ?", hashToken(state))
-		c.Redirect(http.StatusFound, withQuery(flow.ReturnTo, "error", code))
+		returnTo(c, withQuery(flow.ReturnTo, "error", code))
 	}
 	if e := c.Query("error"); e != "" { // e.g. access_denied — the user cancelled
 		fail(e, errors.New(e))
@@ -390,7 +423,7 @@ func (a *Auth) googleCallback(c *gin.Context) {
 		fail("login_failed", err)
 		return
 	}
-	c.Redirect(http.StatusFound, withQuery(flow.ReturnTo, "code", code))
+	returnTo(c, withQuery(flow.ReturnTo, "code", code))
 }
 
 // idToken exchanges the authorization code and verifies the ID token.

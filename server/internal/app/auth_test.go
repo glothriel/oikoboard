@@ -1,15 +1,19 @@
 package app_test
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"html"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"regexp"
 	"sync"
 	"testing"
 	"time"
@@ -131,11 +135,20 @@ func (e *env) googleLogin(returnTo, appChallenge, sub, email string, verified bo
 	if err != nil {
 		e.t.Fatal(err)
 	}
-	res.Body.Close()
-	if res.StatusCode != http.StatusFound {
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusFound && res.StatusCode != http.StatusOK {
 		e.t.Fatalf("callback: %d", res.StatusCode)
 	}
-	back, _ := url.Parse(res.Header.Get("Location"))
+	loc := res.Header.Get("Location")
+	if res.StatusCode == http.StatusOK { // app scheme: a page that opens the app
+		body, _ := io.ReadAll(res.Body)
+		m := regexp.MustCompile(`href="(oikoboard://[^"]+)"`).FindSubmatch(body)
+		if m == nil || !bytes.Contains(body, []byte("intent://auth?")) {
+			e.t.Fatalf("app return page: %s", body)
+		}
+		loc = html.UnescapeString(string(m[1]))
+	}
+	back, _ := url.Parse(loc)
 	return back
 }
 

@@ -5,7 +5,7 @@
     "display": "standalone",
     "background_color": "#03347F",
     "theme_color": "#03347F",
-    "description": "Tablica rodziny: listy i kalendarz",
+    "description": "Family board: shared lists and calendar",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
