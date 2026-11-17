@@ -15,7 +15,7 @@ import 'modules/registry.dart';
 
 ThemeData _theme(Brightness brightness) {
   final scheme = ColorScheme.fromSeed(
-    seedColor: const Color(0xFF2E7D6B),
+    seedColor: const Color(0xFF03347F), // the logo's navy
     brightness: brightness,
   );
   return ThemeData(

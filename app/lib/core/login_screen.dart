@@ -60,10 +60,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             shrinkWrap: true,
             padding: const EdgeInsets.all(24),
             children: [
-              Icon(
-                Icons.home_work_outlined,
-                size: 56,
-                color: theme.colorScheme.primary,
+              Center(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Image.asset(
+                    'assets/logo_512.png',
+                    width: 96,
+                    height: 96,
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
               Text(
