@@ -28,7 +28,8 @@ Flutter app (web + Android)                    Go server                        
 
 One instance per family (or a few): Postgres + one image (root `Dockerfile`) with the Go binary that also serves the
 built web app (`OIKO_WEB_DIR`); `docker compose up -d --build` runs it (`docker-compose.yml`). Development uses
-`docker-compose.dev.yml` through `./local-dev`. The app finds its server like this: a release **web** build talks to its own origin (the
+`docker-compose.dev.yml` through `./local-dev`. Releases: a `v*` tag builds the image to `ghcr.io/glothriel/oikoboard`
+(`:<version>` and `:latest`) and attaches the Android APK to a GitHub release (`.github/workflows/release.yml`). The app finds its server like this: a release **web** build talks to its own origin (the
 web app is served from the same host as the API); **Android** asks for the server address on first start (saved,
 changeable on the login screen); `--dart-define=OIKO_API=<url|mock>` overrides both. Config is `OIKO_*` env vars,
 listed in `server/cmd/oikoboard/main.go`.

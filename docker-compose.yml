@@ -1,8 +1,9 @@
-# Production: `docker compose up -d --build` — postgres + the server image
-# (Go binary + the built web app on one origin). Development is docker-compose.dev.yml (`./local-dev`).
+# Production: `docker compose up -d` — postgres + the released server image from GHCR
+# (Go binary + the built web app on one origin); OIKO_VERSION picks a release (default latest).
+# `docker compose up --build` (or `./local-dev prod`) builds the image from this checkout instead. Development is docker-compose.dev.yml (`./local-dev`).
 #
 # Server config: server/.env (see server/cmd/oikoboard/main.go). Compose variables (root .env or the
-# environment): OIKO_BIND, OIKO_HOST_PORT, POSTGRES_PASSWORD.
+# environment): OIKO_VERSION, OIKO_BIND, OIKO_HOST_PORT, POSTGRES_PASSWORD.
 name: oikoboard-prod # COMPOSE_PROJECT_NAME overrides it
 
 services:
@@ -21,6 +22,7 @@ services:
     restart: unless-stopped
 
   server:
+    image: ghcr.io/glothriel/oikoboard:${OIKO_VERSION:-latest}
     build: .
     env_file:
       - path: server/.env
