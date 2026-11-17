@@ -31,6 +31,11 @@ func TestClientMetadataDocument(t *testing.T) {
 	if err != nil || doc.ClientName != "ChatGPT" || len(doc.RedirectURIs) != 1 {
 		t.Fatalf("valid document: %+v %v", doc, err)
 	}
+	// ChatGPT: prefers private_key_jwt, also supports none (we use none).
+	body = `{"client_id":"SELF","redirect_uris":["https://chatgpt.com/cb"],"token_endpoint_auth_method":"private_key_jwt","token_endpoint_auth_methods_supported":["none","private_key_jwt"]}`
+	if _, err := fetchClientMetadata(ctx, id); err != nil {
+		t.Fatalf("chatgpt document: %v", err)
+	}
 	for name, b := range map[string]string{
 		"id mismatch":   `{"client_id":"https://other.example/x","redirect_uris":["https://a.example/cb"]}`,
 		"no redirects":  `{"client_id":"SELF","redirect_uris":[]}`,

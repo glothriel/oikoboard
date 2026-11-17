@@ -236,6 +236,8 @@ type clientMetadata struct {
 	ClientName   string      `json:"client_name"`
 	RedirectURIs pgTextArray `json:"redirect_uris"`
 	AuthMethod   string      `json:"token_endpoint_auth_method"`
+	// Methods the client can use; we pick "none" when listed (ChatGPT prefers private_key_jwt but supports none).
+	AuthMethods []string `json:"token_endpoint_auth_methods_supported"`
 }
 
 // metadataHTTP refuses non-public addresses: the URL comes from the client.
@@ -275,7 +277,7 @@ func fetchClientMetadata(ctx context.Context, id string) (*clientMetadata, error
 	if doc.ClientID != id {
 		return nil, errors.New("client_id in the document doesn't match its URL")
 	}
-	if doc.AuthMethod != "" && doc.AuthMethod != "none" {
+	if doc.AuthMethod != "" && doc.AuthMethod != "none" && !slices.Contains(doc.AuthMethods, "none") {
 		return nil, errors.New("only public clients (token_endpoint_auth_method none) are supported")
 	}
 	if len(doc.RedirectURIs) == 0 {
