@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -94,14 +96,40 @@ final changeEventsProvider = StreamProvider<Change>((ref) {
   };
 });
 
-/// Whether we are connected to the server (mock: always).
-final onlineProvider = StreamProvider<bool>((ref) async* {
+/// Whether we are connected to the server (mock: always). A reconnect that
+/// takes under [offlineGrace] isn't reported — the UI would only flicker.
+final onlineProvider = StreamProvider<bool>((ref) {
   switch (ref.watch(backendProvider)) {
     case MockBackend():
-      yield true;
+      return Stream.value(true);
     case ApiBackend():
       final sync = ref.watch(syncClientProvider);
-      yield sync.connected;
-      yield* sync.status;
+      final out = StreamController<bool>();
+      Timer? grace;
+      void offlineSoon() {
+        grace?.cancel();
+        grace = Timer(offlineGrace, () {
+          if (!sync.connected) out.add(false);
+        });
+      }
+
+      out.add(true);
+      if (!sync.connected) offlineSoon(); // still connecting at start
+      final sub = sync.status.listen((up) {
+        if (up) {
+          grace?.cancel();
+          out.add(true);
+        } else {
+          offlineSoon();
+        }
+      });
+      ref.onDispose(() {
+        grace?.cancel();
+        sub.cancel();
+        out.close();
+      });
+      return out.stream;
   }
 });
+
+const offlineGrace = Duration(seconds: 3);

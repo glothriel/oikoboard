@@ -213,10 +213,13 @@ Rdzeń (listener, dispatcher, WS) się nie zmienia.
 {"t":"error","sub":"s1","code":"bad_params","msg":"…"}
 {"t":"ping"}                                       // heartbeat every 5 s
 ```
-Every 5 s the server sends a WebSocket ping (no pong → it closes the connection) and an app-level
-`{"t":"ping"}`, because browsers don't expose control frames. The client treats ~12 s without any
-message (10 s without `ready` after connecting) as a dead, possibly half-open socket and reconnects;
-reconnects use a backoff capped at 3 s and happen immediately when the app returns to the foreground.
+Every 5 s the server sends an app-level `{"t":"ping"}`, because browsers don't expose control frames,
+and, separately, a WebSocket ping (no pong within 15 s → it closes the connection). Once a connection
+has delivered a heartbeat, the client treats ~12 s without any message (and any connection 10 s
+without `ready`) as a dead, possibly half-open socket and reconnects; a server that sends no
+heartbeats is judged only by the socket closing. Reconnects use a backoff capped at 3 s and happen
+immediately when the app returns to the foreground. The UI reports "offline" only after 3 s without
+a connection, so a quick reconnect doesn't flicker.
 
 ### Snapshot + strumień bez wyścigu
 

@@ -12,9 +12,9 @@ void main() {
   tearDown(() => server.close());
 
   test('a silent connection is dropped and replaced', () async {
-    // First connection says ready and then goes quiet without closing
-    // (half-open socket); the second one behaves.
-    server.behave = (n, ws) => readyThen(ws);
+    // First connection says ready, sends one heartbeat and then goes quiet
+    // without closing (half-open socket).
+    server.behave = (n, ws) => readyThen(ws, () => ws.add('{"t":"ping"}'));
     final client = SyncClient(
       server.uri,
       't',
@@ -26,6 +26,23 @@ void main() {
     await client.status.firstWhere((c) => c);
     await server.waitFor(2);
     expect(server.connections, 2);
+  });
+
+  test('a server without heartbeats (older version) is not dropped', () async {
+    server.behave = (n, ws) => readyThen(ws);
+    final client = SyncClient(
+      server.uri,
+      't',
+      silenceTimeout: const Duration(seconds: 1),
+    );
+    addTearDown(client.dispose);
+
+    await client.status.firstWhere((c) => c);
+    await Future<void>.delayed(const Duration(seconds: 3));
+    client.checkNow(); // e.g. the app resumed
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    expect(server.connections, 1);
+    expect(client.connected, isTrue);
   });
 
   test('heartbeats keep the connection alive', () async {

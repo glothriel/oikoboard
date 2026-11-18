@@ -99,7 +99,10 @@ void main() {
 
       outbox.enqueue(patch('a', {'title': 'x'}));
       outbox.enqueue(Mutation.delete('/todo/items/b', 'todo_items', 'b'));
-      await settle(500);
+      // retries add up to 300 ms of jitter each — wait for the result
+      for (var i = 0; i < 60 && outbox.pending.isNotEmpty; i++) {
+        await settle();
+      }
       expect(calls, 3);
       expect(outbox.pending, isEmpty);
       expect(outbox.failed, isEmpty);

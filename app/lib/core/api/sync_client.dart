@@ -93,6 +93,9 @@ class SyncClient {
   Timer? _retry;
   Timer? _watchdog;
   DateTime _lastMessage = DateTime.now();
+  // This connection gets heartbeats: silence then means it's dead. A server
+  // without them (older version) is only judged by the socket closing.
+  var _heartbeats = false;
   var _backoff = _minBackoff;
   var _disposed = false;
   final _random = Random();
@@ -140,6 +143,7 @@ class SyncClient {
   void checkNow() {
     if (_disposed) return;
     final quiet = DateTime.now().difference(_lastMessage);
+    if (connected && !_heartbeats) return; // can't tell; trust the socket
     final fresh = connected
         ? const Duration(seconds: 7) // a heartbeat came recently
         : const Duration(seconds: 3); // a connect is already under way
@@ -153,6 +157,7 @@ class SyncClient {
     final gen = ++_gen;
     _retry?.cancel();
     _lastMessage = DateTime.now();
+    _heartbeats = false;
     final WebSocketChannel channel;
     try {
       channel = WebSocketChannel.connect(wsUri);
@@ -177,6 +182,7 @@ class SyncClient {
     _watchdog?.cancel();
     _watchdog = Timer.periodic(const Duration(seconds: 1), (_) {
       if (gen != _gen) return;
+      if (connected && !_heartbeats) return;
       final quiet = DateTime.now().difference(_lastMessage);
       if (quiet > (connected ? silenceTimeout : readyTimeout)) {
         _reconnect(immediately: true);
@@ -246,7 +252,10 @@ class SyncClient {
     _lastMessage = DateTime.now();
     final msg = jsonDecode(raw as String) as Map<String, dynamic>;
     final type = msg['t'] as String;
-    if (type == 'ping') return;
+    if (type == 'ping') {
+      _heartbeats = true;
+      return;
+    }
     if (type == 'ready') {
       _backoff = _minBackoff;
       _setConnected(true);

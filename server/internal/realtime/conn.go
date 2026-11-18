@@ -66,7 +66,9 @@ const (
 	// hide WebSocket control frames, so clients detect dead connections by
 	// the absence of any message for a few intervals.
 	pingInterval = 5 * time.Second
-	authTimeout  = 10 * time.Second
+	// pongTimeout is generous: a phone on Wi-Fi power saving can answer late.
+	pongTimeout = 15 * time.Second
+	authTimeout = 10 * time.Second
 
 	closeUnauthorized websocket.StatusCode = 4001
 )
@@ -240,6 +242,7 @@ func (c *Conn) send(msg any) {
 func (c *Conn) closeSlow() { c.cancel(errSlowClient) }
 
 func (c *Conn) writer() {
+	go c.pinger()
 	t := time.NewTicker(pingInterval)
 	defer t.Stop()
 	for {
@@ -256,7 +259,22 @@ func (c *Conn) writer() {
 				c.cancel(err)
 				return
 			}
-			ctx, cancel := context.WithTimeout(c.ctx, pingInterval)
+		}
+	}
+}
+
+// pinger sends WebSocket pings and closes the connection when no pong comes
+// back in time. It runs apart from the writer: waiting for a pong must not
+// hold back messages or the heartbeat the client watches for.
+func (c *Conn) pinger() {
+	t := time.NewTicker(pingInterval)
+	defer t.Stop()
+	for {
+		select {
+		case <-c.ctx.Done():
+			return
+		case <-t.C:
+			ctx, cancel := context.WithTimeout(c.ctx, pongTimeout)
 			err := c.ws.Ping(ctx)
 			cancel()
 			if err != nil {
