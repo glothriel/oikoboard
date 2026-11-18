@@ -60,9 +60,10 @@ choć mogłoby wynikać z listy). Dzięki temu trigger jest generyczny.
 ```
 households        (id uuid pk, name, seq bigint not null default 0)
 members           (id uuid pk, household_id, name, color, ...)
-todo_lists        (id uuid pk, household_id, name, color, created_at, updated_at, version)
+todo_lists        (id uuid pk, household_id, name, color, due date, created_at, updated_at, version)
 todo_items        (id uuid pk, household_id, list_id fk on delete cascade, title, done, done_at,
                    assignee_id, due date, created_at, updated_at, version)
+todo_comments     (id uuid pk, household_id, item_id fk on delete cascade, author_id, body, created_at, ...)
 calendar_events   (id uuid pk, household_id, title, starts_at, ends_at, all_day,
                    member_ids uuid[], created_at, updated_at, version)
 ```
@@ -144,6 +145,7 @@ albo należały** do tego zbioru.
 | `todo.lists`      | —               | wszystkie `todo_lists` gospodarstwa                 | panel/chipy list |
 | `todo.list`       | `list_id`       | ta lista + wszystkie jej `todo_items`               | ekran listy |
 | `todo.open`       | —               | niezrobione `todo_items` gospodarstwa               | ściana, liczniki przy listach |
+| `todo.comments`   | `item_id`       | `todo_comments` of one task (its thread)            | task editor |
 | `calendar.range`  | `from`, `to`    | `calendar_events` nachodzące na przedział           | miesiąc w kalendarzu, ściana |
 
 Liczby („4 do zrobienia”) liczy klient z encji, a nie serwer. Dzięki temu widoki to zwykłe filtry,

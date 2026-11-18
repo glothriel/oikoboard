@@ -447,6 +447,41 @@ class AppLocalizationsEn extends AppLocalizations {
   String get todoRemoveDue => 'Remove due date';
 
   @override
+  String get todoChangeDue => 'Change due date';
+
+  @override
+  String get todoComments => 'Comments';
+
+  @override
+  String get todoNoComments => 'No comments yet';
+
+  @override
+  String get todoCommentHint => 'Add a comment…';
+
+  @override
+  String get todoCommentSend => 'Send';
+
+  @override
+  String get todoCommentDelete => 'Delete comment';
+
+  @override
+  String get todoCommentFormerMember => 'Former member';
+
+  @override
+  String get todoDayListDue => 'List due';
+
+  @override
+  String get wallLayoutToday => 'Today';
+
+  @override
+  String get wallLayoutKanban => 'Board';
+
+  @override
+  String changeCommentAdded(String body) {
+    return 'commented: “$body”';
+  }
+
+  @override
   String get calendarModuleTitle => 'Calendar';
 
   @override

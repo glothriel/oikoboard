@@ -81,9 +81,6 @@ func (m Module) Routes(r *gin.RouterGroup) {
 	r.PATCH("/calendar/events/:id", m.updateEvent)
 	r.DELETE("/calendar/events/:id", m.deleteEvent)
 
-	r.GET("/calendar/preferences", m.getPreferences)
-	r.PATCH("/calendar/preferences", m.updatePreferences)
-
 	r.GET("/calendar/connections", m.listConnections)
 	r.POST("/calendar/connections", m.startConnect)
 	r.POST("/calendar/connections/complete", m.completeConnect)

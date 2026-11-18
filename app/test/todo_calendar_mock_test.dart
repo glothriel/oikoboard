@@ -10,6 +10,7 @@ import 'package:oikoboard/core/mock/mock_store.dart';
 import 'package:oikoboard/core/session.dart';
 import 'package:oikoboard/modules/registry.dart';
 import 'package:oikoboard/modules/todo/repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Due tasks show in the calendar as one chip per day; the chip opens the
 /// day's tasks, and ticking the last one removes the chip.
@@ -23,6 +24,7 @@ void main() {
     ];
   });
   testWidgets('due tasks in the calendar (mock)', (tester) async {
+    SharedPreferences.setMockInitialValues({});
     await initializeDateFormatting('pl');
     Intl.defaultLocale = 'pl';
     final onError = FlutterError.onError;

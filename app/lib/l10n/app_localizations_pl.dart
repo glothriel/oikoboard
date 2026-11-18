@@ -449,6 +449,41 @@ class AppLocalizationsPl extends AppLocalizations {
   String get todoRemoveDue => 'Usuń termin';
 
   @override
+  String get todoChangeDue => 'Zmień termin';
+
+  @override
+  String get todoComments => 'Komentarze';
+
+  @override
+  String get todoNoComments => 'Brak komentarzy';
+
+  @override
+  String get todoCommentHint => 'Dodaj komentarz…';
+
+  @override
+  String get todoCommentSend => 'Wyślij';
+
+  @override
+  String get todoCommentDelete => 'Usuń komentarz';
+
+  @override
+  String get todoCommentFormerMember => 'Były członek';
+
+  @override
+  String get todoDayListDue => 'Termin listy';
+
+  @override
+  String get wallLayoutToday => 'Dziś';
+
+  @override
+  String get wallLayoutKanban => 'Tablica';
+
+  @override
+  String changeCommentAdded(String body) {
+    return 'skomentował(a): „$body”';
+  }
+
+  @override
   String get calendarModuleTitle => 'Kalendarz';
 
   @override

@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -29,6 +30,12 @@ abstract class FamilyModule {
 
   /// Optional tile on the home screen (the “wall”).
   Widget? buildWallTile(BuildContext context) => null;
+
+  /// Columns for the wall's board (kanban) layout; by default the wall tile.
+  /// [ref] belongs to the wall, which rebuilds when watched data changes.
+  List<Widget> buildWallColumns(BuildContext context, WidgetRef ref) => [
+    ?buildWallTile(context),
+  ];
 
   /// Description of a change made by another member (for a notice), or null
   /// if the change doesn't concern this module.

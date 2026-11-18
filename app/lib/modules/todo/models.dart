@@ -10,6 +10,7 @@ class TodoList {
     required this.name,
     required this.color,
     required this.createdAt,
+    this.due,
   });
 
   final String id;
@@ -17,11 +18,20 @@ class TodoList {
   final int color;
   final DateTime createdAt;
 
+  /// Due date of the whole list (e.g. a packing list for a trip).
+  final DateTime? due;
+
+  /// Due before today.
+  bool get overdue => due != null && due!.isBefore(dateOnly(DateTime.now()));
+
+  bool dueOn(DateTime day) => due != null && isSameDay(due!, day);
+
   factory TodoList.fromJson(Map<String, dynamic> j) => TodoList(
     id: j['id'] as String,
     name: j['name'] as String,
     color: j['color'] as int,
     createdAt: fromApiTime(j['created_at'])!,
+    due: fromApiDate(j['due']),
   );
 
   Map<String, dynamic> toJson() => {
@@ -29,14 +39,18 @@ class TodoList {
     'name': name,
     'color': color,
     'created_at': toApiTime(createdAt),
+    'due': toApiDate(due),
   };
 
-  TodoList copyWith({String? name, int? color}) => TodoList(
-    id: id,
-    name: name ?? this.name,
-    color: color ?? this.color,
-    createdAt: createdAt,
-  );
+  /// [due] can be cleared by passing `null` explicitly.
+  TodoList copyWith({String? name, int? color, Object? due = _unset}) =>
+      TodoList(
+        id: id,
+        name: name ?? this.name,
+        color: color ?? this.color,
+        createdAt: createdAt,
+        due: identical(due, _unset) ? this.due : due as DateTime?,
+      );
 }
 
 class TodoItem {
@@ -91,7 +105,7 @@ class TodoItem {
     'done_at': toApiTime(doneAt),
   };
 
-  /// Pola nullowalne można wyczyścić przekazując jawnie `null`.
+  /// Nullable fields can be cleared by passing `null` explicitly.
   TodoItem copyWith({
     String? title,
     bool? done,
@@ -113,4 +127,39 @@ class TodoItem {
 
   TodoItem toggled() =>
       copyWith(done: !done, doneAt: done ? null : DateTime.now());
+}
+
+/// One message in a task's comment thread.
+class TodoComment {
+  const TodoComment({
+    required this.id,
+    required this.itemId,
+    required this.body,
+    required this.createdAt,
+    this.authorId,
+  });
+
+  final String id;
+  final String itemId;
+  final String body;
+  final DateTime createdAt;
+
+  /// Null when the author is no longer a member.
+  final String? authorId;
+
+  factory TodoComment.fromJson(Map<String, dynamic> j) => TodoComment(
+    id: j['id'] as String,
+    itemId: j['item_id'] as String,
+    body: j['body'] as String,
+    createdAt: fromApiTime(j['created_at'])!,
+    authorId: j['author_id'] as String?,
+  );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'item_id': itemId,
+    'body': body,
+    'created_at': toApiTime(createdAt),
+    'author_id': authorId,
+  };
 }

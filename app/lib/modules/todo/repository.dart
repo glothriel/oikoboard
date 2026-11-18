@@ -10,9 +10,10 @@ import 'models.dart';
 
 const listsEntity = 'todo_lists';
 const itemsEntity = 'todo_items';
+const commentsEntity = 'todo_comments';
 
-/// Interfejs, którego używa UI. Metody `watch*` odpowiadają widokom
-/// serwera (todo.lists, todo.list, todo.open).
+/// The interface the UI uses. The `watch*` methods match the server's views
+/// (todo.lists, todo.list, todo.open, todo.comments).
 abstract interface class TodoRepository {
   Stream<List<TodoList>> watchLists();
   Stream<List<TodoItem>> watchListItems(String listId);
@@ -30,7 +31,17 @@ abstract interface class TodoRepository {
   });
   Future<void> updateItem(TodoItem item);
   Future<void> deleteItem(String id);
+
+  /// A task's comment thread, oldest first.
+  Stream<List<TodoComment>> watchComments(String itemId);
+  Future<void> addComment(String itemId, String body);
+
+  /// Only the author can delete a comment.
+  Future<void> deleteComment(String id);
 }
+
+List<TodoComment> _sortComments(Iterable<TodoComment> c) =>
+    c.toList()..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
 List<TodoList> _sortLists(List<TodoList> l) =>
     l..sort((a, b) => a.createdAt.compareTo(b.createdAt));
@@ -72,7 +83,7 @@ class ApiTodoRepository implements TodoRepository {
   @override
   Future<void> updateList(TodoList list) => api.patch(
     '/todo/lists/${list.id}',
-    {'name': list.name, 'color': list.color},
+    {'name': list.name, 'color': list.color, 'due': toApiDate(list.due)},
   );
 
   @override
@@ -105,6 +116,22 @@ class ApiTodoRepository implements TodoRepository {
 
   @override
   Future<void> deleteItem(String id) => api.delete('/todo/items/$id');
+
+  @override
+  Stream<List<TodoComment>> watchComments(String itemId) => sync
+      .watch('todo.comments', {'item_id': itemId})
+      .map(
+        (v) => _sortComments(v.rows(commentsEntity).map(TodoComment.fromJson)),
+      );
+
+  @override
+  Future<void> addComment(String itemId, String body) => api.post(
+    '/todo/comments',
+    {'id': uuid.v4(), 'item_id': itemId, 'body': body},
+  );
+
+  @override
+  Future<void> deleteComment(String id) => api.delete('/todo/comments/$id');
 }
 
 // --- mock ---
@@ -182,8 +209,43 @@ class MockTodoRepository implements TodoRepository {
       store.put(itemsEntity, item.toJson(), actorId: actorId);
 
   @override
-  Future<void> deleteItem(String id) =>
-      store.delete(itemsEntity, id, actorId: actorId);
+  Future<void> deleteItem(String id) async {
+    final comments = store
+        .list(commentsEntity)
+        .where((d) => d['item_id'] == id)
+        .map((d) => d['id'] as String)
+        .toList();
+    for (final c in comments) {
+      await store.delete(commentsEntity, c, actorId: actorId);
+    }
+    await store.delete(itemsEntity, id, actorId: actorId);
+  }
+
+  @override
+  Stream<List<TodoComment>> watchComments(String itemId) => store
+      .watch(commentsEntity)
+      .map(
+        (docs) => _sortComments(
+          docs.map(TodoComment.fromJson).where((c) => c.itemId == itemId),
+        ),
+      );
+
+  @override
+  Future<void> addComment(String itemId, String body) => store.put(
+    commentsEntity,
+    TodoComment(
+      id: uuid.v4(),
+      itemId: itemId,
+      body: body.trim(),
+      createdAt: DateTime.now(),
+      authorId: actorId,
+    ).toJson(),
+    actorId: actorId,
+  );
+
+  @override
+  Future<void> deleteComment(String id) =>
+      store.delete(commentsEntity, id, actorId: actorId);
 }
 
 // --- providers ---
@@ -208,6 +270,11 @@ final todoListsProvider = StreamProvider<List<TodoList>>(
 final todoOpenItemsProvider = StreamProvider<List<TodoItem>>(
   (ref) => ref.watch(todoRepositoryProvider).watchOpenItems(),
 );
+
+final todoCommentsProvider = StreamProvider.autoDispose
+    .family<List<TodoComment>, String>(
+      (ref, itemId) => ref.watch(todoRepositoryProvider).watchComments(itemId),
+    );
 
 final todoListItemsProvider = StreamProvider.autoDispose
     .family<List<TodoItem>, String>(

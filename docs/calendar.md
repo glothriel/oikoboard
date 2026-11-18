@@ -15,9 +15,9 @@ calendar_connections   a user's provider account (OAuth grant, sealed credential
         ├─< calendar_remote_events   the mirror: series masters, exceptions, single events
         └─< calendar_events          occurrences — what the app, views and MCP read (tracked)
 
-calendar_preferences   per member: the view the app opens with (day / 3days / week / month);
-                       plain REST (GET|PATCH /calendar/preferences), not tracked
 ```
+
+The view the app opens with (day / 3 days / week / month) is remembered on the device, not on the server.
 
 - **Provider** (`provider.go`) is the only abstraction point: `ListCalendars`, `Changes(token)`, `Put`, `Delete`.
   Implementations: `google_provider.go` (Calendar API v3, plain REST) and `mock_provider.go` (dev/tests, stored in
@@ -73,15 +73,15 @@ The API edits occurrences: `PATCH|DELETE /calendar/events/:id?scope=this|series`
 
 ## Due tasks
 
-Tasks with a due date (`todo_items.due`, a date) appear in the household's **todo target** calendar as one all-day
-event per day with open tasks due, `kind = "todo-day"`: title "Zadanie: <title>" or "Zadania: N", the tasks listed in
-the description, the assignees as members. The app renders these as a task chip that opens the day's tasks; the
+Tasks with a due date (`todo_items.due`, a date) and lists with one (`todo_lists.due`) appear in the household's
+**todo target** calendar as one all-day event per day with open tasks or lists due, `kind = "todo-day"`: title
+"Zadanie: <title>", "Lista: <name>" or "Zadania: N", the entries listed in the description, the assignees as members. The app renders these as a task chip that opens the day's tasks; the
 events API refuses to edit them (409 `managed_event`).
 
 - **Target:** the first writable calendar linked to the household; changeable (`PATCH /calendars/:id
   {"todo_target": true}`). Unlinking the target first deletes its task events, then the oldest remaining writable
   calendar takes over.
-- **Reconciliation, not event handling** (`todo_sync.go`): desired state = open tasks due from 30 days back to a year
+- **Reconciliation, not event handling** (`todo_sync.go`): desired state = open tasks and lists (unless all their tasks are done) due from 30 days back to a year
   ahead, grouped by date (in the calendar's time zone); actual state = the mirror's `todo-day` rows of the household.
   The differences are written to the provider (`Put` / `Delete`) and applied to the mirror. A moved, finished or
   deleted task therefore just changes the desired state — an emptied day loses its event. Older events are left alone.

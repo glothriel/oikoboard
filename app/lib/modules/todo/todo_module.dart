@@ -1,12 +1,12 @@
 import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/api/api_client.dart' show toApiDate;
 import '../../core/change.dart';
 import '../../core/family.dart';
-import '../../core/format.dart';
 import '../../core/l10n.dart';
 import '../../core/mock/mock_store.dart';
 import '../../core/module.dart';
@@ -38,6 +38,22 @@ class TodoModule extends FamilyModule {
     child: const _TodoWallTile(),
   );
 
+  /// A column per list with its open tasks.
+  @override
+  List<Widget> buildWallColumns(BuildContext context, WidgetRef ref) {
+    final lists = ref.watch(todoListsProvider).value ?? const <TodoList>[];
+    final items = ref.watch(todoOpenItemsProvider).value ?? const <TodoItem>[];
+    return [
+      for (final l in lists)
+        _KanbanColumn(
+          key: ValueKey(l.id),
+          list: l,
+          items: items.where((i) => i.listId == l.id).toList()
+            ..sort((a, b) => a.createdAt.compareTo(b.createdAt)),
+        ),
+    ];
+  }
+
   @override
   String? describeChange(AppLocalizations l, Change change) {
     if (change.collection == listsEntity) {
@@ -47,6 +63,11 @@ class TodoModule extends FamilyModule {
         ChangeOp.updated => l.changeListUpdated(name),
         ChangeOp.deleted => l.changeListDeleted(name),
       };
+    }
+    if (change.collection == commentsEntity) {
+      return change.op == ChangeOp.created
+          ? l.changeCommentAdded('${change.data['body']}')
+          : null;
     }
     if (change.collection != itemsEntity) return null;
     final t = '${change.data['title']}';
@@ -66,12 +87,18 @@ class TodoModule extends FamilyModule {
     var n = 0;
     String ts() => now.subtract(Duration(minutes: 500 - n++)).toIso8601String();
 
-    void list(String id, String name, int color) => store.seed(listsEntity, {
-      'id': id,
-      'name': name,
-      'color': color,
-      'created_at': ts(),
-    });
+    void list(String id, String name, int color, {int? dueInDays}) =>
+        store.seed(listsEntity, {
+          'id': id,
+          'name': name,
+          'color': color,
+          'created_at': ts(),
+          'due': toApiDate(
+            dueInDays == null
+                ? null
+                : DateTime(now.year, now.month, now.day + dueInDays),
+          ),
+        });
 
     void item(
       String listId,
@@ -96,7 +123,7 @@ class TodoModule extends FamilyModule {
 
     list('zakupy', 'Zakupy', 0xFF26A69A);
     list('dom', 'Dom', 0xFF5C6BC0);
-    list('wakacje', 'Wakacje', 0xFFFFA726);
+    list('wakacje', 'Wakacje', 0xFFFFA726, dueInDays: 9);
 
     item('zakupy', 'Mleko');
     item('zakupy', 'Chleb');
@@ -158,7 +185,6 @@ class _TodoWallTile extends ConsumerWidget {
     final theme = Theme.of(context);
     final lists = ref.watch(todoListsProvider).value ?? const <TodoList>[];
     final items = ref.watch(todoOpenItemsProvider).value ?? const <TodoItem>[];
-    final family = ref.watch(familyProvider);
     final me = ref.watch(currentMemberProvider);
     final l10n = context.l10n;
 
@@ -179,29 +205,7 @@ class _TodoWallTile extends ConsumerWidget {
         return a.due!.compareTo(b.due!);
       });
 
-    Widget tile(TodoItem i) => CheckboxListTile(
-      dense: true,
-      contentPadding: EdgeInsets.zero,
-      controlAffinity: ListTileControlAffinity.leading,
-      value: i.done,
-      title: Text(
-        i.title,
-        style: TextStyle(color: i.overdue ? theme.colorScheme.error : null),
-      ),
-      subtitle: i.due == null
-          ? null
-          : Text(
-              l10n.todoDue(relativeDay(l10n, i.due!)),
-              style: TextStyle(
-                color: i.overdue ? theme.colorScheme.error : null,
-              ),
-            ),
-      secondary: family.byId(i.assigneeId) == null
-          ? null
-          : MemberAvatar(family.byId(i.assigneeId)!, radius: 12),
-      onChanged: (_) =>
-          ref.read(todoRepositoryProvider).updateItem(i.toggled()),
-    );
+    Widget tile(TodoItem i) => WallTaskTile(i);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -213,7 +217,24 @@ class _TodoWallTile extends ConsumerWidget {
               children: [
                 ColorDot(Color(l.color)),
                 const SizedBox(width: 8),
-                Expanded(child: Text(l.name)),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (l.due != null)
+                        DueLabel(
+                          l.due!,
+                          overdue: l.overdue,
+                          style: theme.textTheme.bodySmall,
+                        ),
+                    ],
+                  ),
+                ),
                 Text(
                   l10n.todoOpenCount(
                     open.where((i) => i.listId == l.id).length,
@@ -238,6 +259,136 @@ class _TodoWallTile extends ConsumerWidget {
         if (rest.isNotEmpty) const Divider(height: 20),
         for (final i in rest.take(5)) tile(i),
       ],
+    );
+  }
+}
+
+/// An open task on the wall: the checkbox ticks it, tapping the row opens
+/// the editor (a tap anywhere must not finish the task).
+class WallTaskTile extends ConsumerWidget {
+  const WallTaskTile(this.item, {super.key});
+  final TodoItem item;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final i = item;
+    final assignee = ref.watch(familyProvider).byId(i.assigneeId);
+    return ListTile(
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      leading: Checkbox(
+        value: i.done,
+        onChanged: (_) =>
+            ref.read(todoRepositoryProvider).updateItem(i.toggled()),
+      ),
+      title: Text(
+        i.title,
+        style: TextStyle(color: i.overdue ? theme.colorScheme.error : null),
+      ),
+      subtitle: i.due == null ? null : DueLabel(i.due!, overdue: i.overdue),
+      trailing: assignee == null ? null : MemberAvatar(assignee, radius: 12),
+      onTap: () => showTodoItemEditor(context, i),
+    );
+  }
+}
+
+class _KanbanColumn extends ConsumerStatefulWidget {
+  const _KanbanColumn({super.key, required this.list, required this.items});
+  final TodoList list;
+  final List<TodoItem> items;
+
+  @override
+  ConsumerState<_KanbanColumn> createState() => _KanbanColumnState();
+}
+
+class _KanbanColumnState extends ConsumerState<_KanbanColumn> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _add(String text) {
+    final title = text.trim();
+    if (title.isEmpty) return;
+    _controller.clear();
+    ref.read(todoRepositoryProvider).addItem(widget.list.id, title);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l = context.l10n;
+    final list = widget.list;
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: () {
+                ref.read(selectedTodoListProvider.notifier).select(list.id);
+                context.go(const TodoModule().path);
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    ColorDot(Color(list.color), size: 12),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        list.name,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${widget.items.length}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.outline,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (list.due != null)
+              DueLabel(
+                list.due!,
+                overdue: list.overdue && widget.items.isNotEmpty,
+                style: theme.textTheme.bodySmall,
+              ),
+            const SizedBox(height: 4),
+            if (widget.items.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  l.todoAllDone,
+                  style: TextStyle(color: theme.colorScheme.outline),
+                ),
+              ),
+            for (final i in widget.items) WallTaskTile(i, key: ValueKey(i.id)),
+            TextField(
+              controller: _controller,
+              onSubmitted: _add,
+              textInputAction: TextInputAction.done,
+              decoration: InputDecoration(
+                hintText: l.todoAddTo(list.name),
+                prefixIcon: const Icon(Icons.add, size: 20),
+                isDense: true,
+                border: InputBorder.none,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

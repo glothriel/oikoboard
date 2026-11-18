@@ -10,10 +10,11 @@ import '../../core/api/pkce.dart';
 import '../../core/api/sync_client.dart';
 import '../../core/backend.dart';
 import '../../core/data.dart';
+import '../../core/device_prefs.dart';
 import '../../core/family.dart';
 import '../../core/mock/mock_store.dart';
 import '../../core/platform/browser.dart';
-import '../todo/repository.dart' as todo show itemsEntity;
+import '../todo/repository.dart' as todo show itemsEntity, listsEntity;
 import 'models.dart';
 
 const eventsEntity = 'calendar_events';
@@ -66,10 +67,6 @@ abstract interface class CalendarRepository {
   Future<void> setTodoTarget(String calendarId);
   Future<void> disconnect(String connectionId);
   Future<void> syncNow(String calendarId);
-
-  /// The signed-in member's preferred view (follows them across devices).
-  Future<CalendarView> preferredView();
-  Future<void> setPreferredView(CalendarView view);
 }
 
 List<CalendarEvent> _sorted(Iterable<CalendarEvent> e) =>
@@ -241,15 +238,6 @@ class ApiCalendarRepository implements CalendarRepository {
   @override
   Future<void> syncNow(String calendarId) =>
       api.post('/calendars/$calendarId/sync', {});
-
-  @override
-  Future<CalendarView> preferredView() async => CalendarView.parse(
-    (await api.get('/calendar/preferences') as Map)['view'],
-  );
-
-  @override
-  Future<void> setPreferredView(CalendarView view) =>
-      api.patch('/calendar/preferences', {'view': view.param});
 }
 
 /// In-memory mock: calendars are fixed, recurring events show only their
@@ -280,6 +268,7 @@ class MockCalendarRepository implements CalendarRepository {
                 eventsEntity,
                 calendarsEntity,
                 todo.itemsEntity,
+                todo.listsEntity,
               }.contains(c.collection),
             )
             .listen((_) => ctrl.add(current()));
@@ -290,33 +279,46 @@ class MockCalendarRepository implements CalendarRepository {
   }
 
   /// What the server's due-task reconciliation would put into the target
-  /// calendar: one all-day event per day with open tasks due.
+  /// calendar: one all-day event per day with open tasks (or lists) due.
   List<CalendarEvent> _todoDays() {
     final target = store
         .list(calendarsEntity)
         .where((c) => c['todo_target'] == true)
         .firstOrNull;
     if (target == null) return const [];
-    final byDay = <DateTime, List<Map<String, dynamic>>>{};
-    for (final t in store.list(todo.itemsEntity)) {
+    final items = store.list(todo.itemsEntity);
+    final byDay = <DateTime, List<({String title, String? assignee})>>{};
+    for (final l in store.list(todo.listsEntity)) {
+      final due = fromApiDate(l['due']);
+      final own = items.where((t) => t['list_id'] == l['id']);
+      if (due == null ||
+          (own.isNotEmpty && own.every((t) => t['done'] == true))) {
+        continue;
+      }
+      (byDay[due] ??= []).add((title: 'Lista: ${l['name']}', assignee: null));
+    }
+    for (final t in items) {
       final due = fromApiDate(t['due']);
       if (due == null || t['done'] == true) continue;
-      (byDay[due] ??= []).add(t);
+      (byDay[due] ??= []).add((
+        title: 'Zadanie: ${t['title']}',
+        assignee: t['assignee_id'] as String?,
+      ));
     }
     return [
-      for (final MapEntry(key: day, value: tasks) in byDay.entries)
+      for (final MapEntry(key: day, value: entries) in byDay.entries)
         CalendarEvent(
           id: 'todo-day-${toApiDate(day)}',
           calendarId: target['id'] as String,
-          title: tasks.length == 1
-              ? 'Zadanie: ${tasks.single['title']}'
-              : 'Zadania: ${tasks.length}',
+          title: entries.length == 1
+              ? entries.single.title
+              : 'Zadania: ${entries.length}',
           start: day,
           end: DateTime(day.year, day.month, day.day + 1),
           allDay: true,
           memberIds: {
-            for (final t in tasks)
-              if (t['assignee_id'] != null) t['assignee_id'] as String,
+            for (final e in entries)
+              if (e.assignee != null) e.assignee!,
           }.toList(),
           kind: CalendarEvent.todoDayKind,
         ),
@@ -381,17 +383,6 @@ class MockCalendarRepository implements CalendarRepository {
   Future<void> disconnect(String connectionId) => _unsupported();
   @override
   Future<void> syncNow(String calendarId) async {}
-
-  /// Per member, for the app's lifetime.
-  static final _views = <String, CalendarView>{};
-
-  @override
-  Future<CalendarView> preferredView() async =>
-      _views[actorId] ?? CalendarView.month;
-
-  @override
-  Future<void> setPreferredView(CalendarView view) async =>
-      _views[actorId] = view;
 }
 
 final calendarRepositoryProvider = Provider<CalendarRepository>(
@@ -427,20 +418,17 @@ class PendingCalendarConnect extends Notifier<Uri?> {
 final pendingCalendarConnectProvider =
     NotifierProvider<PendingCalendarConnect, Uri?>(PendingCalendarConnect.new);
 
-/// The view the calendar opens with; changing it saves the preference.
+/// The view the calendar opens with, remembered on this device.
 class CalendarViewPreference extends AsyncNotifier<CalendarView> {
+  static const key = 'oiko.calendar_view';
+
   @override
-  Future<CalendarView> build() async {
-    try {
-      return await ref.watch(calendarRepositoryProvider).preferredView();
-    } catch (_) {
-      return CalendarView.month;
-    }
-  }
+  Future<CalendarView> build() async =>
+      CalendarView.parse(await DevicePrefs.get(key));
 
   Future<void> set(CalendarView view) async {
     state = AsyncData(view);
-    await ref.read(calendarRepositoryProvider).setPreferredView(view);
+    await DevicePrefs.set(key, view.param);
   }
 }
 

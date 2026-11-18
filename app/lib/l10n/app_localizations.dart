@@ -818,6 +818,72 @@ abstract class AppLocalizations {
   /// **'Remove due date'**
   String get todoRemoveDue;
 
+  /// No description provided for @todoChangeDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Change due date'**
+  String get todoChangeDue;
+
+  /// No description provided for @todoComments.
+  ///
+  /// In en, this message translates to:
+  /// **'Comments'**
+  String get todoComments;
+
+  /// No description provided for @todoNoComments.
+  ///
+  /// In en, this message translates to:
+  /// **'No comments yet'**
+  String get todoNoComments;
+
+  /// No description provided for @todoCommentHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a comment…'**
+  String get todoCommentHint;
+
+  /// No description provided for @todoCommentSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get todoCommentSend;
+
+  /// No description provided for @todoCommentDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete comment'**
+  String get todoCommentDelete;
+
+  /// No description provided for @todoCommentFormerMember.
+  ///
+  /// In en, this message translates to:
+  /// **'Former member'**
+  String get todoCommentFormerMember;
+
+  /// No description provided for @todoDayListDue.
+  ///
+  /// In en, this message translates to:
+  /// **'List due'**
+  String get todoDayListDue;
+
+  /// No description provided for @wallLayoutToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get wallLayoutToday;
+
+  /// No description provided for @wallLayoutKanban.
+  ///
+  /// In en, this message translates to:
+  /// **'Board'**
+  String get wallLayoutKanban;
+
+  /// No description provided for @changeCommentAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'commented: “{body}”'**
+  String changeCommentAdded(String body);
+
   /// No description provided for @calendarModuleTitle.
   ///
   /// In en, this message translates to:

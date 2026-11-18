@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -35,10 +36,9 @@ class _TodoDaySheetState extends ConsumerState<_TodoDaySheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final open = ref.watch(todoOpenItemsProvider).value ?? const <TodoItem>[];
-    final lists = {
-      for (final l in ref.watch(todoListsProvider).value ?? const <TodoList>[])
-        l.id: l,
-    };
+    final allLists = ref.watch(todoListsProvider).value ?? const <TodoList>[];
+    final lists = {for (final l in allLists) l.id: l};
+    final dueLists = allLists.where((l) => l.dueOn(widget.day)).toList();
     final family = ref.watch(familyProvider);
     final l = context.l10n;
     for (final i in open.where((i) => i.dueOn(widget.day))) {
@@ -61,7 +61,27 @@ class _TodoDaySheetState extends ConsumerState<_TodoDaySheet> {
               style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
-            if (items.isEmpty)
+            for (final dl in dueLists)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: ColorDot(Color(dl.color), size: 14),
+                ),
+                title: Text(dl.name),
+                subtitle: Text(l.todoDayListDue),
+                trailing: Text(
+                  l.todoOpenCount(open.where((i) => i.listId == dl.id).length),
+                  style: theme.textTheme.bodySmall,
+                ),
+                onTap: () {
+                  final router = GoRouter.of(context);
+                  ref.read(selectedTodoListProvider.notifier).select(dl.id);
+                  Navigator.pop(context);
+                  router.go('/todo');
+                },
+              ),
+            if (items.isEmpty && dueLists.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Text(
@@ -118,8 +138,8 @@ class _TodoDaySheetState extends ConsumerState<_TodoDaySheet> {
   }
 }
 
-/// The lists of the tasks due on [day] (color dot + name), e.g. under the
-/// day's due-tasks event in the agenda.
+/// The lists due on [day] or with tasks due then (color dot + name), e.g.
+/// under the day's due-tasks event in the agenda.
 class TodoDayLists extends ConsumerWidget {
   const TodoDayLists(this.day, {super.key, this.style});
   final DateTime day;
@@ -130,7 +150,7 @@ class TodoDayLists extends ConsumerWidget {
     final open = ref.watch(todoOpenItemsProvider).value ?? const <TodoItem>[];
     final ids = {for (final i in open.where((i) => i.dueOn(day))) i.listId};
     final lists = (ref.watch(todoListsProvider).value ?? const <TodoList>[])
-        .where((l) => ids.contains(l.id))
+        .where((l) => ids.contains(l.id) || l.dueOn(day))
         .toList();
     return Wrap(
       spacing: 10,

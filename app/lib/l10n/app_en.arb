@@ -346,6 +346,24 @@
   "todoWhoDoesIt": "Who will do it?",
   "todoSetDue": "Set due date",
   "todoRemoveDue": "Remove due date",
+  "todoChangeDue": "Change due date",
+  "todoComments": "Comments",
+  "todoNoComments": "No comments yet",
+  "todoCommentHint": "Add a comment…",
+  "todoCommentSend": "Send",
+  "todoCommentDelete": "Delete comment",
+  "todoCommentFormerMember": "Former member",
+  "todoDayListDue": "List due",
+  "wallLayoutToday": "Today",
+  "wallLayoutKanban": "Board",
+  "changeCommentAdded": "commented: “{body}”",
+  "@changeCommentAdded": {
+    "placeholders": {
+      "body": {
+        "type": "String"
+      }
+    }
+  },
   "calendarModuleTitle": "Calendar",
   "calendarViewDay": "Day",
   "calendarViewThreeDays": "3 days",

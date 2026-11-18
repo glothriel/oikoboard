@@ -116,6 +116,7 @@ type person struct {
 type todoList struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+	Due  string `json:"due,omitempty"`
 }
 
 type calendarRef struct {

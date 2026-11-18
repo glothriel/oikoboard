@@ -72,6 +72,33 @@ class TodoScreen extends ConsumerWidget {
   }
 }
 
+/// Date picker for a due date.
+Future<DateTime?> pickDueDate(BuildContext context, DateTime? initial) {
+  final now = DateTime.now();
+  return showDatePicker(
+    context: context,
+    initialDate: initial ?? now,
+    firstDate: DateTime(now.year - 1),
+    lastDate: DateTime(now.year + 5),
+  );
+}
+
+/// “Due: Fri, 20 Nov” in the error color when overdue; for lists and tasks.
+class DueLabel extends StatelessWidget {
+  const DueLabel(this.due, {super.key, required this.overdue, this.style});
+  final DateTime due;
+  final bool overdue;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    context.l10n.todoDue(relativeDay(context.l10n, due)),
+    style: (style ?? const TextStyle()).copyWith(
+      color: overdue ? Theme.of(context).colorScheme.error : null,
+    ),
+  );
+}
+
 int _openCount(List<TodoItem> items, String listId) =>
     items.where((i) => i.listId == listId && !i.done).length;
 
@@ -142,6 +169,9 @@ class _ListsPanel extends ConsumerWidget {
             ),
             leading: ColorDot(Color(l.color), size: 14),
             title: Text(l.name),
+            subtitle: l.due == null
+                ? null
+                : DueLabel(l.due!, overdue: l.overdue),
             trailing: Text('${_openCount(items, l.id)}'),
             onTap: () =>
                 ref.read(selectedTodoListProvider.notifier).select(l.id),
@@ -244,6 +274,11 @@ class _TodoItemsPaneState extends ConsumerState<TodoItemsPane> {
         if (name != null) {
           await repo.updateList(widget.list.copyWith(name: name));
         }
+      case 'due':
+        final due = await pickDueDate(context, widget.list.due);
+        if (due != null) await repo.updateList(widget.list.copyWith(due: due));
+      case 'clearDue':
+        await repo.updateList(widget.list.copyWith(due: null));
       case 'delete':
         ref.read(selectedTodoListProvider.notifier).select(null);
         await repo.deleteList(widget.list.id);
@@ -282,12 +317,34 @@ class _TodoItemsPaneState extends ConsumerState<TodoItemsPane> {
             ColorDot(Color(widget.list.color), size: 14),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(widget.list.name, style: theme.textTheme.titleLarge),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(widget.list.name, style: theme.textTheme.titleLarge),
+                  if (widget.list.due != null)
+                    DueLabel(
+                      widget.list.due!,
+                      overdue: widget.list.overdue && open.isNotEmpty,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                ],
+              ),
             ),
             PopupMenuButton<String>(
               onSelected: _onMenu,
               itemBuilder: (_) => [
                 PopupMenuItem(value: 'rename', child: Text(l.todoRename)),
+                PopupMenuItem(
+                  value: 'due',
+                  child: Text(
+                    widget.list.due == null ? l.todoSetDue : l.todoChangeDue,
+                  ),
+                ),
+                if (widget.list.due != null)
+                  PopupMenuItem(
+                    value: 'clearDue',
+                    child: Text(l.todoRemoveDue),
+                  ),
                 PopupMenuItem(value: 'delete', child: Text(l.todoDeleteList)),
               ],
             ),
@@ -380,12 +437,7 @@ class TodoItemTile extends ConsumerWidget {
         ),
         subtitle: item.due == null
             ? null
-            : Text(
-                context.l10n.todoDue(relativeDay(context.l10n, item.due!)),
-                style: TextStyle(
-                  color: item.overdue ? theme.colorScheme.error : null,
-                ),
-              ),
+            : DueLabel(item.due!, overdue: item.overdue),
         trailing: member == null ? null : MemberAvatar(member, radius: 14),
         onTap: () => showTodoItemEditor(context, item),
       ),
@@ -421,13 +473,7 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
   }
 
   Future<void> _pickDue() async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _due ?? now,
-      firstDate: DateTime(now.year - 1),
-      lastDate: DateTime(now.year + 5),
-    );
+    final picked = await pickDueDate(context, _due);
     if (picked != null) setState(() => _due = picked);
   }
 
@@ -532,8 +578,135 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
               ),
             ],
           ),
+          const Divider(height: 24),
+          Flexible(child: TodoComments(itemId: widget.item.id)),
         ],
       ),
+    );
+  }
+}
+
+/// A task's comment thread: author, time and text, plus a field to add one.
+class TodoComments extends ConsumerStatefulWidget {
+  const TodoComments({super.key, required this.itemId});
+  final String itemId;
+
+  @override
+  ConsumerState<TodoComments> createState() => _TodoCommentsState();
+}
+
+class _TodoCommentsState extends ConsumerState<TodoComments> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _send() {
+    final body = _controller.text.trim();
+    if (body.isEmpty) return;
+    _controller.clear();
+    ref.read(todoRepositoryProvider).addComment(widget.itemId, body);
+  }
+
+  String _when(DateTime t) {
+    final l = context.l10n;
+    final local = t.toLocal();
+    return isSameDay(local, DateTime.now())
+        ? hm(local)
+        : '${relativeDay(l, local)} ${hm(local)}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l = context.l10n;
+    final comments =
+        ref.watch(todoCommentsProvider(widget.itemId)).value ??
+        const <TodoComment>[];
+    final family = ref.watch(familyProvider);
+    final me = ref.watch(currentMemberProvider);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l.todoComments, style: theme.textTheme.labelLarge),
+        if (comments.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              l.todoNoComments,
+              style: TextStyle(color: theme.colorScheme.outline),
+            ),
+          ),
+        Flexible(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              for (final c in comments)
+                ListTile(
+                  key: ValueKey(c.id),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  leading: family.byId(c.authorId) == null
+                      ? const CircleAvatar(
+                          radius: 14,
+                          child: Icon(Icons.person_outline, size: 16),
+                        )
+                      : MemberAvatar(family.byId(c.authorId)!, radius: 14),
+                  title: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text:
+                              family.byId(c.authorId)?.name ??
+                              l.todoCommentFormerMember,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        TextSpan(
+                          text: '  ${_when(c.createdAt)}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.outline,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  subtitle: Text(c.body, style: theme.textTheme.bodyMedium),
+                  trailing: c.authorId == me
+                      ? IconButton(
+                          tooltip: l.todoCommentDelete,
+                          icon: const Icon(Icons.close, size: 18),
+                          onPressed: () => ref
+                              .read(todoRepositoryProvider)
+                              .deleteComment(c.id),
+                        )
+                      : null,
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _controller,
+          textInputAction: TextInputAction.send,
+          onSubmitted: (_) => _send(),
+          minLines: 1,
+          maxLines: 4,
+          decoration: InputDecoration(
+            hintText: l.todoCommentHint,
+            isDense: true,
+            suffixIcon: IconButton(
+              tooltip: l.todoCommentSend,
+              icon: const Icon(Icons.send),
+              onPressed: _send,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

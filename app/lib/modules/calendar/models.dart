@@ -11,7 +11,7 @@ enum CalendarView {
 
   const CalendarView(this.param, this.days);
 
-  /// Name in the API.
+  /// Stored name (device preferences).
   final String param;
 
   /// Days shown side by side; 0 for the month grid.

@@ -12,6 +12,7 @@ import 'package:oikoboard/modules/calendar/models.dart';
 import 'package:oikoboard/modules/calendar/repository.dart';
 import 'package:oikoboard/modules/calendar/time_grid.dart';
 import 'package:oikoboard/modules/registry.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// The calendar works in the in-memory mock: linked calendars, adding an
 /// event through the editor (with a calendar and repeat choice).
@@ -25,6 +26,7 @@ void main() {
     ];
   });
   testWidgets('calendar screen and editor in mock mode', (tester) async {
+    SharedPreferences.setMockInitialValues({});
     await initializeDateFormatting('pl');
     Intl.defaultLocale = 'pl';
     // Known, unrelated: no Cupertino localizations for `pl` (app.dart).
@@ -162,9 +164,11 @@ void main() {
     await tester.tap(find.byTooltip('Następny okres'));
     await tester.pumpAndSettle();
 
+    // The view is remembered on the device.
+    final prefs = await SharedPreferences.getInstance();
     expect(
-      await container.read(calendarRepositoryProvider).preferredView(),
-      CalendarView.week,
+      prefs.getString(CalendarViewPreference.key),
+      CalendarView.week.param,
     );
   });
 }

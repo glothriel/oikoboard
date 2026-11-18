@@ -235,26 +235,3 @@ func TestCalendarSync(t *testing.T) {
 		t.Fatalf("calendars after disconnect: %d", len(cals["calendars"]))
 	}
 }
-
-func TestCalendarPreferences(t *testing.T) {
-	e := setup(t)
-	a := e.newFamily("Kowalscy")
-	var p struct{ View string }
-	if st := a.do("GET", "/calendar/preferences", nil, &p); st != http.StatusOK || p.View != "month" {
-		t.Fatalf("default: %d %+v", st, p)
-	}
-	if st := a.do("PATCH", "/calendar/preferences", map[string]any{"view": "3days"}, nil); st != http.StatusOK {
-		t.Fatalf("update: %d", st)
-	}
-	if st := a.do("PATCH", "/calendar/preferences", map[string]any{"view": "year"}, nil); st != http.StatusBadRequest {
-		t.Fatalf("invalid view: %d", st)
-	}
-	if a.do("GET", "/calendar/preferences", nil, &p); p.View != "3days" {
-		t.Fatalf("saved: %+v", p)
-	}
-	// Another member of another household doesn't see it.
-	b := e.newFamily("Nowakowie")
-	if b.do("GET", "/calendar/preferences", nil, &p); p.View != "month" {
-		t.Fatalf("other member: %+v", p)
-	}
-}

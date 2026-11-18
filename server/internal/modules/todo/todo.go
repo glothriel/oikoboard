@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -15,13 +16,14 @@ import (
 )
 
 type List struct {
-	ID          uuid.UUID `json:"id" gorm:"type:uuid;primaryKey"`
-	HouseholdID uuid.UUID `json:"household_id"`
-	Name        string    `json:"name"`
-	Color       int64     `json:"color"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	Version     int       `json:"version" gorm:"default:1"`
+	ID          uuid.UUID  `json:"id" gorm:"type:uuid;primaryKey"`
+	HouseholdID uuid.UUID  `json:"household_id"`
+	Name        string     `json:"name"`
+	Color       int64      `json:"color"`
+	Due         *core.Date `json:"due"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+	Version     int        `json:"version" gorm:"default:1"`
 }
 
 func (List) TableName() string { return "todo_lists" }
@@ -42,9 +44,24 @@ type Item struct {
 
 func (Item) TableName() string { return "todo_items" }
 
+// Comment is one message in a task's thread.
+type Comment struct {
+	ID          uuid.UUID  `json:"id" gorm:"type:uuid;primaryKey"`
+	HouseholdID uuid.UUID  `json:"household_id"`
+	ItemID      uuid.UUID  `json:"item_id"`
+	AuthorID    *uuid.UUID `json:"author_id"`
+	Body        string     `json:"body"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+	Version     int        `json:"version" gorm:"default:1"`
+}
+
+func (Comment) TableName() string { return "todo_comments" }
+
 const (
-	entityLists = "todo_lists"
-	entityItems = "todo_items"
+	entityLists    = "todo_lists"
+	entityItems    = "todo_items"
+	entityComments = "todo_comments"
 )
 
 type Module struct {
@@ -62,7 +79,9 @@ func (m Module) itemsChanged(hh uuid.UUID) {
 
 func (Module) Name() string { return "todo" }
 
-func (m Module) Views() []core.View { return []core.View{listsView{}, listView{}, openView{}} }
+func (m Module) Views() []core.View {
+	return []core.View{listsView{}, listView{}, openView{}, commentsView{}}
+}
 
 func (m Module) Routes(r *gin.RouterGroup) {
 	r.POST("/todo/lists", m.createList)
@@ -71,15 +90,18 @@ func (m Module) Routes(r *gin.RouterGroup) {
 	r.POST("/todo/items", m.createItem)
 	r.PATCH("/todo/items/:id", m.updateItem)
 	r.DELETE("/todo/items/:id", m.deleteItem)
+	r.POST("/todo/comments", m.createComment)
+	r.DELETE("/todo/comments/:id", m.deleteComment)
 }
 
 // --- handlers ---
 
 func (m Module) createList(c *gin.Context) {
 	var req struct {
-		ID    uuid.UUID `json:"id"`
-		Name  string    `json:"name" binding:"required"`
-		Color int64     `json:"color"`
+		ID    uuid.UUID  `json:"id"`
+		Name  string     `json:"name" binding:"required"`
+		Color int64      `json:"color"`
+		Due   *core.Date `json:"due"`
 	}
 	if !core.Bind(c, &req) {
 		return
@@ -91,10 +113,13 @@ func (m Module) createList(c *gin.Context) {
 		req.Color = 0xFF26A69A
 	}
 	actor := core.ActorOf(c)
-	row := List{ID: req.ID, HouseholdID: actor.HouseholdID, Name: req.Name, Color: req.Color}
+	row := List{ID: req.ID, HouseholdID: actor.HouseholdID, Name: req.Name, Color: req.Color, Due: req.Due}
 	err := core.Write(c.Request.Context(), m.DB, actor, core.MutationID(c), func(tx *gorm.DB) error {
 		return core.CreateIdempotent(tx, &row, actor.HouseholdID, row.ID)
 	})
+	if err == nil && row.Due != nil {
+		m.itemsChanged(actor.HouseholdID)
+	}
 	respond(c, http.StatusCreated, &row, err)
 }
 
@@ -109,7 +134,8 @@ func (m Module) updateList(c *gin.Context) {
 	}
 	var name string
 	var color int64
-	cols, err := p.Apply(map[string]any{"name": &name, "color": &color})
+	var due core.Date
+	cols, err := p.Apply(map[string]any{"name": &name, "color": &color, "due": &due})
 	if err != nil {
 		core.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
 		return
@@ -119,6 +145,9 @@ func (m Module) updateList(c *gin.Context) {
 	err = core.Write(c.Request.Context(), m.DB, actor, core.MutationID(c), func(tx *gorm.DB) error {
 		return update(tx, &row, actor.HouseholdID, id, cols)
 	})
+	if err == nil {
+		m.itemsChanged(actor.HouseholdID) // the list's name and due show in the calendar
+	}
 	respond(c, http.StatusOK, &row, err)
 }
 
@@ -196,6 +225,61 @@ func (m Module) updateItem(c *gin.Context) {
 
 func (m Module) deleteItem(c *gin.Context) {
 	m.delete(c, &Item{})
+}
+
+func (m Module) createComment(c *gin.Context) {
+	var req struct {
+		ID     uuid.UUID `json:"id"`
+		ItemID uuid.UUID `json:"item_id" binding:"required"`
+		Body   string    `json:"body" binding:"required"`
+	}
+	if !core.Bind(c, &req) {
+		return
+	}
+	if req.Body = strings.TrimSpace(req.Body); req.Body == "" {
+		core.Fail(c, http.StatusBadRequest, "bad_request", "body is empty")
+		return
+	}
+	if req.ID == uuid.Nil {
+		req.ID = uuid.New()
+	}
+	actor := core.ActorOf(c)
+	row := Comment{ID: req.ID, HouseholdID: actor.HouseholdID, ItemID: req.ItemID, Body: req.Body}
+	if actor.MemberID != uuid.Nil {
+		row.AuthorID = &actor.MemberID
+	}
+	err := core.Write(c.Request.Context(), m.DB, actor, core.MutationID(c), func(tx *gorm.DB) error {
+		return core.CreateIdempotent(tx, &row, actor.HouseholdID, row.ID)
+	})
+	respond(c, http.StatusCreated, &row, err)
+}
+
+// deleteComment: only the author can delete their comment.
+func (m Module) deleteComment(c *gin.Context) {
+	id, ok := core.ParamUUID(c, "id")
+	if !ok {
+		return
+	}
+	actor := core.ActorOf(c)
+	errNotAuthor := errors.New("not the author")
+	err := core.Write(c.Request.Context(), m.DB, actor, core.MutationID(c), func(tx *gorm.DB) error {
+		var row Comment
+		if err := tx.Where("household_id = ? AND id = ?", actor.HouseholdID, id).First(&row).Error; err != nil {
+			return err
+		}
+		if row.AuthorID == nil || *row.AuthorID != actor.MemberID {
+			return errNotAuthor
+		}
+		return tx.Delete(&row).Error
+	})
+	switch {
+	case errors.Is(err, errNotAuthor):
+		core.Fail(c, http.StatusForbidden, "forbidden", "only the author can delete a comment")
+	case err != nil:
+		core.FailErr(c, err)
+	default:
+		c.Status(http.StatusNoContent)
+	}
 }
 
 func (m Module) delete(c *gin.Context, model any) {
@@ -318,4 +402,36 @@ func (openView) Matches(_ any, entity string, row json.RawMessage) bool {
 	}
 	i, ok := core.DecodeRow[Item](row)
 	return ok && !i.Done
+}
+
+// todo.comments{item_id} — the comment thread of one task.
+type commentsView struct{}
+
+type commentsParams struct {
+	ItemID uuid.UUID `json:"item_id"`
+}
+
+func (commentsView) Name() string { return "todo.comments" }
+
+func (commentsView) ParseParams(raw json.RawMessage) (any, error) {
+	var p commentsParams
+	if err := json.Unmarshal(raw, &p); err != nil || p.ItemID == uuid.Nil {
+		return nil, errors.New("item_id is required")
+	}
+	return p, nil
+}
+
+func (commentsView) Snapshot(tx *gorm.DB, hh uuid.UUID, params any) (core.Entities, error) {
+	p := params.(commentsParams)
+	comments := []Comment{}
+	err := tx.Where("household_id = ? AND item_id = ?", hh, p.ItemID).Order("created_at, id").Find(&comments).Error
+	return core.Entities{entityComments: comments}, err
+}
+
+func (commentsView) Matches(params any, entity string, row json.RawMessage) bool {
+	if entity != entityComments {
+		return false
+	}
+	cm, ok := core.DecodeRow[Comment](row)
+	return ok && cm.ItemID == params.(commentsParams).ItemID
 }
