@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'api/api_client.dart';
@@ -6,7 +7,7 @@ import 'backend.dart';
 import 'change.dart';
 import 'session.dart';
 
-/// Klient REST zalogowanego użytkownika (tylko tryb API).
+/// REST client of the signed-in user (API mode only).
 final apiClientProvider = Provider<ApiClient>((ref) {
   final backend = ref.watch(backendProvider) as ApiBackend;
   final session = ref.watch(sessionProvider)!;
@@ -19,7 +20,7 @@ final apiClientProvider = Provider<ApiClient>((ref) {
   return client;
 });
 
-/// WebSocket zalogowanego użytkownika (tylko tryb API).
+/// WebSocket of the signed-in user (API mode only).
 final syncClientProvider = Provider<SyncClient>((ref) {
   final backend = ref.watch(backendProvider) as ApiBackend;
   final session = ref.watch(sessionProvider)!;
@@ -32,11 +33,14 @@ final syncClientProvider = Provider<SyncClient>((ref) {
     session.token,
     onUnauthorized: () => ref.read(sessionProvider.notifier).logout(),
   );
+  // Back from background/sleep: don't wait for the watchdog or backoff.
+  final lifecycle = AppLifecycleListener(onResume: client.checkNow);
+  ref.onDispose(lifecycle.dispose);
   ref.onDispose(client.dispose);
   return client;
 });
 
-/// Zmiany robione przez innych (do powiadomień), niezależnie od backendu.
+/// Changes made by others (for notifications), regardless of backend.
 final changeEventsProvider = StreamProvider<Change>((ref) {
   return switch (ref.watch(backendProvider)) {
     MockBackend(:final store) => store.changes,
@@ -44,7 +48,7 @@ final changeEventsProvider = StreamProvider<Change>((ref) {
   };
 });
 
-/// Czy jesteśmy połączeni z serwerem (mock: zawsze).
+/// Whether we are connected to the server (mock: always).
 final onlineProvider = StreamProvider<bool>((ref) async* {
   switch (ref.watch(backendProvider)) {
     case MockBackend():

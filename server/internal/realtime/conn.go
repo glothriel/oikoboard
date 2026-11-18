@@ -61,8 +61,11 @@ type errorMsg struct {
 }
 
 const (
-	outBuffer    = 256
-	pingInterval = 30 * time.Second
+	outBuffer = 256
+	// pingInterval also drives the app-level {"t":"ping"} heartbeat: browsers
+	// hide WebSocket control frames, so clients detect dead connections by
+	// the absence of any message for a few intervals.
+	pingInterval = 5 * time.Second
 	authTimeout  = 10 * time.Second
 
 	closeUnauthorized websocket.StatusCode = 4001
@@ -80,6 +83,8 @@ type Conn struct {
 	d      *dispatcher
 	subs   map[string]*subscription // tylko z goroutine handlera
 }
+
+var heartbeat = []byte(`{"t":"ping"}`)
 
 var errSlowClient = errors.New("klient nie nadąża")
 
@@ -247,7 +252,11 @@ func (c *Conn) writer() {
 				return
 			}
 		case <-t.C:
-			ctx, cancel := context.WithTimeout(c.ctx, 10*time.Second)
+			if err := c.ws.Write(c.ctx, websocket.MessageText, heartbeat); err != nil {
+				c.cancel(err)
+				return
+			}
+			ctx, cancel := context.WithTimeout(c.ctx, pingInterval)
 			err := c.ws.Ping(ctx)
 			cancel()
 			if err != nil {

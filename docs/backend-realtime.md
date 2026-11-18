@@ -211,8 +211,12 @@ Rdzeń (listener, dispatcher, WS) się nie zmienia.
 {"t":"remove","sub":"s1","op":"update","seq":1207,"entity":"todo_items","id":"…",
  "row":{…}}   // row = ostatni stan; op=update → wypadło z widoku, op=delete → usunięte
 {"t":"error","sub":"s1","code":"bad_params","msg":"…"}
+{"t":"ping"}                                       // heartbeat every 5 s
 ```
-Pingi robi warstwa WebSocket (ping/pong co 30 s). Brak ponga = zamknięcie połączenia.
+Every 5 s the server sends a WebSocket ping (no pong → it closes the connection) and an app-level
+`{"t":"ping"}`, because browsers don't expose control frames. The client treats ~12 s without any
+message (10 s without `ready` after connecting) as a dead, possibly half-open socket and reconnects;
+reconnects use a backoff capped at 3 s and happen immediately when the app returns to the foreground.
 
 ### Snapshot + strumień bez wyścigu
 

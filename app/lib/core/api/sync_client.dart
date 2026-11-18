@@ -6,7 +6,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../change.dart';
 
-/// Stan jednego widoku: encja → id → wiersz.
+/// State of one view: entity → id → row.
 class ViewData {
   ViewData(this.entities);
   final Map<String, Map<String, Map<String, dynamic>>> entities;
@@ -23,41 +23,61 @@ class _Sub {
   Map<String, Map<String, Map<String, dynamic>>> state = {};
 }
 
-/// Jedno połączenie WebSocket na aplikację, wiele subskrypcji widoków.
+/// One WebSocket connection per app, many view subscriptions.
 ///
-/// Protokół (docs/backend-realtime.md): auth → sub → snapshot, potem
-/// upsert/remove. Po zerwaniu: reconnect z backoffem i ponowna subskrypcja
-/// wszystkich otwartych widoków — każdy dostaje świeży snapshot.
+/// Protocol (docs/backend-realtime.md): auth → sub → snapshot, then
+/// upsert/remove. After a disconnect it reconnects with a short backoff and
+/// re-subscribes every open view — each gets a fresh snapshot.
+///
+/// The server sends `{"t":"ping"}` every 5 s, so silence longer than
+/// [silenceTimeout] means a half-open socket (sleep, Wi-Fi ↔ LTE): it is
+/// dropped and replaced.
 class SyncClient {
-  SyncClient(this.wsUri, this.token, {this.onUnauthorized}) {
+  SyncClient(
+    this.wsUri,
+    this.token, {
+    this.onUnauthorized,
+    this.silenceTimeout = const Duration(seconds: 12),
+    this.readyTimeout = const Duration(seconds: 10),
+    this.maxBackoff = const Duration(seconds: 3),
+  }) {
     _connect();
   }
 
   final Uri wsUri;
   final String token;
   final void Function()? onUnauthorized;
+  final Duration silenceTimeout;
+  final Duration readyTimeout;
+  final Duration maxBackoff;
+
+  static const _minBackoff = Duration(milliseconds: 500);
 
   final _subs = <String, _Sub>{};
   var _nextId = 0;
   WebSocketChannel? _channel;
   StreamSubscription<dynamic>? _channelSub;
+  // Incremented on every connect; callbacks of older channels are ignored.
+  var _gen = 0;
   Timer? _retry;
-  var _backoff = const Duration(milliseconds: 500);
+  Timer? _watchdog;
+  DateTime _lastMessage = DateTime.now();
+  var _backoff = _minBackoff;
   var _disposed = false;
   final _random = Random();
 
   final _status = StreamController<bool>.broadcast();
   final _changes = StreamController<Change>.broadcast();
-  final _seenSeqs = <int>{}; // LinkedHashSet — pamięta kolejność
+  final _seenSeqs = <int>{}; // LinkedHashSet — keeps insertion order
   var connected = false;
 
-  /// true = połączony i zalogowany.
+  /// true = connected and authenticated.
   Stream<bool> get status => _status.stream;
 
-  /// Zmiany ze wszystkich subskrypcji (bez duplikatów) — do powiadomień.
+  /// Changes from all subscriptions (deduplicated) — for notifications.
   Stream<Change> get changes => _changes.stream;
 
-  /// Subskrypcja widoku. Anulowanie streamu = `unsub`.
+  /// Subscribes to a view. Cancelling the stream sends `unsub`.
   Stream<ViewData> watch(
     String view, [
     Map<String, dynamic> params = const {},
@@ -77,15 +97,39 @@ class SyncClient {
     return ctrl.stream;
   }
 
+  /// Call when the app comes back to the foreground or the network changes:
+  /// a connection that is down or has been silent for a while is replaced
+  /// right away instead of waiting for the backoff or the watchdog.
+  void checkNow() {
+    if (_disposed) return;
+    final quiet = DateTime.now().difference(_lastMessage);
+    final fresh = connected
+        ? const Duration(seconds: 7) // a heartbeat came recently
+        : const Duration(seconds: 3); // a connect is already under way
+    if (_channel != null && quiet < fresh) return;
+    _backoff = _minBackoff;
+    _reconnect(immediately: true);
+  }
+
   void _connect() {
     if (_disposed) return;
-    final channel = WebSocketChannel.connect(wsUri);
+    final gen = ++_gen;
+    _retry?.cancel();
+    _lastMessage = DateTime.now();
+    final WebSocketChannel channel;
+    try {
+      channel = WebSocketChannel.connect(wsUri);
+    } catch (_) {
+      _reconnect();
+      return;
+    }
     _channel = channel;
-    // błąd połączenia obsługuje onDone niżej
-    channel.ready.then((_) {}, onError: (_) {});
+    channel.ready.then((_) {}, onError: (_) => _onClosed(gen, channel));
     _channelSub = channel.stream.listen(
-      _onMessage,
-      onDone: () => _onClosed(channel),
+      (raw) {
+        if (gen == _gen) _onMessage(raw);
+      },
+      onDone: () => _onClosed(gen, channel),
       onError: (_) {},
       cancelOnError: false,
     );
@@ -93,18 +137,52 @@ class SyncClient {
     for (final id in _subs.keys) {
       _sendSub(id);
     }
+    _watchdog?.cancel();
+    _watchdog = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (gen != _gen) return;
+      final quiet = DateTime.now().difference(_lastMessage);
+      if (quiet > (connected ? silenceTimeout : readyTimeout)) {
+        _reconnect(immediately: true);
+      }
+    });
   }
 
-  void _onClosed(WebSocketChannel channel) {
-    if (_disposed || channel != _channel) return;
-    _setConnected(false);
+  void _onClosed(int gen, WebSocketChannel channel) {
+    if (_disposed || gen != _gen) return;
     if (channel.closeCode == 4001) {
+      _drop();
       onUnauthorized?.call();
+      return;
+    }
+    _reconnect();
+  }
+
+  /// Tears the current channel down; its late callbacks are ignored.
+  void _drop() {
+    _gen++;
+    _watchdog?.cancel();
+    _channelSub?.cancel();
+    _channelSub = null;
+    try {
+      _channel?.sink.close();
+    } catch (_) {}
+    _channel = null;
+    _setConnected(false);
+  }
+
+  void _reconnect({bool immediately = false}) {
+    if (_disposed) return;
+    _drop();
+    _retry?.cancel();
+    if (immediately) {
+      _connect();
       return;
     }
     final jitter = Duration(milliseconds: _random.nextInt(300));
     _retry = Timer(_backoff + jitter, _connect);
-    _backoff = Duration(milliseconds: min(_backoff.inMilliseconds * 2, 30000));
+    _backoff = Duration(
+      milliseconds: min(_backoff.inMilliseconds * 2, maxBackoff.inMilliseconds),
+    );
   }
 
   void _setConnected(bool v) {
@@ -117,7 +195,7 @@ class SyncClient {
     try {
       _channel?.sink.add(jsonEncode(msg));
     } catch (_) {
-      // połączenie padło — reconnect wyśle subskrypcje od nowa
+      // connection is gone — the reconnect re-sends the subscriptions
     }
   }
 
@@ -128,10 +206,12 @@ class SyncClient {
   }
 
   void _onMessage(dynamic raw) {
+    _lastMessage = DateTime.now();
     final msg = jsonDecode(raw as String) as Map<String, dynamic>;
     final type = msg['t'] as String;
+    if (type == 'ping') return;
     if (type == 'ready') {
-      _backoff = const Duration(milliseconds: 500);
+      _backoff = _minBackoff;
       _setConnected(true);
       return;
     }
@@ -168,7 +248,7 @@ class SyncClient {
 
   void _notify(Map<String, dynamic> msg) {
     final seq = msg['seq'] as int;
-    if (!_seenSeqs.add(seq)) return; // ta sama zmiana z innej subskrypcji
+    if (!_seenSeqs.add(seq)) return; // same change via another subscription
     if (_seenSeqs.length > 500) _seenSeqs.remove(_seenSeqs.first);
     final actor = msg['actor'] as String?;
     if (actor == null) return;
@@ -192,6 +272,7 @@ class SyncClient {
   void dispose() {
     _disposed = true;
     _retry?.cancel();
+    _watchdog?.cancel();
     _channelSub?.cancel();
     _channel?.sink.close();
     for (final s in _subs.values) {
