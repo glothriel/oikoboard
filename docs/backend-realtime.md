@@ -313,8 +313,10 @@ The server stays the source of truth; the app has no local database.
 - **Overlay.** A view = the server's state (snapshot + changes) with the pending mutations applied
   on top, in order. Each view has a client-side copy of its filter (`Matches`), so a pending create
   or change can enter or leave it (e.g. a checked-off task leaves `todo.open` at once). A mutation
-  leaves the overlay when a change with its `mutation_id` arrives over the WS, or, if no open view
-  receives one, 10 s after the server accepted it.
+  leaves the overlay 1 s after a change with its `mutation_id` arrives over the WS (the server sends
+  a change to each view in its own message, so dropping it at the first one would make the other
+  views blink back to the old state), or, if no open view receives one, 10 s after the server
+  accepted it.
 - **Last snapshot on the device.** The last state of recently used views is cached, so the app
   shows data when started offline. Logout deletes the cache (not the outbox).
 - **What is retried vs. rejected:**

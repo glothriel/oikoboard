@@ -163,14 +163,21 @@ typedef MutationSender = Future<void> Function(Mutation m);
 ///
 /// Mutations are sent one at a time, in order. Network errors, 5xx, 408 and
 /// 429 are retried; any other 4xx moves the mutation to [failed]. A sent
-/// mutation stays in the overlay until its change comes back over the
-/// WebSocket ([confirm]) or, failing that, for [echoTimeout].
+/// mutation stays in the overlay until [echoGrace] after its change comes back
+/// over the WebSocket ([confirm]) or, failing that, for [echoTimeout].
+///
+/// The grace is there because the server sends a change to each subscribed
+/// view in its own message (and a cascade as several changes): dropping the
+/// mutation at the first echo would let views that haven't got theirs yet
+/// show the old state for a moment — rows blinking out and back in. Keeping
+/// it a bit longer is harmless, as it matches the server's state by then.
 class Outbox {
   Outbox({
     required this.send,
     TextStore? storage,
     this.maxBackoff = const Duration(seconds: 3),
     this.echoTimeout = const Duration(seconds: 10),
+    this.echoGrace = const Duration(seconds: 1),
   }) : storage = storage ?? MemoryTextStore() {
     _ready = _load();
   }
@@ -179,12 +186,14 @@ class Outbox {
   final TextStore storage;
   final Duration maxBackoff;
   final Duration echoTimeout;
+  final Duration echoGrace;
 
   final _pending = <Mutation>[];
   final _failed = <FailedMutation>[];
-  // Sent, waiting for the change to come back (in memory only — after a
-  // restart the snapshot already contains them).
+  // Sent, until [echoGrace] after the change came back or [echoTimeout]
+  // (in memory only — after a restart the snapshot already contains them).
   final _sent = <String, Mutation>{};
+  // Came back while still in flight.
   final _echoed = <String>{};
   late final Future<void> _ready;
   var _busy = false;
@@ -210,8 +219,7 @@ class Outbox {
   List<FailedMutation> get failed => List.unmodifiable(_failed);
 
   /// What views should show on top of the server's state, in order.
-  Iterable<Mutation> get overlay =>
-      [..._sent.values, ..._pending].where((m) => !_echoed.contains(m.id));
+  Iterable<Mutation> get overlay => [..._sent.values, ..._pending];
 
   /// Loaded from storage (tests).
   Future<void> get ready => _ready;
@@ -263,16 +271,18 @@ class Outbox {
   }
 
   /// A change with this mutation id came back over the WebSocket: the
-  /// server's state now contains it.
+  /// server's state now contains it (or will in every view shortly).
   void confirm(String mutationId) {
-    if (_sent.remove(mutationId) != null) {
-      _notify();
-      return;
-    }
-    if (_pending.any((m) => m.id == mutationId) && _echoed.add(mutationId)) {
-      _notify(); // in flight; dropped when the response arrives
+    if (_sent.containsKey(mutationId)) {
+      _expire(mutationId, echoGrace);
+    } else if (_pending.any((m) => m.id == mutationId)) {
+      _echoed.add(mutationId); // in flight; expires once the response arrives
     }
   }
+
+  void _expire(String id, Duration after) => Timer(after, () {
+    if (_sent.remove(id) != null) _notify();
+  });
 
   /// Try sending now (e.g. the connection is back).
   void kick() {
@@ -315,11 +325,9 @@ class Outbox {
           _echoed.remove(m.id);
           _failed.add(f);
           _failures.add(f);
-        } else if (!_echoed.remove(m.id)) {
+        } else {
           _sent[m.id] = m;
-          Timer(echoTimeout, () {
-            if (_sent.remove(m.id) != null) _notify();
-          });
+          _expire(m.id, _echoed.remove(m.id) ? echoGrace : echoTimeout);
         }
         _backoff = _firstBackoff;
         _save();

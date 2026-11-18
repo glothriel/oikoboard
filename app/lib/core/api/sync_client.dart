@@ -263,8 +263,7 @@ class SyncClient {
     }
     final sub = _subs[msg['sub']];
     if (sub == null) return;
-    // Our own write came back — before emitting, so the view never shows
-    // the change twice (overlay + server state).
+    // Our own write came back: it leaves the overlay shortly.
     if (msg['mutation'] case final String m) outbox?.confirm(m);
 
     switch (type) {

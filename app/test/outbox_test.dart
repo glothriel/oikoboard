@@ -130,6 +130,7 @@ void main() {
       final outbox = Outbox(
         send: FakeSender().call,
         echoTimeout: const Duration(milliseconds: 300),
+        echoGrace: const Duration(milliseconds: 50),
       );
       addTearDown(outbox.dispose);
       final a = patch('a', {'title': 'x'});
@@ -139,8 +140,11 @@ void main() {
       await settle();
       expect(outbox.overlay, hasLength(2));
       outbox.confirm(a.id);
+      // Other views may not have got the change yet: kept for the grace.
+      expect(outbox.overlay, hasLength(2));
+      await settle(100);
       expect(outbox.overlay.single.id, b.id);
-      await settle(400); // no echo for b: dropped after the timeout
+      await settle(300); // no echo for b: dropped after the timeout
       expect(outbox.overlay, isEmpty);
     });
   });
@@ -227,7 +231,10 @@ void main() {
         }
       });
       sender = FakeSender()..behave = (_) => const SocketException('offline');
-      outbox = Outbox(send: sender.call);
+      outbox = Outbox(
+        send: sender.call,
+        echoGrace: const Duration(milliseconds: 100),
+      );
       client = SyncClient(server.uri, 't', outbox: outbox);
     });
 
@@ -304,9 +311,38 @@ void main() {
           'mutation': m.id,
         }),
       );
-      await settle();
+      await settle(200);
       expect(outbox.overlay, isEmpty);
       expect(views.last.rows('todo_items').single['title'], 'Oat milk');
+    });
+
+    test('an echo in one view keeps the overlay for the others', () async {
+      final open1 = <ViewData>[], list = <ViewData>[];
+      open().listen(open1.add);
+      client.watch('todo.list', const {'list_id': 'L'}).listen(list.add);
+      await settle(200);
+      sender.behave = (_) => null;
+      final m = Mutation.delete('/todo/items/i1', 'todo_items', 'i1');
+      outbox.enqueue(m);
+      await settle();
+
+      // The server sends the change to each view separately; only the
+      // first has arrived so far.
+      server.sockets.last.add(
+        jsonEncode({
+          't': 'remove',
+          'sub': 's0',
+          'op': 'delete',
+          'seq': 2,
+          'entity': 'todo_items',
+          'id': 'i1',
+          'row': item,
+          'mutation': m.id,
+        }),
+      );
+      await settle();
+      expect(open1.last.rows('todo_items'), isEmpty);
+      expect(list.last.rows('todo_items'), isEmpty); // no blink back
     });
 
     test('a rejected change rolls back', () async {
