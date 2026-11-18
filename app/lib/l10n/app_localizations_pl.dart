@@ -693,4 +693,79 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get calendarsDisconnectAccount =>
       'Odłącz konto (usuwa jego kalendarze)';
+
+  @override
+  String syncPending(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Brak połączenia — $count zmiany czeka na wysłanie',
+      many: 'Brak połączenia — $count zmian czeka na wysłanie',
+      few: 'Brak połączenia — $count zmiany czekają na wysłanie',
+      one: 'Brak połączenia — $count zmiana czeka na wysłanie',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String syncFailedBadge(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count zmiany nie zostały zapisane',
+      many: '$count zmian nie zostało zapisanych',
+      few: '$count zmiany nie zostały zapisane',
+      one: '$count zmiana nie została zapisana',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncUnsyncedTitle => 'Niezapisane zmiany';
+
+  @override
+  String get syncUnsyncedHint =>
+      'Serwer odrzucił te zmiany. Spróbuj ponownie albo je odrzuć.';
+
+  @override
+  String syncFailedNotice(String what) {
+    return 'Nie udało się zapisać: $what';
+  }
+
+  @override
+  String get syncShow => 'Pokaż';
+
+  @override
+  String get syncRetry => 'Ponów';
+
+  @override
+  String get syncDiscard => 'Odrzuć';
+
+  @override
+  String syncAdd(String name) {
+    return 'Dodanie „$name”';
+  }
+
+  @override
+  String syncChange(String name) {
+    return 'Zmiana „$name”';
+  }
+
+  @override
+  String syncDelete(String name) {
+    return 'Usunięcie „$name”';
+  }
+
+  @override
+  String get syncUnnamed => 'bez nazwy';
+
+  @override
+  String syncServerSays(int status, String message) {
+    return 'Serwer ($status): $message';
+  }
+
+  @override
+  String syncDiffLine(String field, String before, String after) {
+    return '$field: $before → $after';
+  }
 }

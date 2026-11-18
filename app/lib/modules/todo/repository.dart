@@ -6,6 +6,7 @@ import '../../core/backend.dart';
 import '../../core/data.dart';
 import '../../core/family.dart';
 import '../../core/mock/mock_store.dart';
+import '../../core/sync/outbox.dart';
 import 'models.dart';
 
 const listsEntity = 'todo_lists';
@@ -20,8 +21,10 @@ abstract interface class TodoRepository {
   Stream<List<TodoItem>> watchOpenItems();
 
   Future<TodoList> addList(String name, {required int color});
-  Future<void> updateList(TodoList list);
-  Future<void> deleteList(String id);
+
+  /// Sends only the fields that differ between [list] and [updated].
+  Future<void> updateList(TodoList list, TodoList updated);
+  Future<void> deleteList(TodoList list);
 
   Future<TodoItem> addItem(
     String listId,
@@ -29,15 +32,17 @@ abstract interface class TodoRepository {
     String? assigneeId,
     DateTime? due,
   });
-  Future<void> updateItem(TodoItem item);
-  Future<void> deleteItem(String id);
+
+  /// Sends only the fields that differ between [item] and [updated].
+  Future<void> updateItem(TodoItem item, TodoItem updated);
+  Future<void> deleteItem(TodoItem item);
 
   /// A task's comment thread, oldest first.
   Stream<List<TodoComment>> watchComments(String itemId);
   Future<void> addComment(String itemId, String body);
 
   /// Only the author can delete a comment.
-  Future<void> deleteComment(String id);
+  Future<void> deleteComment(TodoComment comment);
 }
 
 List<TodoComment> _sortComments(Iterable<TodoComment> c) =>
@@ -48,46 +53,91 @@ List<TodoList> _sortLists(List<TodoList> l) =>
 
 // --- API ---
 
+/// Reads come from the WebSocket views, writes go through the [Outbox] and
+/// show up in the views at once (docs/backend-realtime.md, "Offline writes").
 class ApiTodoRepository implements TodoRepository {
-  ApiTodoRepository(this.api, this.sync);
-  final ApiClient api;
+  ApiTodoRepository(this.sync, this.outbox, {required this.actorId});
   final SyncClient sync;
+  final Outbox outbox;
+  final String actorId;
+
+  static const _listFields = ['name', 'color', 'due'];
+  static const _itemFields = ['title', 'done', 'assignee_id', 'due'];
 
   @override
   Stream<List<TodoList>> watchLists() => sync
-      .watch('todo.lists')
+      .watch('todo.lists', const {}, (e, _) => e == listsEntity)
       .map(
         (v) => _sortLists(v.rows(listsEntity).map(TodoList.fromJson).toList()),
       );
 
   @override
   Stream<List<TodoItem>> watchListItems(String listId) => sync
-      .watch('todo.list', {'list_id': listId})
+      .watch(
+        'todo.list',
+        {'list_id': listId},
+        (e, r) => switch (e) {
+          listsEntity => r['id'] == listId,
+          itemsEntity => r['list_id'] == listId,
+          _ => false,
+        },
+      )
       .map((v) => v.rows(itemsEntity).map(TodoItem.fromJson).toList());
 
   @override
   Stream<List<TodoItem>> watchOpenItems() => sync
-      .watch('todo.open')
+      .watch(
+        'todo.open',
+        const {},
+        (e, r) => e == itemsEntity && r['done'] != true,
+      )
       .map((v) => v.rows(itemsEntity).map(TodoItem.fromJson).toList());
 
   @override
-  Future<TodoList> addList(String name, {required int color}) async =>
-      TodoList.fromJson(
-        await api.post('/todo/lists', {
-          'id': uuid.v4(),
-          'name': name,
-          'color': color,
-        }),
-      );
+  Future<TodoList> addList(String name, {required int color}) async {
+    final list = TodoList(
+      id: uuid.v4(),
+      name: name,
+      color: color,
+      createdAt: DateTime.now(),
+    );
+    outbox.enqueue(
+      Mutation.create(
+        '/todo/lists',
+        listsEntity,
+        list.toJson(),
+        body: {'id': list.id, 'name': name, 'color': color},
+        label: name,
+      ),
+    );
+    return list;
+  }
 
   @override
-  Future<void> updateList(TodoList list) => api.patch(
-    '/todo/lists/${list.id}',
-    {'name': list.name, 'color': list.color, 'due': toApiDate(list.due)},
+  Future<void> updateList(TodoList list, TodoList updated) async {
+    final fields = changedFields(list.toJson(), updated.toJson(), _listFields);
+    if (fields.isEmpty) return;
+    outbox.enqueue(
+      Mutation.patch(
+        '/todo/lists/${list.id}',
+        listsEntity,
+        list.id,
+        fields,
+        label: updated.name,
+      ),
+    );
+  }
+
+  @override
+  Future<void> deleteList(TodoList list) async => outbox.enqueue(
+    Mutation.delete(
+      '/todo/lists/${list.id}',
+      listsEntity,
+      list.id,
+      cascade: const [(itemsEntity, 'list_id')],
+      label: list.name,
+    ),
   );
-
-  @override
-  Future<void> deleteList(String id) => api.delete('/todo/lists/$id');
 
   @override
   Future<TodoItem> addItem(
@@ -95,43 +145,98 @@ class ApiTodoRepository implements TodoRepository {
     String title, {
     String? assigneeId,
     DateTime? due,
-  }) async => TodoItem.fromJson(
-    await api.post('/todo/items', {
-      'id': uuid.v4(),
-      'list_id': listId,
-      'title': title,
-      'assignee_id': assigneeId,
-      'due': toApiDate(due),
-    }),
+  }) async {
+    final item = TodoItem(
+      id: uuid.v4(),
+      listId: listId,
+      title: title,
+      done: false,
+      createdAt: DateTime.now(),
+      assigneeId: assigneeId,
+      due: due,
+    );
+    outbox.enqueue(
+      Mutation.create(
+        '/todo/items',
+        itemsEntity,
+        item.toJson(),
+        body: {
+          'id': item.id,
+          'list_id': listId,
+          'title': title,
+          'assignee_id': assigneeId,
+          'due': toApiDate(due),
+        },
+        label: title,
+      ),
+    );
+    return item;
+  }
+
+  @override
+  Future<void> updateItem(TodoItem item, TodoItem updated) async {
+    final fields = changedFields(item.toJson(), updated.toJson(), _itemFields);
+    if (fields.isEmpty) return;
+    outbox.enqueue(
+      Mutation.patch(
+        '/todo/items/${item.id}',
+        itemsEntity,
+        item.id,
+        fields,
+        label: updated.title,
+      ),
+    );
+  }
+
+  @override
+  Future<void> deleteItem(TodoItem item) async => outbox.enqueue(
+    Mutation.delete(
+      '/todo/items/${item.id}',
+      itemsEntity,
+      item.id,
+      cascade: const [(commentsEntity, 'item_id')],
+      label: item.title,
+    ),
   );
 
   @override
-  Future<void> updateItem(TodoItem item) =>
-      api.patch('/todo/items/${item.id}', {
-        'title': item.title,
-        'done': item.done,
-        'assignee_id': item.assigneeId,
-        'due': toApiDate(item.due),
-      });
-
-  @override
-  Future<void> deleteItem(String id) => api.delete('/todo/items/$id');
-
-  @override
   Stream<List<TodoComment>> watchComments(String itemId) => sync
-      .watch('todo.comments', {'item_id': itemId})
+      .watch('todo.comments', {
+        'item_id': itemId,
+      }, (e, r) => e == commentsEntity && r['item_id'] == itemId)
       .map(
         (v) => _sortComments(v.rows(commentsEntity).map(TodoComment.fromJson)),
       );
 
   @override
-  Future<void> addComment(String itemId, String body) => api.post(
-    '/todo/comments',
-    {'id': uuid.v4(), 'item_id': itemId, 'body': body},
-  );
+  Future<void> addComment(String itemId, String body) async {
+    final comment = TodoComment(
+      id: uuid.v4(),
+      itemId: itemId,
+      body: body.trim(),
+      createdAt: DateTime.now(),
+      authorId: actorId,
+    );
+    outbox.enqueue(
+      Mutation.create(
+        '/todo/comments',
+        commentsEntity,
+        comment.toJson(),
+        body: {'id': comment.id, 'item_id': itemId, 'body': comment.body},
+        label: comment.body,
+      ),
+    );
+  }
 
   @override
-  Future<void> deleteComment(String id) => api.delete('/todo/comments/$id');
+  Future<void> deleteComment(TodoComment comment) async => outbox.enqueue(
+    Mutation.delete(
+      '/todo/comments/${comment.id}',
+      commentsEntity,
+      comment.id,
+      label: comment.body,
+    ),
+  );
 }
 
 // --- mock ---
@@ -171,17 +276,25 @@ class MockTodoRepository implements TodoRepository {
   }
 
   @override
-  Future<void> updateList(TodoList list) =>
-      store.put(listsEntity, list.toJson(), actorId: actorId);
+  Future<void> updateList(TodoList list, TodoList updated) => store.patch(
+    listsEntity,
+    list.id,
+    changedFields(list.toJson(), updated.toJson(), const [
+      'name',
+      'color',
+      'due',
+    ]),
+    actorId: actorId,
+  );
 
   @override
-  Future<void> deleteList(String id) async {
+  Future<void> deleteList(TodoList list) async {
     final items = store
         .list(itemsEntity)
-        .where((d) => d['list_id'] == id)
-        .map((d) => d['id'] as String);
+        .where((d) => d['list_id'] == list.id)
+        .map(TodoItem.fromJson);
     await Future.wait(items.map(deleteItem));
-    await store.delete(listsEntity, id, actorId: actorId);
+    await store.delete(listsEntity, list.id, actorId: actorId);
   }
 
   @override
@@ -205,11 +318,22 @@ class MockTodoRepository implements TodoRepository {
   }
 
   @override
-  Future<void> updateItem(TodoItem item) =>
-      store.put(itemsEntity, item.toJson(), actorId: actorId);
+  Future<void> updateItem(TodoItem item, TodoItem updated) => store.patch(
+    itemsEntity,
+    item.id,
+    changedFields(item.toJson(), updated.toJson(), const [
+      'title',
+      'done',
+      'done_at',
+      'assignee_id',
+      'due',
+    ]),
+    actorId: actorId,
+  );
 
   @override
-  Future<void> deleteItem(String id) async {
+  Future<void> deleteItem(TodoItem item) async {
+    final id = item.id;
     final comments = store
         .list(commentsEntity)
         .where((d) => d['item_id'] == id)
@@ -244,8 +368,8 @@ class MockTodoRepository implements TodoRepository {
   );
 
   @override
-  Future<void> deleteComment(String id) =>
-      store.delete(commentsEntity, id, actorId: actorId);
+  Future<void> deleteComment(TodoComment comment) =>
+      store.delete(commentsEntity, comment.id, actorId: actorId);
 }
 
 // --- providers ---
@@ -257,8 +381,9 @@ final todoRepositoryProvider = Provider<TodoRepository>(
       actorId: ref.watch(currentMemberProvider),
     ),
     ApiBackend() => ApiTodoRepository(
-      ref.watch(apiClientProvider),
       ref.watch(syncClientProvider),
+      ref.watch(outboxProvider)!,
+      actorId: ref.watch(currentMemberProvider),
     ),
   },
 );

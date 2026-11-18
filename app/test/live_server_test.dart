@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:oikoboard/core/api/api_client.dart';
 import 'package:oikoboard/core/api/sync_client.dart';
+import 'package:oikoboard/core/sync/outbox.dart';
 import 'package:oikoboard/modules/todo/models.dart';
 import 'package:oikoboard/modules/todo/repository.dart';
 
@@ -23,10 +24,21 @@ Future<String> devLogin(String email) async {
   return res['token'] as String;
 }
 
-ApiTodoRepository repoFor(String token) => ApiTodoRepository(
-  ApiClient(base, token: token),
-  SyncClient(base.replace(scheme: 'ws', path: '/api/v1/ws'), token),
-);
+ApiTodoRepository repoFor(String token) {
+  final api = ApiClient(base, token: token);
+  final outbox = Outbox(
+    send: (m) => api.mutate(m.method, m.path, m.body, mutationId: m.id),
+  );
+  return ApiTodoRepository(
+    SyncClient(
+      base.replace(scheme: 'ws', path: '/api/v1/ws'),
+      token,
+      outbox: outbox,
+    ),
+    outbox,
+    actorId: '',
+  );
+}
 
 Future<T> firstWhere<T>(Stream<T> s, bool Function(T) test) =>
     s.firstWhere(test).timeout(const Duration(seconds: 5));
@@ -44,7 +56,7 @@ void main() {
 
   test("Dad's change reaches Ola live, only in the right views", () async {
     if (!up) {
-      markTestSkipped('serwer niedostępny albo bez OIKO_DEV_LOGIN=1');
+      markTestSkipped('server unreachable or without OIKO_DEV_LOGIN=1');
       return;
     }
     // Dad creates a new family and invites Ola with a link.
@@ -75,7 +87,7 @@ void main() {
     // Ola has open: the shopping list and “not done”.
     final olaList = ola.watchListItems(zakupy.id).asBroadcastStream();
     final olaOpen = ola.watchOpenItems().asBroadcastStream();
-    await olaList.first; // snapshoty
+    await olaList.first; // snapshots
     await olaOpen.first;
 
     final title = 'Test ${DateTime.now().millisecondsSinceEpoch}';
@@ -100,7 +112,7 @@ void main() {
       olaOpen,
       (l) => l.every((i) => i.id != item.id),
     );
-    await tata.updateItem(item.toggled());
+    await tata.updateItem(item, item.toggled());
     await doneSeen;
     await goneFromOpen;
 
@@ -108,7 +120,24 @@ void main() {
       olaList,
       (l) => l.every((i) => i.id != item.id),
     );
-    await tata.deleteItem(item.id);
+    await tata.deleteItem(item);
     await deleted;
+
+    // Dad's own write leaves the overlay when its change comes back over
+    // the WebSocket — well before the outbox's fallback timeout.
+    final tataLists = tata.watchLists().asBroadcastStream();
+    await tataLists.first;
+    await tata.updateList(zakupy, zakupy.copyWith(name: 'Sklep'));
+    await firstWhere<List<TodoList>>(
+      tataLists,
+      (l) => l.any((l) => l.name == 'Sklep'),
+    );
+    final sw = Stopwatch()..start();
+    // (earlier writes had no open view to come back through — they wait
+    // for the timeout, so look at the rename only)
+    while (tata.outbox.overlay.any((m) => m.fields['name'] == 'Sklep')) {
+      expect(sw.elapsed, lessThan(const Duration(seconds: 3)));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
   });
 }

@@ -15,6 +15,8 @@ import 'invite_dialog.dart';
 import 'l10n.dart';
 import 'mock/simulator.dart';
 import 'session.dart';
+import 'sync/outbox.dart';
+import 'unsynced_sheet.dart';
 
 class _Destination {
   const _Destination(this.title, this.icon, this.selectedIcon);
@@ -35,6 +37,7 @@ class AppShell extends ConsumerStatefulWidget {
 
 class _AppShellState extends ConsumerState<AppShell> {
   StreamSubscription<Exception>? _errors;
+  StreamSubscription<FailedMutation>? _failures;
 
   List<_Destination> _destinations(AppLocalizations l) => [
     _Destination(l.navWall, Icons.dashboard_outlined, Icons.dashboard),
@@ -44,6 +47,10 @@ class _AppShellState extends ConsumerState<AppShell> {
   @override
   void initState() {
     super.initState();
+    ref.listenManual(outboxProvider, (_, outbox) {
+      _failures?.cancel();
+      _failures = outbox?.failures.listen(_onFailure);
+    }, fireImmediately: true);
     _errors = ApiClient.errors.stream.listen((error) {
       if (!mounted) return;
       final l = context.l10n;
@@ -58,9 +65,27 @@ class _AppShellState extends ConsumerState<AppShell> {
     });
   }
 
+  void _onFailure(FailedMutation f) {
+    if (!mounted) return;
+    final l = context.l10n;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text(l.syncFailedNotice(describeMutation(l, f.mutation))),
+          action: SnackBarAction(
+            label: l.syncShow,
+            onPressed: () => showUnsyncedSheet(context),
+          ),
+        ),
+      );
+  }
+
   @override
   void dispose() {
     _errors?.cancel();
+    _failures?.cancel();
     super.dispose();
   }
 
@@ -114,6 +139,7 @@ class _AppShellState extends ConsumerState<AppShell> {
         index == 0 ? context.l10n.appName : destinations[index].title,
       ),
       actions: const [
+        _UnsyncedButton(),
         _OfflineBadge(),
         _SimulatorButton(),
         _AccountMenu(),
@@ -303,7 +329,30 @@ class _AccountMenu extends ConsumerWidget {
   }
 }
 
-/// Icon shown when there is no connection to the server (data may be stale).
+/// Opens the changes the server rejected; shown only when there are some.
+class _UnsyncedButton extends ConsumerWidget {
+  const _UnsyncedButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final failed = ref.watch(outboxStateProvider).value?.failed.length ?? 0;
+    if (failed == 0) return const SizedBox();
+    return IconButton(
+      tooltip: context.l10n.syncFailedBadge(failed),
+      icon: Badge.count(
+        count: failed,
+        child: Icon(
+          Icons.sync_problem,
+          color: Theme.of(context).colorScheme.error,
+        ),
+      ),
+      onPressed: () => showUnsyncedSheet(context),
+    );
+  }
+}
+
+/// Icon shown when there is no connection to the server (data may be stale,
+/// changes wait in the outbox).
 class _OfflineBadge extends ConsumerWidget {
   const _OfflineBadge();
 
@@ -311,8 +360,11 @@ class _OfflineBadge extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final online = ref.watch(onlineProvider).value ?? true;
     if (online) return const SizedBox();
+    final pending = ref.watch(outboxStateProvider).value?.pending ?? 0;
     return Tooltip(
-      message: context.l10n.shellOffline,
+      message: pending == 0
+          ? context.l10n.shellOffline
+          : context.l10n.syncPending(pending),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8),
         child: Icon(

@@ -5,6 +5,8 @@ import 'dart:math';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../change.dart';
+import '../sync/outbox.dart';
+import '../sync/view_cache.dart';
 
 /// State of one view: entity → id → row.
 class ViewData {
@@ -15,12 +17,24 @@ class ViewData {
       entities[entity]?.values.toList() ?? const [];
 }
 
+/// Whether a row belongs to a view — the client's copy of the server's
+/// `View.Matches`, used to place pending changes into views.
+typedef ViewFilter = bool Function(String entity, Map<String, dynamic> row);
+
 class _Sub {
-  _Sub(this.view, this.params, this.controller);
+  _Sub(this.view, this.params, this.controller, this.accept);
   final String view;
   final Map<String, dynamic> params;
   final StreamController<ViewData> controller;
-  Map<String, Map<String, Map<String, dynamic>>> state = {};
+  final ViewFilter? accept;
+
+  /// The server's state (snapshot + changes), without the overlay.
+  Entities state = {};
+
+  /// Has a snapshot, live or cached.
+  var hasData = false;
+
+  String get cacheKey => viewCacheKey(view, params);
 }
 
 /// One WebSocket connection per app, many view subscriptions.
@@ -32,6 +46,11 @@ class _Sub {
 /// The server sends `{"t":"ping"}` every 5 s, so silence longer than
 /// [silenceTimeout] means a half-open socket (sleep, Wi-Fi ↔ LTE): it is
 /// dropped and replaced.
+///
+/// With an [Outbox], views show its pending mutations on top of the server's
+/// state, and changes coming back with a mutation id confirm them. With a
+/// [ViewCache], the last state of each view is kept on the device and shown
+/// until the snapshot arrives (e.g. when started offline).
 class SyncClient {
   SyncClient(
     this.wsUri,
@@ -40,9 +59,21 @@ class SyncClient {
     this.silenceTimeout = const Duration(seconds: 12),
     this.readyTimeout = const Duration(seconds: 10),
     this.maxBackoff = const Duration(seconds: 3),
+    this.outbox,
+    this.cache,
   }) {
+    _outboxSub = outbox?.changes.listen((_) => _emitAll());
+    cache?.loaded.then((_) {
+      for (final s in _subs.values) {
+        _fromCache(s);
+      }
+    });
     _connect();
   }
+
+  final Outbox? outbox;
+  final ViewCache? cache;
+  StreamSubscription<void>? _outboxSub;
 
   final Uri wsUri;
   final String token;
@@ -78,15 +109,21 @@ class SyncClient {
   Stream<Change> get changes => _changes.stream;
 
   /// Subscribes to a view. Cancelling the stream sends `unsub`.
+  ///
+  /// [accept] lets pending mutations add rows to the view (creates, or
+  /// changes that move a row into it) and drop rows that no longer match;
+  /// without it they only change or remove rows already in it.
   Stream<ViewData> watch(
     String view, [
     Map<String, dynamic> params = const {},
+    ViewFilter? accept,
   ]) {
     late final StreamController<ViewData> ctrl;
     final id = 's${_nextId++}';
     ctrl = StreamController<ViewData>(
       onListen: () {
-        _subs[id] = _Sub(view, params, ctrl);
+        final sub = _subs[id] = _Sub(view, params, ctrl, accept);
+        _fromCache(sub);
         _sendSub(id);
       },
       onCancel: () {
@@ -217,6 +254,9 @@ class SyncClient {
     }
     final sub = _subs[msg['sub']];
     if (sub == null) return;
+    // Our own write came back — before emitting, so the view never shows
+    // the change twice (overlay + server state).
+    if (msg['mutation'] case final String m) outbox?.confirm(m);
 
     switch (type) {
       case 'snapshot':
@@ -241,9 +281,87 @@ class SyncClient {
       default:
         return;
     }
-    sub.controller.add(
-      ViewData({for (final e in sub.state.entries) e.key: Map.of(e.value)}),
-    );
+    sub.hasData = true;
+    cache?.put(sub.cacheKey, sub.state);
+    _emit(sub);
+  }
+
+  void _fromCache(_Sub sub) {
+    if (sub.hasData) return;
+    final cached = cache?.get(sub.cacheKey);
+    if (cached == null) return;
+    sub.state = cached;
+    sub.hasData = true;
+    _emit(sub);
+  }
+
+  void _emitAll() {
+    for (final s in _subs.values) {
+      _emit(s);
+    }
+  }
+
+  void _emit(_Sub sub) {
+    if (!sub.hasData || sub.controller.isClosed) return;
+    sub.controller.add(ViewData(_withOverlay(sub)));
+  }
+
+  /// The server's state of [sub] with the pending mutations applied in order.
+  Entities _withOverlay(_Sub sub) {
+    final out = {for (final e in sub.state.entries) e.key: Map.of(e.value)};
+    final accept = sub.accept;
+    for (final m in outbox?.overlay ?? const <Mutation>[]) {
+      switch (m.kind) {
+        case MutationKind.create:
+          if (accept != null && accept(m.entity, m.fields)) {
+            (out[m.entity] ??= {})[m.entityId] = m.fields;
+          }
+        case MutationKind.patch:
+          final current =
+              out[m.entity]?[m.entityId] ?? _knownRow(m.entity, m.entityId);
+          if (current == null) continue;
+          final row = {...current, ...m.fields};
+          if (accept == null) {
+            if (out[m.entity]?.containsKey(m.entityId) ?? false) {
+              out[m.entity]![m.entityId] = row;
+            }
+          } else if (accept(m.entity, row)) {
+            (out[m.entity] ??= {})[m.entityId] = row;
+          } else {
+            out[m.entity]?.remove(m.entityId);
+          }
+        case MutationKind.delete:
+          out[m.entity]?.remove(m.entityId);
+          for (final (entity, field) in m.cascade) {
+            out[entity]?.removeWhere((_, r) => r[field] == m.entityId);
+          }
+      }
+    }
+    return out;
+  }
+
+  /// A row as any open view (or a pending create) knows it.
+  Map<String, dynamic>? _knownRow(String entity, String id) {
+    for (final s in _subs.values) {
+      if (s.state[entity]?[id] case final row?) return row;
+    }
+    for (final m in outbox?.overlay ?? const <Mutation>[]) {
+      if (m.kind == MutationKind.create &&
+          m.entity == entity &&
+          m.entityId == id) {
+        return m.fields;
+      }
+    }
+    return null;
+  }
+
+  /// The server's state of a row, if an open view has it (for showing what a
+  /// failed change would have changed).
+  Map<String, dynamic>? serverRow(String entity, String id) {
+    for (final s in _subs.values) {
+      if (s.state[entity]?[id] case final row?) return row;
+    }
+    return null;
   }
 
   void _notify(Map<String, dynamic> msg) {
@@ -273,6 +391,8 @@ class SyncClient {
     _disposed = true;
     _retry?.cancel();
     _watchdog?.cancel();
+    _outboxSub?.cancel();
+    cache?.close();
     _channelSub?.cancel();
     _channel?.sink.close();
     for (final s in _subs.values) {

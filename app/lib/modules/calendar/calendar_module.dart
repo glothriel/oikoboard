@@ -154,6 +154,7 @@ class CalendarModule extends FamilyModule {
       final e = future[random.nextInt(future.length)];
       const shift = Duration(hours: 1);
       await repo.updateEvent(
+        e,
         e.copyWith(start: e.start.add(shift), end: e.end.add(shift)),
       );
       return;

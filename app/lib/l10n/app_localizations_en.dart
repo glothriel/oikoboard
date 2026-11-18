@@ -688,4 +688,75 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get calendarsDisconnectAccount =>
       'Disconnect account (removes its calendars)';
+
+  @override
+  String syncPending(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'No connection — $count changes waiting to be sent',
+      one: 'No connection — $count change waiting to be sent',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String syncFailedBadge(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count changes weren’t saved',
+      one: '$count change wasn’t saved',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get syncUnsyncedTitle => 'Unsynced changes';
+
+  @override
+  String get syncUnsyncedHint =>
+      'The server rejected these changes. Retry them or discard them.';
+
+  @override
+  String syncFailedNotice(String what) {
+    return 'Couldn’t save: $what';
+  }
+
+  @override
+  String get syncShow => 'Show';
+
+  @override
+  String get syncRetry => 'Retry';
+
+  @override
+  String get syncDiscard => 'Discard';
+
+  @override
+  String syncAdd(String name) {
+    return 'Add “$name”';
+  }
+
+  @override
+  String syncChange(String name) {
+    return 'Change “$name”';
+  }
+
+  @override
+  String syncDelete(String name) {
+    return 'Delete “$name”';
+  }
+
+  @override
+  String get syncUnnamed => 'untitled';
+
+  @override
+  String syncServerSays(int status, String message) {
+    return 'Server ($status): $message';
+  }
+
+  @override
+  String syncDiffLine(String field, String before, String after) {
+    return '$field: $before → $after';
+  }
 }

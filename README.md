@@ -58,7 +58,8 @@ members' devices.
 
 > Detailed design: [docs/backend-realtime.md](docs/backend-realtime.md). Below is a summary of the original idea.
 
-1. Writes go through plain REST (`POST/PATCH/DELETE`).
+1. Writes go through plain REST (`POST/PATCH/DELETE`), queued on the device (outbox) so they work offline
+   and show up at once.
 2. Every change in the database gets an increasing number in the `changes` table
    (`seq`, `household_id`, `module`, `entity_type`, `entity_id`, `op`, `payload`).
 3. After commit the server does `pg_notify` → every server instance gets notified
@@ -178,7 +179,8 @@ oikoboard/
    - [x] REST for todo and calendar
    - [x] Change log (trigger → `changes` → NOTIFY) + WebSocket with views (snapshot + stream)
    - [x] `Api*Repository` + `SyncClient` in the app (reconnect = fresh snapshots)
-   - [ ] Resume from `since`, optimistic UI, offline write queue
+   - [x] Optimistic UI, offline write queue (outbox) with a dead letter for rejected changes
+   - [ ] Resume from `since`
 3. **Phase 3 — More modules** (weight, meals, shopping…), notifications, offline
 
 ---

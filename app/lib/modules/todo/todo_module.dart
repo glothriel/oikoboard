@@ -160,7 +160,8 @@ class TodoModule extends FamilyModule {
     final repo = MockTodoRepository(store, actorId: actorId);
     final items = store.list(itemsEntity).map(TodoItem.fromJson).toList();
     if (items.isNotEmpty && random.nextBool()) {
-      await repo.updateItem(items[random.nextInt(items.length)].toggled());
+      final item = items[random.nextInt(items.length)];
+      await repo.updateItem(item, item.toggled());
       return;
     }
     final lists = store.list(listsEntity);
@@ -280,7 +281,7 @@ class WallTaskTile extends ConsumerWidget {
       leading: Checkbox(
         value: i.done,
         onChanged: (_) =>
-            ref.read(todoRepositoryProvider).updateItem(i.toggled()),
+            ref.read(todoRepositoryProvider).updateItem(i, i.toggled()),
       ),
       title: Text(
         i.title,

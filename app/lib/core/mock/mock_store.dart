@@ -2,11 +2,11 @@ import 'dart:async';
 
 import '../change.dart';
 
-/// Udawany backend: dokumenty w pamięci + strumień zmian.
+/// Fake backend: documents in memory + a stream of changes.
 ///
-/// Zachowuje się jak przyszły serwer: zapis ma lekkie opóźnienie, a każda
-/// zmiana trafia do [changes] (odpowiednik WebSocketu). Repozytoria modułów
-/// budują na nim swoje typowane API; później podmienimy je na wersje HTTP.
+/// Behaves like the server: a write has a slight delay and every change goes
+/// to [changes] (the WebSocket's counterpart). The modules' mock repositories
+/// build their typed API on it.
 class MockStore {
   MockStore({this.latency = const Duration(milliseconds: 120)});
 
@@ -24,7 +24,7 @@ class MockStore {
   List<Map<String, dynamic>> list(String collection) =>
       _data[collection]?.values.map(Map<String, dynamic>.of).toList() ?? [];
 
-  /// Aktualny stan kolekcji, a potem nowy po każdej zmianie w niej.
+  /// The collection's current state, then the new one after each change.
   Stream<List<Map<String, dynamic>>> watch(String collection) {
     late final StreamController<List<Map<String, dynamic>>> ctrl;
     StreamSubscription<Change>? sub;
@@ -40,7 +40,7 @@ class MockStore {
     return ctrl.stream;
   }
 
-  /// Dane startowe — bez opóźnienia i bez emitowania zmian.
+  /// Initial data — no delay, no change events.
   void seed(String collection, Map<String, dynamic> doc) {
     (_data[collection] ??= {})[doc['id'] as String] = Map.of(doc);
   }
@@ -64,6 +64,21 @@ class MockStore {
       actorId,
     );
     return Map.of(stored);
+  }
+
+  /// Changes only [fields] of an existing document (like a PATCH).
+  Future<void> patch(
+    String collection,
+    String id,
+    Map<String, dynamic> fields, {
+    required String actorId,
+  }) async {
+    if (fields.isEmpty) return;
+    await Future<void>.delayed(latency);
+    final doc = _data[collection]?[id];
+    if (doc == null) return;
+    doc.addAll(fields);
+    _emit(collection, id, ChangeOp.updated, doc, actorId);
   }
 
   Future<void> delete(

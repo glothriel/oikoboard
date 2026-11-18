@@ -272,16 +272,18 @@ class _TodoItemsPaneState extends ConsumerState<TodoItemsPane> {
           initial: widget.list.name,
         );
         if (name != null) {
-          await repo.updateList(widget.list.copyWith(name: name));
+          await repo.updateList(widget.list, widget.list.copyWith(name: name));
         }
       case 'due':
         final due = await pickDueDate(context, widget.list.due);
-        if (due != null) await repo.updateList(widget.list.copyWith(due: due));
+        if (due != null) {
+          await repo.updateList(widget.list, widget.list.copyWith(due: due));
+        }
       case 'clearDue':
-        await repo.updateList(widget.list.copyWith(due: null));
+        await repo.updateList(widget.list, widget.list.copyWith(due: null));
       case 'delete':
         ref.read(selectedTodoListProvider.notifier).select(null);
-        await repo.deleteList(widget.list.id);
+        await repo.deleteList(widget.list);
     }
   }
 
@@ -305,7 +307,7 @@ class _TodoItemsPaneState extends ConsumerState<TodoItemsPane> {
       item: i,
       onDismissed: () {
         setState(() => _hidden.add(i.id));
-        ref.read(todoRepositoryProvider).deleteItem(i.id);
+        ref.read(todoRepositoryProvider).deleteItem(i);
       },
     );
 
@@ -424,7 +426,7 @@ class TodoItemTile extends ConsumerWidget {
         leading: Checkbox(
           value: item.done,
           onChanged: (_) =>
-              ref.read(todoRepositoryProvider).updateItem(item.toggled()),
+              ref.read(todoRepositoryProvider).updateItem(item, item.toggled()),
         ),
         title: Text(
           item.title,
@@ -482,6 +484,7 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
     ref
         .read(todoRepositoryProvider)
         .updateItem(
+          widget.item,
           widget.item.copyWith(
             title: title.isEmpty ? null : title,
             assigneeId: _assignee,
@@ -492,7 +495,7 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
   }
 
   void _delete() {
-    ref.read(todoRepositoryProvider).deleteItem(widget.item.id);
+    ref.read(todoRepositoryProvider).deleteItem(widget.item);
     Navigator.pop(context);
   }
 
@@ -680,9 +683,8 @@ class _TodoCommentsState extends ConsumerState<TodoComments> {
                       ? IconButton(
                           tooltip: l.todoCommentDelete,
                           icon: const Icon(Icons.close, size: 18),
-                          onPressed: () => ref
-                              .read(todoRepositoryProvider)
-                              .deleteComment(c.id),
+                          onPressed: () =>
+                              ref.read(todoRepositoryProvider).deleteComment(c),
                         )
                       : null,
                 ),

@@ -14,6 +14,7 @@ import '../../core/device_prefs.dart';
 import '../../core/family.dart';
 import '../../core/mock/mock_store.dart';
 import '../../core/platform/browser.dart';
+import '../../core/sync/outbox.dart';
 import '../todo/repository.dart' as todo show itemsEntity, listsEntity;
 import 'models.dart';
 
@@ -39,8 +40,11 @@ abstract interface class CalendarRepository {
   Stream<List<FamilyCalendar>> watchCalendars();
 
   Future<void> addEvent(CalendarEvent draft);
+
+  /// Sends only the fields that differ between [event] and [updated].
   Future<void> updateEvent(
-    CalendarEvent event, {
+    CalendarEvent event,
+    CalendarEvent updated, {
     EditScope scope = EditScope.occurrence,
   });
   Future<void> deleteEvent(
@@ -86,19 +90,25 @@ class CalendarConnectError implements Exception {
   String toString() => 'CalendarConnectError(${failure.name})';
 }
 
+/// Event writes go through the [Outbox] (they work offline); managing
+/// calendars and accounts needs the server and goes straight to the API.
 class ApiCalendarRepository implements CalendarRepository {
-  ApiCalendarRepository(this.api, this.sync);
+  ApiCalendarRepository(this.api, this.sync, this.outbox);
   final ApiClient api;
   final SyncClient sync;
+  final Outbox outbox;
 
   static const _verifierKey = 'oiko.calendar_pkce';
 
   @override
   Stream<List<CalendarEvent>> watchRange(DateRange r) => sync
-      .watch('calendar.range', {
-        'from': toApiTime(r.from),
-        'to': toApiTime(r.to),
-      })
+      .watch(
+        'calendar.range',
+        {'from': toApiTime(r.from), 'to': toApiTime(r.to)},
+        (e, row) =>
+            e == eventsEntity &&
+            CalendarEvent.fromJson(row).overlaps(r.from, r.to),
+      )
       .map((v) => _sorted(v.rows(eventsEntity).map(CalendarEvent.fromJson)));
 
   @override
@@ -110,38 +120,72 @@ class ApiCalendarRepository implements CalendarRepository {
               ..sort((a, b) => a.name.compareTo(b.name)),
       );
 
+  static const _eventFields = [
+    'title',
+    'description',
+    'location',
+    'starts_at',
+    'ends_at',
+    'all_day',
+    'member_ids',
+    'recurrence',
+  ];
+
   @override
-  Future<void> addEvent(CalendarEvent draft) {
+  Future<void> addEvent(CalendarEvent draft) async {
     final body = draft.toJson()
       ..remove('event_id')
       ..remove('original_start')
       ..remove('kind');
-    return api.post('/calendar/events', body);
+    // Shown under the id the server will give it, so it can be changed or
+    // deleted before the server confirms it.
+    final row = draft.toJson()..addAll(mirroredIds(draft));
+    outbox.enqueue(
+      Mutation.create(
+        '/calendar/events',
+        eventsEntity,
+        row,
+        body: body,
+        label: draft.title,
+      ),
+    );
   }
 
   @override
   Future<void> updateEvent(
-    CalendarEvent e, {
+    CalendarEvent e,
+    CalendarEvent updated, {
     EditScope scope = EditScope.occurrence,
-  }) {
-    final body = e.toJson()
-      ..remove('id')
-      ..remove('calendar_id')
-      ..remove('event_id')
-      ..remove('original_start')
-      ..remove('kind');
+  }) async {
+    final fields = changedFields(e.toJson(), updated.toJson(), _eventFields);
     // Recurrence belongs to the series; an occurrence can't change it.
     if (e.originalStart != null && scope == EditScope.occurrence) {
-      body.remove('recurrence');
+      fields.remove('recurrence');
     }
-    return api.patch('/calendar/events/${e.id}?scope=${scope.param}', body);
+    if (fields.isEmpty) return;
+    outbox.enqueue(
+      Mutation.patch(
+        '/calendar/events/${e.id}?scope=${scope.param}',
+        eventsEntity,
+        e.id,
+        fields,
+        label: updated.title,
+      ),
+    );
   }
 
   @override
   Future<void> deleteEvent(
     CalendarEvent e, {
     EditScope scope = EditScope.occurrence,
-  }) => api.delete('/calendar/events/${e.id}?scope=${scope.param}');
+  }) async => outbox.enqueue(
+    Mutation.delete(
+      '/calendar/events/${e.id}?scope=${scope.param}',
+      eventsEntity,
+      e.id,
+      label: e.title,
+    ),
+  );
 
   @override
   bool get canConnect => true;
@@ -240,6 +284,35 @@ class ApiCalendarRepository implements CalendarRepository {
       api.post('/calendars/$calendarId/sync', {});
 }
 
+/// Namespace of the server's mirror ids (calendar/mirror.go `idSpace`).
+const _idSpace = '6f0c5f5e-3c39-4a0e-9a3b-0b1c2d3e4f50';
+
+/// The ids the server gives a new event created with the client id
+/// `draft.id` (calendar/mirror.go): the event is `uuidv5(calendar/remoteId)`,
+/// the remote id being the client id without dashes; an occurrence of a
+/// series is `uuidv5(event@start)`. Returns `id`, `event_id` and
+/// `original_start` of the event's first occurrence.
+Map<String, dynamic> mirroredIds(CalendarEvent draft) {
+  final remoteId = draft.id.replaceAll('-', '').toLowerCase();
+  final eventId = uuid.v5(_idSpace, '${draft.calendarId}/$remoteId');
+  if (!draft.recurring) {
+    return {'id': eventId, 'event_id': eventId, 'original_start': null};
+  }
+  final start = draft.allDay
+      ? DateTime.utc(draft.start.year, draft.start.month, draft.start.day)
+      : draft.start.toUtc();
+  String two(int n) => n.toString().padLeft(2, '0');
+  final rfc3339 =
+      '${start.year.toString().padLeft(4, '0')}-${two(start.month)}-'
+      '${two(start.day)}T${two(start.hour)}:${two(start.minute)}:'
+      '${two(start.second)}Z';
+  return {
+    'id': uuid.v5(_idSpace, '$eventId@$rfc3339'),
+    'event_id': eventId,
+    'original_start': start.toIso8601String(),
+  };
+}
+
 /// In-memory mock: calendars are fixed, recurring events show only their
 /// first occurrence. Due-task days are derived from the mock tasks the way
 /// the server derives them.
@@ -336,9 +409,24 @@ class MockCalendarRepository implements CalendarRepository {
 
   @override
   Future<void> updateEvent(
-    CalendarEvent event, {
+    CalendarEvent event,
+    CalendarEvent updated, {
     EditScope scope = EditScope.occurrence,
-  }) => store.put(eventsEntity, event.toJson(), actorId: actorId);
+  }) => store.patch(
+    eventsEntity,
+    event.id,
+    changedFields(event.toJson(), updated.toJson(), const [
+      'title',
+      'description',
+      'location',
+      'starts_at',
+      'ends_at',
+      'all_day',
+      'member_ids',
+      'recurrence',
+    ]),
+    actorId: actorId,
+  );
 
   @override
   Future<void> deleteEvent(
@@ -394,6 +482,7 @@ final calendarRepositoryProvider = Provider<CalendarRepository>(
     ApiBackend() => ApiCalendarRepository(
       ref.watch(apiClientProvider),
       ref.watch(syncClientProvider),
+      ref.watch(outboxProvider)!,
     ),
   },
 );

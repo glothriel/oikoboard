@@ -982,6 +982,7 @@ class _EventEditorState extends ConsumerState<_EventEditor> {
     }
     Navigator.pop(context);
     await repo.updateEvent(
+      old,
       old.copyWith(
         title: title,
         description: _description.text.trim(),

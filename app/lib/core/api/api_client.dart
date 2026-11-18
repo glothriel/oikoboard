@@ -36,15 +36,33 @@ class ApiClient {
   static final errors = StreamController<Exception>.broadcast();
 
   Future<dynamic> get(String path) => _send('GET', path);
-  Future<dynamic> post(String path, Object body) => _send('POST', path, body);
-  Future<dynamic> patch(String path, Object body) => _send('PATCH', path, body);
+  Future<dynamic> post(String path, Object body) =>
+      _send('POST', path, body: body);
+  Future<dynamic> patch(String path, Object body) =>
+      _send('PATCH', path, body: body);
   Future<dynamic> delete(String path) => _send('DELETE', path);
 
-  Future<dynamic> _send(String method, String path, [Object? body]) async {
+  /// A queued write (the outbox): with its own mutation id, so a retry is
+  /// the same operation, and without reporting failures to [errors] — the
+  /// outbox decides what to do with them.
+  Future<dynamic> mutate(
+    String method,
+    String path,
+    Object? body, {
+    required String mutationId,
+  }) => _send(method, path, body: body, mutationId: mutationId, report: false);
+
+  Future<dynamic> _send(
+    String method,
+    String path, {
+    Object? body,
+    String? mutationId,
+    bool report = true,
+  }) async {
     final req = http.Request(method, baseUri.resolve('/api/v1$path'));
     req.headers['Content-Type'] = 'application/json';
     // Operation id — comes back in the change over the WebSocket (confirmation).
-    req.headers['X-Mutation-Id'] = uuid.v4();
+    req.headers['X-Mutation-Id'] = mutationId ?? uuid.v4();
     if (token != null) req.headers['Authorization'] = 'Bearer $token';
     if (body != null) req.body = jsonEncode(body);
 
@@ -52,7 +70,7 @@ class ApiClient {
     try {
       res = await http.Response.fromStream(await _http.send(req));
     } catch (e) {
-      errors.add(const ConnectionException());
+      if (report) errors.add(const ConnectionException());
       rethrow;
     }
     if (res.statusCode == 401) onUnauthorized?.call();
@@ -64,7 +82,7 @@ class ApiClient {
                 as String;
       } catch (_) {}
       final error = ApiException(res.statusCode, msg);
-      errors.add(error);
+      if (report) errors.add(error);
       throw error;
     }
     if (res.bodyBytes.isEmpty) return null;

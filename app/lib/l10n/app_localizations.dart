@@ -1267,6 +1267,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Disconnect account (removes its calendars)'**
   String get calendarsDisconnectAccount;
+
+  /// Offline badge tooltip with queued changes
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{No connection — {count} change waiting to be sent} other{No connection — {count} changes waiting to be sent}}'**
+  String syncPending(int count);
+
+  /// Tooltip of the button opening unsynced changes
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} change wasn’t saved} other{{count} changes weren’t saved}}'**
+  String syncFailedBadge(int count);
+
+  /// No description provided for @syncUnsyncedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsynced changes'**
+  String get syncUnsyncedTitle;
+
+  /// No description provided for @syncUnsyncedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The server rejected these changes. Retry them or discard them.'**
+  String get syncUnsyncedHint;
+
+  /// Snackbar; what: e.g. Change “Milk”
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t save: {what}'**
+  String syncFailedNotice(String what);
+
+  /// No description provided for @syncShow.
+  ///
+  /// In en, this message translates to:
+  /// **'Show'**
+  String get syncShow;
+
+  /// No description provided for @syncRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get syncRetry;
+
+  /// No description provided for @syncDiscard.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard'**
+  String get syncDiscard;
+
+  /// A rejected create
+  ///
+  /// In en, this message translates to:
+  /// **'Add “{name}”'**
+  String syncAdd(String name);
+
+  /// A rejected edit
+  ///
+  /// In en, this message translates to:
+  /// **'Change “{name}”'**
+  String syncChange(String name);
+
+  /// A rejected delete
+  ///
+  /// In en, this message translates to:
+  /// **'Delete “{name}”'**
+  String syncDelete(String name);
+
+  /// No description provided for @syncUnnamed.
+  ///
+  /// In en, this message translates to:
+  /// **'untitled'**
+  String get syncUnnamed;
+
+  /// Why the server rejected a change
+  ///
+  /// In en, this message translates to:
+  /// **'Server ({status}): {message}'**
+  String syncServerSays(int status, String message);
+
+  /// One field of a rejected change: current server value → attempted value
+  ///
+  /// In en, this message translates to:
+  /// **'{field}: {before} → {after}'**
+  String syncDiffLine(String field, String before, String after);
 }
 
 class _AppLocalizationsDelegate

@@ -9,7 +9,8 @@ Flutter app (web + Android)                    Go server                        
 
 - **Writes are REST, reads are WebSocket views.** A view is a named query with params (`todo.list`,
   `calendar.range`…): the client subscribes, gets a snapshot, then only changes that match. Reconnect = resubscribe =
-  fresh snapshot. Details: [backend-realtime.md](backend-realtime.md).
+  fresh snapshot. The app queues writes in a persistent outbox and shows them on top of the views until the server
+  confirms them, so it works offline. Details: [backend-realtime.md](backend-realtime.md).
 - **Change feed in the database:** every tracked table has a trigger writing to `changes` (per-household `seq`) and
   `pg_notify` after commit. Handlers never push to clients themselves.
 - **Modules** own their tables, routes and views; the core (households, members, auth, change feed) is generic.

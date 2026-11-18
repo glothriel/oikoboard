@@ -125,7 +125,7 @@ class _TodoDaySheetState extends ConsumerState<_TodoDaySheet> {
                       onChanged: (_) {
                         final next = i.toggled();
                         setState(() => _shown[i.id] = next);
-                        ref.read(todoRepositoryProvider).updateItem(next);
+                        ref.read(todoRepositoryProvider).updateItem(i, next);
                       },
                     ),
                 ],

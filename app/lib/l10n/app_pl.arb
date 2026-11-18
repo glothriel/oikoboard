@@ -194,5 +194,19 @@
   "calendarsAccessRevoked": "Dostęp cofnięty — podłącz konto ponownie",
   "calendarsTestAccount": "konto testowe (mock)",
   "calendarsLoadFailed": "Nie udało się pobrać listy kalendarzy.",
-  "calendarsDisconnectAccount": "Odłącz konto (usuwa jego kalendarze)"
+  "calendarsDisconnectAccount": "Odłącz konto (usuwa jego kalendarze)",
+  "syncPending": "{count, plural, one{Brak połączenia — {count} zmiana czeka na wysłanie} few{Brak połączenia — {count} zmiany czekają na wysłanie} many{Brak połączenia — {count} zmian czeka na wysłanie} other{Brak połączenia — {count} zmiany czeka na wysłanie}}",
+  "syncFailedBadge": "{count, plural, one{{count} zmiana nie została zapisana} few{{count} zmiany nie zostały zapisane} many{{count} zmian nie zostało zapisanych} other{{count} zmiany nie zostały zapisane}}",
+  "syncUnsyncedTitle": "Niezapisane zmiany",
+  "syncUnsyncedHint": "Serwer odrzucił te zmiany. Spróbuj ponownie albo je odrzuć.",
+  "syncFailedNotice": "Nie udało się zapisać: {what}",
+  "syncShow": "Pokaż",
+  "syncRetry": "Ponów",
+  "syncDiscard": "Odrzuć",
+  "syncAdd": "Dodanie „{name}”",
+  "syncChange": "Zmiana „{name}”",
+  "syncDelete": "Usunięcie „{name}”",
+  "syncUnnamed": "bez nazwy",
+  "syncServerSays": "Serwer ({status}): {message}",
+  "syncDiffLine": "{field}: {before} → {after}"
 }

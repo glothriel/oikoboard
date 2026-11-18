@@ -281,13 +281,13 @@ Uwagi:
 
 | Sytuacja | Co się dzieje |
 |----------|---------------|
-| Zerwany WS (sieć, uśpiony telefon, deploy) | Klient: backoff 0.5 s → 30 s z jitterem, nowy WS, `auth`, ponowny `sub` dla każdego **aktualnie otwartego** widoku. Każdy dostaje świeży snapshot i **zastępuje** lokalny stan tej subskrypcji. W UI dane zostają widoczne, a mały wskaźnik pokazuje „łączenie…”. |
+| Dropped WS (network, phone asleep, deploy) | Client: backoff 0.5 s → 3 s with jitter, a new WS, `auth`, `sub` again for every **currently open** view. Each gets a fresh snapshot that **replaces** that subscription's local state. The UI keeps showing the data, with an offline indicator. |
 | Restart serwera | j.w. |
 | Zerwane LISTEN na serwerze | Listener łączy się ponownie i każe dispatcherom dociągnąć zmiany od `lastSeq`. Klienci nic nie zauważą. |
 | Zgubiony NOTIFY | Okresowy poke dispatchera (~10 s) dociąga brakujące zmiany. |
 | Wolny klient (pełny bufor wyjściowy) | Zamykamy połączenie, klient reconnectuje i dostaje snapshot. Bez skomplikowanego backpressure. |
 | Zmiana parametrów widoku (np. inny miesiąc) | `unsub` starego + `sub` nowego. |
-| Zapis podczas braku sieci | MVP: błąd i komunikat. Później: kolejka zapisów (outbox) w aplikacji, retry z tym samym UUID / `X-Mutation-Id`, więc bez duplikatów. |
+| Write while offline | Queued in the outbox and shown at once; sent when the server is reachable (see below). |
 
 **Dlaczego na start zawsze snapshot:** pełny stan widoku to dziesiątki, najwyżej setki wierszy.
 Wysłanie go od nowa jest tańsze niż utrzymywanie logiki „co klient już ma”, a przy tym zawsze poprawne.
@@ -298,17 +298,39 @@ wciąż ma wpisy od `since+1` (retencja), serwer zamiast snapshotu odtwarza z ta
 
 ---
 
-## Własne zapisy i optymistyczne UI
+## Offline writes: outbox and optimistic overlay
 
-1. Klient generuje `id` encji i `mutationId`, od razu zmienia lokalny stan (np. odhaczone zadanie).
-2. `PATCH /api/v1/todo/items/:id` z nagłówkiem `X-Mutation-Id`.
-3. Serwer ustawia `SET LOCAL oiko.mutation`, trigger zapisuje to w `changes`.
-4. Przez WS wraca `upsert` z tym samym `mutation`. Klient wie, że to potwierdzenie jego zmiany
-   (nie pokazuje „Tata: odhaczono…” samemu Tacie).
-5. Błąd REST → klient cofa lokalną zmianę i pokazuje komunikat.
+The server stays the source of truth; the app has no local database.
 
-Konflikty: **last-write-wins** na poziomie wiersza. Kolumna `version` (inkrementowana przy update)
-pozwala później dodać `If-Match` i 409, jeśli kiedyś będzie potrzebne.
+- **Outbox.** Repositories don't call REST directly: each write becomes a mutation (method, path,
+  body, a client-generated `mutation_id`, and what it does to which row) in a persistent on-device
+  queue, per member and server. Mutations are sent one at a time, in order, with
+  `X-Mutation-Id: <mutation_id>` — a retry is the same operation, and creates use client ids, so
+  retries don't duplicate.
+- **Overlay.** A view = the server's state (snapshot + changes) with the pending mutations applied
+  on top, in order. Each view has a client-side copy of its filter (`Matches`), so a pending create
+  or change can enter or leave it (e.g. a checked-off task leaves `todo.open` at once). A mutation
+  leaves the overlay when a change with its `mutation_id` arrives over the WS, or, if no open view
+  receives one, 10 s after the server accepted it.
+- **Last snapshot on the device.** The last state of recently used views is cached, so the app
+  shows data when started offline. Logout deletes the cache (not the outbox).
+- **What is retried vs. rejected:**
+
+  | Response | Outcome |
+  |----------|---------|
+  | 2xx | done |
+  | 404 on DELETE | done (already gone — e.g. a retry whose first response was lost) |
+  | no response, 5xx, 401, 408, 429 | retried (backoff up to 3 s, and at once when the WS reconnects) |
+  | any other 4xx (incl. 409, 404 on PATCH) | dead letter: the overlay rolls back, the change is listed under "Unsynced changes" on the device (retry / discard / what it would have changed) |
+
+- **Conflicts.** PATCH sends only the changed fields, so concurrent edits of different fields of a
+  row both survive; the same field is last-write-wins. A change to a row deleted meanwhile → 404 →
+  dead letter. `version` allows `If-Match` + 409 later where it matters.
+- **Calendar events.** Event writes go through the outbox; managing calendars and accounts needs
+  the server. A created event is stored under ids the server derives from the client id
+  (`calendar/mirror.go`: `uuidv5(calendar/remoteId)`, per occurrence `uuidv5(event@start)`); the app
+  computes the same ids, so a pending event can be edited or deleted before it's confirmed.
+- The own change coming back is also how the app knows not to show "Dad: checked off…" to Dad.
 
 ---
 
@@ -377,8 +399,8 @@ a `AutoMigrate` nie radzi sobie dobrze ze zmianami schematu. GORM służy jako O
   `{entity: {id: row}}` (snapshot = podmiana, upsert/remove = łatka).
 - Riverpod: `StreamProvider.autoDispose.family` na `(view, params)`. Ekran znika → `unsub`
   (z kilkusekundowym `keepAlive`, żeby przełączanie zakładek nie robiło churnu).
-- `ApiTodoRepository` / `ApiCalendarRepository` implementują istniejące interfejsy:
-  `watch*` = subskrypcja widoku, zapisy = REST. Ekrany się nie zmieniają.
+- `ApiTodoRepository` / `ApiCalendarRepository` implement the same interfaces as the mocks:
+  `watch*` = a view subscription, writes = outbox mutations (see "Offline writes").
 - Snackbar „Ola: dodano „Masło”” bierze się z `actor` w wiadomości `upsert`/`remove`.
 
 ---
@@ -390,7 +412,7 @@ a `AutoMigrate` nie radzi sobie dobrze ze zmianami schematu. GORM służy jako O
 3. Realtime: listener → dispatcher → WS (snapshot + zmiany). Test: dwa `websocat` + curl.
 4. Moduł calendar: tabela + REST + `calendar.range`.
 5. Flutter: `SyncClient` + `Api*Repository`, przełącznik mock/API w `main.dart`.
-6. Auth na serio (hasła/zaproszenia), wznawianie `since`, offline outbox, gdy będzie potrzeba.
+6. Auth na serio (hasła/zaproszenia), wznawianie `since`, gdy będzie potrzeba.
 
 ## Decyzje
 - **Auth:** logowanie Google (OIDC) → token sesji (w bazie tylko SHA-256). Konto (`users`) jest

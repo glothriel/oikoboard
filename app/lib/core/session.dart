@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'backend.dart';
 import 'family.dart';
+import 'sync/view_cache.dart';
 
 /// The signed-in account (a person with an email). A family member is a separate thing.
 class Account {
@@ -144,7 +145,19 @@ class SessionNotifier extends Notifier<Session?> {
   Future<void> logout() async {
     final s = state;
     state = null;
+    await _clearViewCaches();
     if (s != null) await ref.read(authApiProvider).logout(s);
+  }
+
+  /// The household's data cached on the device (the outbox stays: its
+  /// changes are sent after the next login).
+  Future<void> _clearViewCaches() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      for (final k in prefs.getKeys()) {
+        if (k.startsWith(ViewCache.keyPrefix)) await prefs.remove(k);
+      }
+    } catch (_) {}
   }
 }
 

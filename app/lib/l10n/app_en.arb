@@ -449,5 +449,92 @@
   "calendarsAccessRevoked": "Access revoked — connect the account again",
   "calendarsTestAccount": "test account (mock)",
   "calendarsLoadFailed": "Couldn’t fetch the list of calendars.",
-  "calendarsDisconnectAccount": "Disconnect account (removes its calendars)"
+  "calendarsDisconnectAccount": "Disconnect account (removes its calendars)",
+  "syncPending": "{count, plural, one{No connection — {count} change waiting to be sent} other{No connection — {count} changes waiting to be sent}}",
+  "@syncPending": {
+    "description": "Offline badge tooltip with queued changes",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncFailedBadge": "{count, plural, one{{count} change wasn’t saved} other{{count} changes weren’t saved}}",
+  "@syncFailedBadge": {
+    "description": "Tooltip of the button opening unsynced changes",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncUnsyncedTitle": "Unsynced changes",
+  "syncUnsyncedHint": "The server rejected these changes. Retry them or discard them.",
+  "syncFailedNotice": "Couldn’t save: {what}",
+  "@syncFailedNotice": {
+    "description": "Snackbar; what: e.g. Change “Milk”",
+    "placeholders": {
+      "what": {
+        "type": "String"
+      }
+    }
+  },
+  "syncShow": "Show",
+  "syncRetry": "Retry",
+  "syncDiscard": "Discard",
+  "syncAdd": "Add “{name}”",
+  "@syncAdd": {
+    "description": "A rejected create",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "syncChange": "Change “{name}”",
+  "@syncChange": {
+    "description": "A rejected edit",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "syncDelete": "Delete “{name}”",
+  "@syncDelete": {
+    "description": "A rejected delete",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "syncUnnamed": "untitled",
+  "syncServerSays": "Server ({status}): {message}",
+  "@syncServerSays": {
+    "description": "Why the server rejected a change",
+    "placeholders": {
+      "status": {
+        "type": "int"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "syncDiffLine": "{field}: {before} → {after}",
+  "@syncDiffLine": {
+    "description": "One field of a rejected change: current server value → attempted value",
+    "placeholders": {
+      "field": {
+        "type": "String"
+      },
+      "before": {
+        "type": "String"
+      },
+      "after": {
+        "type": "String"
+      }
+    }
+  }
 }
