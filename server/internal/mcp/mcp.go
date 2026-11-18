@@ -297,7 +297,7 @@ func (t tools) register(s *sdk.Server) {
 	sdk.AddTool(s, &sdk.Tool{Name: "list_todos", Description: "Tasks on the family's todo lists " +
 		"(shopping lists are todo lists too). Open tasks only unless include_done."}, t.listTodos)
 	sdk.AddTool(s, &sdk.Tool{Name: "add_todo", Description: "Add a task to a todo list."}, t.addTodo)
-	sdk.AddTool(s, &sdk.Tool{Name: "update_todo", Description: "Change a task: title, assignee, " +
+	sdk.AddTool(s, &sdk.Tool{Name: "update_todo", Description: "Change a task: title, description, assignee, " +
 		"due date, or mark it done / not done. Only the given fields change."}, t.updateTodo)
 	sdk.AddTool(s, &sdk.Tool{Name: "delete_todo", Description: "Delete a task."}, t.deleteTodo)
 	sdk.AddTool(s, &sdk.Tool{Name: "agenda", Description: "Calendar events and tasks due in a range " +
@@ -353,25 +353,27 @@ func (t tools) familyTool(ctx context.Context, _ *sdk.CallToolRequest, _ none) (
 }
 
 type todoItem struct {
-	ID         string     `json:"id"`
-	ListID     string     `json:"list_id"`
-	Title      string     `json:"title"`
-	Done       bool       `json:"done"`
-	AssigneeID *string    `json:"assignee_id"`
-	Due        *core.Date `json:"due"`
+	ID          string     `json:"id"`
+	ListID      string     `json:"list_id"`
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	Done        bool       `json:"done"`
+	AssigneeID  *string    `json:"assignee_id"`
+	Due         *core.Date `json:"due"`
 }
 
 type todoOut struct {
-	ID       string `json:"id"`
-	List     string `json:"list"`
-	Title    string `json:"title"`
-	Done     bool   `json:"done,omitempty"`
-	Assignee string `json:"assignee,omitempty"`
-	Due      string `json:"due,omitempty"`
+	ID          string `json:"id"`
+	List        string `json:"list"`
+	Title       string `json:"title"`
+	Description string `json:"description,omitempty"`
+	Done        bool   `json:"done,omitempty"`
+	Assignee    string `json:"assignee,omitempty"`
+	Due         string `json:"due,omitempty"`
 }
 
 func (f *family) todoOut(it todoItem) todoOut {
-	o := todoOut{ID: it.ID, Title: it.Title, Done: it.Done, Assignee: f.memberName(it.AssigneeID)}
+	o := todoOut{ID: it.ID, Title: it.Title, Description: it.Description, Done: it.Done, Assignee: f.memberName(it.AssigneeID)}
 	for _, l := range f.lists {
 		if l.ID == it.ListID {
 			o.List = l.Name
@@ -431,10 +433,11 @@ func (t tools) listTodos(ctx context.Context, _ *sdk.CallToolRequest, in listTod
 }
 
 type addTodoIn struct {
-	List     string `json:"list" jsonschema:"list name or id"`
-	Title    string `json:"title"`
-	Assignee string `json:"assignee,omitempty" jsonschema:"person (name or id)"`
-	Due      string `json:"due,omitempty" jsonschema:"due date YYYY-MM-DD"`
+	List        string `json:"list" jsonschema:"list name or id"`
+	Title       string `json:"title"`
+	Description string `json:"description,omitempty" jsonschema:"details, markdown"`
+	Assignee    string `json:"assignee,omitempty" jsonschema:"person (name or id)"`
+	Due         string `json:"due,omitempty" jsonschema:"due date YYYY-MM-DD"`
 }
 
 func (t tools) addTodo(ctx context.Context, _ *sdk.CallToolRequest, in addTodoIn) (*sdk.CallToolResult, todoOut, error) {
@@ -446,7 +449,8 @@ func (t tools) addTodo(ctx context.Context, _ *sdk.CallToolRequest, in addTodoIn
 	if err != nil {
 		return nil, todoOut{}, err
 	}
-	body := map[string]any{"list_id": l.ID, "title": strings.TrimSpace(in.Title)}
+	body := map[string]any{"list_id": l.ID, "title": strings.TrimSpace(in.Title),
+		"description": strings.TrimSpace(in.Description)}
 	if in.Assignee != "" {
 		if body["assignee_id"], err = f.member(in.Assignee); err != nil {
 			return nil, todoOut{}, err
@@ -467,11 +471,12 @@ func (t tools) addTodo(ctx context.Context, _ *sdk.CallToolRequest, in addTodoIn
 }
 
 type updateTodoIn struct {
-	ID       string  `json:"id"`
-	Title    *string `json:"title,omitempty"`
-	Assignee *string `json:"assignee,omitempty" jsonschema:"person (name or id); empty string removes the assignee"`
-	Due      *string `json:"due,omitempty" jsonschema:"YYYY-MM-DD; empty string removes the due date"`
-	Done     *bool   `json:"done,omitempty"`
+	ID          string  `json:"id"`
+	Title       *string `json:"title,omitempty"`
+	Description *string `json:"description,omitempty" jsonschema:"details, markdown; empty string removes it"`
+	Assignee    *string `json:"assignee,omitempty" jsonschema:"person (name or id); empty string removes the assignee"`
+	Due         *string `json:"due,omitempty" jsonschema:"YYYY-MM-DD; empty string removes the due date"`
+	Done        *bool   `json:"done,omitempty"`
 }
 
 func (t tools) updateTodo(ctx context.Context, _ *sdk.CallToolRequest, in updateTodoIn) (*sdk.CallToolResult, todoOut, error) {
@@ -486,6 +491,9 @@ func (t tools) updateTodo(ctx context.Context, _ *sdk.CallToolRequest, in update
 	body := map[string]any{}
 	if in.Title != nil {
 		body["title"] = strings.TrimSpace(*in.Title)
+	}
+	if in.Description != nil {
+		body["description"] = strings.TrimSpace(*in.Description)
 	}
 	if in.Done != nil {
 		body["done"] = *in.Done

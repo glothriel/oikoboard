@@ -60,8 +60,8 @@ choć mogłoby wynikać z listy). Dzięki temu trigger jest generyczny.
 ```
 households        (id uuid pk, name, seq bigint not null default 0)
 members           (id uuid pk, household_id, name, color, ...)
-todo_lists        (id uuid pk, household_id, name, color, due date, created_at, updated_at, version)
-todo_items        (id uuid pk, household_id, list_id fk on delete cascade, title, done, done_at,
+todo_lists        (id uuid pk, household_id, name, description, color, due date, created_at, updated_at, version)
+todo_items        (id uuid pk, household_id, list_id fk on delete cascade, title, description, done, done_at,
                    assignee_id, due date, created_at, updated_at, version)
 todo_comments     (id uuid pk, household_id, item_id fk on delete cascade, author_id, body, created_at, ...)
 calendar_events   (id uuid pk, household_id, title, starts_at, ends_at, all_day,

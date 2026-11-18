@@ -58,6 +58,26 @@ class AppLocalizationsPl extends AppLocalizations {
   String get commonSomeone => 'Ktoś';
 
   @override
+  String commonDeleted(String name) {
+    return 'Usunięto „$name”';
+  }
+
+  @override
+  String get todoMarkDone => 'Oznacz jako zrobione';
+
+  @override
+  String get todoReopen => 'Oznacz jako niezrobione';
+
+  @override
+  String calendarsConfirmDisconnect(String account) {
+    return 'Odłączyć $account?';
+  }
+
+  @override
+  String get calendarsConfirmDisconnectBody =>
+      'Jego kalendarze znikną z Oikoboard. Wydarzenia zostaną na koncie.';
+
+  @override
   String get navWall => 'Ściana';
 
   @override
@@ -387,7 +407,57 @@ class AppLocalizationsPl extends AppLocalizations {
   String get todoListChip => 'Lista';
 
   @override
-  String get todoRename => 'Zmień nazwę';
+  String get todoEditList => 'Edytuj listę';
+
+  @override
+  String todoMarkedDone(String title) {
+    return 'Zrobione: „$title”';
+  }
+
+  @override
+  String get commonUndo => 'Cofnij';
+
+  @override
+  String get todoCommentDeleted => 'Usunięto komentarz';
+
+  @override
+  String get todoWallFilter => 'Filtruj listy';
+
+  @override
+  String get todoWallFilterReset => 'Wyczyść';
+
+  @override
+  String get todoWallScopeAll => 'Wszystkie listy';
+
+  @override
+  String get todoWallScopeMyLists => 'Listy z moimi zadaniami';
+
+  @override
+  String get todoWallScopeMyTasks => 'Tylko moje zadania';
+
+  @override
+  String get todoWallFilterLists => 'Pokazuj listy';
+
+  @override
+  String get todoWallFilterEmpty => 'Nic nie pasuje do filtra';
+
+  @override
+  String get todoDescription => 'Opis';
+
+  @override
+  String get todoHasDescription => 'Ma opis';
+
+  @override
+  String get todoColor => 'Kolor';
+
+  @override
+  String get markdownEdit => 'Edycja';
+
+  @override
+  String get markdownPreview => 'Podgląd';
+
+  @override
+  String get markdownNothing => 'Nic do podglądu';
 
   @override
   String get todoDeleteList => 'Usuń listę';
@@ -449,13 +519,15 @@ class AppLocalizationsPl extends AppLocalizations {
   String get todoRemoveDue => 'Usuń termin';
 
   @override
-  String get todoChangeDue => 'Zmień termin';
-
-  @override
   String get todoComments => 'Komentarze';
 
   @override
   String get todoNoComments => 'Brak komentarzy';
+
+  @override
+  String todoCommentsOf(String title) {
+    return 'Komentarze: $title';
+  }
 
   @override
   String get todoCommentHint => 'Dodaj komentarz…';

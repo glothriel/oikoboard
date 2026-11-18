@@ -98,3 +98,25 @@ func TestTodoListDue(t *testing.T) {
 		t.Fatalf("list without due still shown: %+v", days)
 	}
 }
+
+func TestTodoDescriptions(t *testing.T) {
+	e := setup(t)
+	a := e.newFamily("Kowalscy")
+	type row struct{ ID, Description string }
+
+	var list row
+	if st := a.do("POST", "/todo/lists", map[string]any{"name": "Trip", "description": "**Bring** passports"}, &list); st != http.StatusCreated || list.Description != "**Bring** passports" {
+		t.Fatalf("add list: %d %+v", st, list)
+	}
+	if st := a.do("PATCH", "/todo/lists/"+list.ID, map[string]any{"description": nil}, &list); st != http.StatusOK || list.Description != "" {
+		t.Fatalf("clear list description: %d %+v", st, list)
+	}
+
+	var item row
+	if st := a.do("POST", "/todo/items", map[string]any{"list_id": list.ID, "title": "Tickets"}, &item); st != http.StatusCreated || item.Description != "" {
+		t.Fatalf("add task: %d %+v", st, item)
+	}
+	if st := a.do("PATCH", "/todo/items/"+item.ID, map[string]any{"description": "- seat 12A"}, &item); st != http.StatusOK || item.Description != "- seat 12A" {
+		t.Fatalf("set task description: %d %+v", st, item)
+	}
+}

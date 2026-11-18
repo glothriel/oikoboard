@@ -7,6 +7,7 @@ import '../../core/data.dart';
 import '../../core/family.dart';
 import '../../core/mock/mock_store.dart';
 import '../../core/sync/outbox.dart';
+import '../../core/undo_delete.dart';
 import 'models.dart';
 
 const listsEntity = 'todo_lists';
@@ -20,7 +21,12 @@ abstract interface class TodoRepository {
   Stream<List<TodoItem>> watchListItems(String listId);
   Stream<List<TodoItem>> watchOpenItems();
 
-  Future<TodoList> addList(String name, {required int color});
+  Future<TodoList> addList(
+    String name, {
+    required int color,
+    String description = '',
+    DateTime? due,
+  });
 
   /// Sends only the fields that differ between [list] and [updated].
   Future<void> updateList(TodoList list, TodoList updated);
@@ -61,8 +67,14 @@ class ApiTodoRepository implements TodoRepository {
   final Outbox outbox;
   final String actorId;
 
-  static const _listFields = ['name', 'color', 'due'];
-  static const _itemFields = ['title', 'done', 'assignee_id', 'due'];
+  static const _listFields = ['name', 'description', 'color', 'due'];
+  static const _itemFields = [
+    'title',
+    'description',
+    'done',
+    'assignee_id',
+    'due',
+  ];
 
   @override
   Stream<List<TodoList>> watchLists() => sync
@@ -94,19 +106,32 @@ class ApiTodoRepository implements TodoRepository {
       .map((v) => v.rows(itemsEntity).map(TodoItem.fromJson).toList());
 
   @override
-  Future<TodoList> addList(String name, {required int color}) async {
+  Future<TodoList> addList(
+    String name, {
+    required int color,
+    String description = '',
+    DateTime? due,
+  }) async {
     final list = TodoList(
       id: uuid.v4(),
       name: name,
+      description: description,
       color: color,
       createdAt: DateTime.now(),
+      due: due,
     );
     outbox.enqueue(
       Mutation.create(
         '/todo/lists',
         listsEntity,
         list.toJson(),
-        body: {'id': list.id, 'name': name, 'color': color},
+        body: {
+          'id': list.id,
+          'name': name,
+          'description': description,
+          'color': color,
+          'due': toApiDate(due),
+        },
         label: name,
       ),
     );
@@ -264,12 +289,19 @@ class MockTodoRepository implements TodoRepository {
   Stream<List<TodoItem>> watchOpenItems() => _items((i) => !i.done);
 
   @override
-  Future<TodoList> addList(String name, {required int color}) async {
+  Future<TodoList> addList(
+    String name, {
+    required int color,
+    String description = '',
+    DateTime? due,
+  }) async {
     final list = TodoList(
       id: uuid.v4(),
       name: name,
+      description: description,
       color: color,
       createdAt: DateTime.now(),
+      due: due,
     );
     await store.put(listsEntity, list.toJson(), actorId: actorId);
     return list;
@@ -281,6 +313,7 @@ class MockTodoRepository implements TodoRepository {
     list.id,
     changedFields(list.toJson(), updated.toJson(), const [
       'name',
+      'description',
       'color',
       'due',
     ]),
@@ -323,6 +356,7 @@ class MockTodoRepository implements TodoRepository {
     item.id,
     changedFields(item.toJson(), updated.toJson(), const [
       'title',
+      'description',
       'done',
       'done_at',
       'assignee_id',
@@ -388,22 +422,74 @@ final todoRepositoryProvider = Provider<TodoRepository>(
   },
 );
 
-final todoListsProvider = StreamProvider<List<TodoList>>(
+// Keys for [deleteWithUndo]: hidden while its snackbar is up.
+String todoListKey(String id) => '$listsEntity:$id';
+String todoItemKey(String id) => '$itemsEntity:$id';
+String todoCommentKey(String id) => '$commentsEntity:$id';
+
+List<TodoItem> _withoutPending(List<TodoItem> items, Set<String> pending) =>
+    pending.isEmpty
+    ? items
+    : items
+          .where(
+            (i) =>
+                !pending.contains(todoItemKey(i.id)) &&
+                !pending.contains(todoListKey(i.listId)),
+          )
+          .toList();
+
+final _todoLists = StreamProvider<List<TodoList>>(
   (ref) => ref.watch(todoRepositoryProvider).watchLists(),
 );
 
-final todoOpenItemsProvider = StreamProvider<List<TodoItem>>(
+final todoListsProvider = Provider<AsyncValue<List<TodoList>>>((ref) {
+  final pending = ref.watch(pendingDeletesProvider);
+  return ref
+      .watch(_todoLists)
+      .whenData(
+        (l) => l.where((l) => !pending.contains(todoListKey(l.id))).toList(),
+      );
+});
+
+final _todoOpenItems = StreamProvider<List<TodoItem>>(
   (ref) => ref.watch(todoRepositoryProvider).watchOpenItems(),
 );
 
-final todoCommentsProvider = StreamProvider.autoDispose
+final todoOpenItemsProvider = Provider<AsyncValue<List<TodoItem>>>(
+  (ref) => ref
+      .watch(_todoOpenItems)
+      .whenData((i) => _withoutPending(i, ref.watch(pendingDeletesProvider))),
+);
+
+final _todoComments = StreamProvider.autoDispose
     .family<List<TodoComment>, String>(
       (ref, itemId) => ref.watch(todoRepositoryProvider).watchComments(itemId),
     );
 
-final todoListItemsProvider = StreamProvider.autoDispose
+final todoCommentsProvider = Provider.autoDispose
+    .family<AsyncValue<List<TodoComment>>, String>((ref, itemId) {
+      final pending = ref.watch(pendingDeletesProvider);
+      return ref
+          .watch(_todoComments(itemId))
+          .whenData(
+            (c) => c
+                .where((c) => !pending.contains(todoCommentKey(c.id)))
+                .toList(),
+          );
+    });
+
+final _todoListItems = StreamProvider.autoDispose
     .family<List<TodoItem>, String>(
       (ref, listId) => ref.watch(todoRepositoryProvider).watchListItems(listId),
+    );
+
+final todoListItemsProvider = Provider.autoDispose
+    .family<AsyncValue<List<TodoItem>>, String>(
+      (ref, listId) => ref
+          .watch(_todoListItems(listId))
+          .whenData(
+            (i) => _withoutPending(i, ref.watch(pendingDeletesProvider)),
+          ),
     );
 
 class SelectedTodoList extends Notifier<String?> {

@@ -77,6 +77,8 @@ class WallScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            for (final m in modules) ...m.buildWallActions(context),
+            const SizedBox(width: 8),
             SegmentedButton<WallLayout>(
               showSelectedIcon: false,
               segments: [

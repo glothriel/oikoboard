@@ -58,6 +58,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonSomeone => 'Someone';
 
   @override
+  String commonDeleted(String name) {
+    return 'Deleted “$name”';
+  }
+
+  @override
+  String get todoMarkDone => 'Mark done';
+
+  @override
+  String get todoReopen => 'Mark not done';
+
+  @override
+  String calendarsConfirmDisconnect(String account) {
+    return 'Disconnect $account?';
+  }
+
+  @override
+  String get calendarsConfirmDisconnectBody =>
+      'Its calendars will disappear from Oikoboard. Events stay in the account.';
+
+  @override
   String get navWall => 'Wall';
 
   @override
@@ -387,7 +407,57 @@ class AppLocalizationsEn extends AppLocalizations {
   String get todoListChip => 'List';
 
   @override
-  String get todoRename => 'Rename';
+  String get todoEditList => 'Edit list';
+
+  @override
+  String todoMarkedDone(String title) {
+    return 'Done: “$title”';
+  }
+
+  @override
+  String get commonUndo => 'Undo';
+
+  @override
+  String get todoCommentDeleted => 'Comment deleted';
+
+  @override
+  String get todoWallFilter => 'Filter lists';
+
+  @override
+  String get todoWallFilterReset => 'Reset';
+
+  @override
+  String get todoWallScopeAll => 'All lists';
+
+  @override
+  String get todoWallScopeMyLists => 'Lists with my tasks';
+
+  @override
+  String get todoWallScopeMyTasks => 'Only my tasks';
+
+  @override
+  String get todoWallFilterLists => 'Show lists';
+
+  @override
+  String get todoWallFilterEmpty => 'Nothing matches the filter';
+
+  @override
+  String get todoDescription => 'Description';
+
+  @override
+  String get todoHasDescription => 'Has a description';
+
+  @override
+  String get todoColor => 'Color';
+
+  @override
+  String get markdownEdit => 'Edit';
+
+  @override
+  String get markdownPreview => 'Preview';
+
+  @override
+  String get markdownNothing => 'Nothing to preview';
 
   @override
   String get todoDeleteList => 'Delete list';
@@ -447,13 +517,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get todoRemoveDue => 'Remove due date';
 
   @override
-  String get todoChangeDue => 'Change due date';
-
-  @override
   String get todoComments => 'Comments';
 
   @override
   String get todoNoComments => 'No comments yet';
+
+  @override
+  String todoCommentsOf(String title) {
+    return 'Comments: $title';
+  }
 
   @override
   String get todoCommentHint => 'Add a comment…';

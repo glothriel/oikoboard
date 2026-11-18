@@ -6,6 +6,7 @@ import '../../core/api/api_client.dart';
 import '../../core/family.dart';
 import '../../core/format.dart';
 import '../../core/l10n.dart';
+import '../../core/undo_delete.dart';
 import 'calendars_sheet.dart';
 import 'models.dart';
 import 'repository.dart';
@@ -1008,8 +1009,14 @@ class _EventEditorState extends ConsumerState<_EventEditor> {
       if (picked == null || !mounted) return;
       scope = picked;
     }
+    final repo = ref.read(calendarRepositoryProvider);
+    deleteWithUndo(
+      context,
+      key: calendarEventKey(event, scope),
+      message: context.l10n.commonDeleted(event.title),
+      commit: () => repo.deleteEvent(event, scope: scope),
+    );
     Navigator.pop(context);
-    await ref.read(calendarRepositoryProvider).deleteEvent(event, scope: scope);
   }
 
   @override

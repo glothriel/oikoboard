@@ -31,6 +31,9 @@ abstract class FamilyModule {
   /// Optional tile on the home screen (the “wall”).
   Widget? buildWallTile(BuildContext context) => null;
 
+  /// Buttons in the wall header (e.g. a filter for the module's tiles).
+  List<Widget> buildWallActions(BuildContext context) => const [];
+
   /// Columns for the wall's board (kanban) layout; by default the wall tile.
   /// [ref] belongs to the wall, which rebuilds when watched data changes.
   List<Widget> buildWallColumns(BuildContext context, WidgetRef ref) => [

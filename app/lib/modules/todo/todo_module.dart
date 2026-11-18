@@ -14,6 +14,7 @@ import '../../core/widgets.dart';
 import 'models.dart';
 import 'repository.dart';
 import 'todo_screen.dart';
+import 'wall_filter.dart';
 
 class TodoModule extends FamilyModule {
   const TodoModule();
@@ -38,11 +39,15 @@ class TodoModule extends FamilyModule {
     child: const _TodoWallTile(),
   );
 
-  /// A column per list with its open tasks.
+  @override
+  List<Widget> buildWallActions(BuildContext context) => const [
+    WallTodoFilterButton(),
+  ];
+
+  /// A column per list with its open tasks (after the wall filter).
   @override
   List<Widget> buildWallColumns(BuildContext context, WidgetRef ref) {
-    final lists = ref.watch(todoListsProvider).value ?? const <TodoList>[];
-    final items = ref.watch(todoOpenItemsProvider).value ?? const <TodoItem>[];
+    final (:lists, :items) = ref.watch(_wallTodosProvider);
     return [
       for (final l in lists)
         _KanbanColumn(
@@ -178,16 +183,34 @@ class TodoModule extends FamilyModule {
   }
 }
 
+/// The lists and open tasks the wall shows, after its filter.
+final _wallTodosProvider =
+    Provider<({List<TodoList> lists, List<TodoItem> items})>((ref) {
+      final filter =
+          ref.watch(wallTodoFilterProvider).value ?? const WallTodoFilter();
+      return filter.apply(
+        ref.watch(todoListsProvider).value ?? const <TodoList>[],
+        ref.watch(todoOpenItemsProvider).value ?? const <TodoItem>[],
+        ref.watch(currentMemberProvider),
+      );
+    });
+
 class _TodoWallTile extends ConsumerWidget {
   const _TodoWallTile();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final lists = ref.watch(todoListsProvider).value ?? const <TodoList>[];
-    final items = ref.watch(todoOpenItemsProvider).value ?? const <TodoItem>[];
+    final (:lists, :items) = ref.watch(_wallTodosProvider);
     final me = ref.watch(currentMemberProvider);
     final l10n = context.l10n;
+    if (lists.isEmpty &&
+        (ref.watch(wallTodoFilterProvider).value?.isActive ?? false)) {
+      return Text(
+        l10n.todoWallFilterEmpty,
+        style: TextStyle(color: theme.colorScheme.outline),
+      );
+    }
 
     final open = items.where((i) => !i.done).toList();
     // Overdue first, all of them, oldest first.
@@ -280,8 +303,7 @@ class WallTaskTile extends ConsumerWidget {
       contentPadding: EdgeInsets.zero,
       leading: Checkbox(
         value: i.done,
-        onChanged: (_) =>
-            ref.read(todoRepositoryProvider).updateItem(i, i.toggled()),
+        onChanged: (_) => toggleTodoDone(context, ref, i),
       ),
       title: Text(
         i.title,
@@ -316,7 +338,16 @@ class _KanbanColumnState extends ConsumerState<_KanbanColumn> {
     final title = text.trim();
     if (title.isEmpty) return;
     _controller.clear();
-    ref.read(todoRepositoryProvider).addItem(widget.list.id, title);
+    // With "only my tasks" a new task is mine, or it would vanish at once.
+    final mine =
+        ref.read(wallTodoFilterProvider).value?.scope == WallTodoScope.myTasks;
+    ref
+        .read(todoRepositoryProvider)
+        .addItem(
+          widget.list.id,
+          title,
+          assigneeId: mine ? ref.read(currentMemberProvider) : null,
+        );
   }
 
   @override
@@ -376,15 +407,25 @@ class _KanbanColumnState extends ConsumerState<_KanbanColumn> {
                 ),
               ),
             for (final i in widget.items) WallTaskTile(i, key: ValueKey(i.id)),
-            TextField(
-              controller: _controller,
-              onSubmitted: _add,
-              textInputAction: TextInputAction.done,
-              decoration: InputDecoration(
-                hintText: l.todoAddTo(list.name),
-                prefixIcon: const Icon(Icons.add, size: 20),
-                isDense: true,
-                border: InputBorder.none,
+            // Laid out like a [WallTaskTile]: the + sits where the checkboxes
+            // are and the text starts where the task titles do.
+            ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: const SizedBox(
+                width: kMinInteractiveDimension,
+                child: Center(child: Icon(Icons.add, size: 20)),
+              ),
+              title: TextField(
+                controller: _controller,
+                onSubmitted: _add,
+                textInputAction: TextInputAction.done,
+                decoration: InputDecoration(
+                  hintText: l.todoAddTo(list.name),
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                  border: InputBorder.none,
+                ),
               ),
             ),
           ],

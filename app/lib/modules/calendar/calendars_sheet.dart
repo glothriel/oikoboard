@@ -245,6 +245,14 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
                     ),
                   TextButton.icon(
                     onPressed: () async {
+                      final l = context.l10n;
+                      final ok = await confirmDelete(
+                        context,
+                        title: l.calendarsConfirmDisconnect(conn.account),
+                        message: l.calendarsConfirmDisconnectBody,
+                        action: l.calendarsDisconnectAccount,
+                      );
+                      if (!ok) return;
                       await ref
                           .read(calendarRepositoryProvider)
                           .disconnect(conn.id);

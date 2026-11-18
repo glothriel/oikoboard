@@ -16,6 +16,25 @@
   "commonError": "Error",
   "commonNoServerConnection": "No connection to the server",
   "commonSomeone": "Someone",
+  "commonDeleted": "Deleted “{name}”",
+  "@commonDeleted": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "todoMarkDone": "Mark done",
+  "todoReopen": "Mark not done",
+  "calendarsConfirmDisconnect": "Disconnect {account}?",
+  "@calendarsConfirmDisconnect": {
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "calendarsConfirmDisconnectBody": "Its calendars will disappear from Oikoboard. Events stay in the account.",
   "navWall": "Wall",
   "dateToday": "Today",
   "dateTomorrow": "Tomorrow",
@@ -289,7 +308,30 @@
   "todoNoLists": "No lists — add the first one.",
   "todoNewList": "New list",
   "todoListChip": "List",
-  "todoRename": "Rename",
+  "todoEditList": "Edit list",
+  "todoMarkedDone": "Done: “{title}”",
+  "@todoMarkedDone": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "commonUndo": "Undo",
+  "todoCommentDeleted": "Comment deleted",
+  "todoWallFilter": "Filter lists",
+  "todoWallFilterReset": "Reset",
+  "todoWallScopeAll": "All lists",
+  "todoWallScopeMyLists": "Lists with my tasks",
+  "todoWallScopeMyTasks": "Only my tasks",
+  "todoWallFilterLists": "Show lists",
+  "todoWallFilterEmpty": "Nothing matches the filter",
+  "todoDescription": "Description",
+  "todoHasDescription": "Has a description",
+  "todoColor": "Color",
+  "markdownEdit": "Edit",
+  "markdownPreview": "Preview",
+  "markdownNothing": "Nothing to preview",
   "todoDeleteList": "Delete list",
   "todoName": "Name",
   "todoAddTo": "Add to “{list}”…",
@@ -346,9 +388,16 @@
   "todoWhoDoesIt": "Who will do it?",
   "todoSetDue": "Set due date",
   "todoRemoveDue": "Remove due date",
-  "todoChangeDue": "Change due date",
   "todoComments": "Comments",
   "todoNoComments": "No comments yet",
+  "todoCommentsOf": "Comments: {title}",
+  "@todoCommentsOf": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "todoCommentHint": "Add a comment…",
   "todoCommentSend": "Send",
   "todoCommentDelete": "Delete comment",

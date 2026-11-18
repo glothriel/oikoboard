@@ -15,6 +15,7 @@ import '../../core/family.dart';
 import '../../core/mock/mock_store.dart';
 import '../../core/platform/browser.dart';
 import '../../core/sync/outbox.dart';
+import '../../core/undo_delete.dart';
 import '../todo/repository.dart' as todo show itemsEntity, listsEntity;
 import 'models.dart';
 
@@ -487,10 +488,39 @@ final calendarRepositoryProvider = Provider<CalendarRepository>(
   },
 );
 
-final calendarRangeProvider = StreamProvider.autoDispose
+/// Key for [deleteWithUndo]: an occurrence (or single event) or a whole series.
+String calendarEventKey(CalendarEvent e, EditScope scope) =>
+    scope == EditScope.series && e.eventId != null
+    ? 'calendar_series:${e.eventId}'
+    : 'calendar_events:${e.id}';
+
+final _calendarRange = StreamProvider.autoDispose
     .family<List<CalendarEvent>, DateRange>(
       (ref, range) => ref.watch(calendarRepositoryProvider).watchRange(range),
     );
+
+/// The events in a range, without those being deleted with Undo.
+final calendarRangeProvider = Provider.autoDispose
+    .family<AsyncValue<List<CalendarEvent>>, DateRange>((ref, range) {
+      final pending = ref.watch(pendingDeletesProvider);
+      return ref
+          .watch(_calendarRange(range))
+          .whenData(
+            (events) => pending.isEmpty
+                ? events
+                : events
+                      .where(
+                        (e) =>
+                            !pending.contains(
+                              calendarEventKey(e, EditScope.occurrence),
+                            ) &&
+                            !pending.contains(
+                              calendarEventKey(e, EditScope.series),
+                            ),
+                      )
+                      .toList(),
+          );
+    });
 
 final calendarsProvider = StreamProvider.autoDispose<List<FamilyCalendar>>(
   (ref) => ref.watch(calendarRepositoryProvider).watchCalendars(),

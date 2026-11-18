@@ -194,6 +194,36 @@ abstract class AppLocalizations {
   /// **'Someone'**
   String get commonSomeone;
 
+  /// No description provided for @commonDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted “{name}”'**
+  String commonDeleted(String name);
+
+  /// No description provided for @todoMarkDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark done'**
+  String get todoMarkDone;
+
+  /// No description provided for @todoReopen.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark not done'**
+  String get todoReopen;
+
+  /// No description provided for @calendarsConfirmDisconnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect {account}?'**
+  String calendarsConfirmDisconnect(String account);
+
+  /// No description provided for @calendarsConfirmDisconnectBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Its calendars will disappear from Oikoboard. Events stay in the account.'**
+  String get calendarsConfirmDisconnectBody;
+
   /// No description provided for @navWall.
   ///
   /// In en, this message translates to:
@@ -734,11 +764,107 @@ abstract class AppLocalizations {
   /// **'List'**
   String get todoListChip;
 
-  /// No description provided for @todoRename.
+  /// No description provided for @todoEditList.
   ///
   /// In en, this message translates to:
-  /// **'Rename'**
-  String get todoRename;
+  /// **'Edit list'**
+  String get todoEditList;
+
+  /// No description provided for @todoMarkedDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done: “{title}”'**
+  String todoMarkedDone(String title);
+
+  /// No description provided for @commonUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get commonUndo;
+
+  /// No description provided for @todoCommentDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Comment deleted'**
+  String get todoCommentDeleted;
+
+  /// No description provided for @todoWallFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter lists'**
+  String get todoWallFilter;
+
+  /// No description provided for @todoWallFilterReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get todoWallFilterReset;
+
+  /// No description provided for @todoWallScopeAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All lists'**
+  String get todoWallScopeAll;
+
+  /// No description provided for @todoWallScopeMyLists.
+  ///
+  /// In en, this message translates to:
+  /// **'Lists with my tasks'**
+  String get todoWallScopeMyLists;
+
+  /// No description provided for @todoWallScopeMyTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Only my tasks'**
+  String get todoWallScopeMyTasks;
+
+  /// No description provided for @todoWallFilterLists.
+  ///
+  /// In en, this message translates to:
+  /// **'Show lists'**
+  String get todoWallFilterLists;
+
+  /// No description provided for @todoWallFilterEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing matches the filter'**
+  String get todoWallFilterEmpty;
+
+  /// No description provided for @todoDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get todoDescription;
+
+  /// No description provided for @todoHasDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Has a description'**
+  String get todoHasDescription;
+
+  /// No description provided for @todoColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Color'**
+  String get todoColor;
+
+  /// No description provided for @markdownEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get markdownEdit;
+
+  /// No description provided for @markdownPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get markdownPreview;
+
+  /// No description provided for @markdownNothing.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to preview'**
+  String get markdownNothing;
 
   /// No description provided for @todoDeleteList.
   ///
@@ -818,12 +944,6 @@ abstract class AppLocalizations {
   /// **'Remove due date'**
   String get todoRemoveDue;
 
-  /// No description provided for @todoChangeDue.
-  ///
-  /// In en, this message translates to:
-  /// **'Change due date'**
-  String get todoChangeDue;
-
   /// No description provided for @todoComments.
   ///
   /// In en, this message translates to:
@@ -835,6 +955,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No comments yet'**
   String get todoNoComments;
+
+  /// No description provided for @todoCommentsOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Comments: {title}'**
+  String todoCommentsOf(String title);
 
   /// No description provided for @todoCommentHint.
   ///

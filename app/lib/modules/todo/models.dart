@@ -10,11 +10,15 @@ class TodoList {
     required this.name,
     required this.color,
     required this.createdAt,
+    this.description = '',
     this.due,
   });
 
   final String id;
   final String name;
+
+  /// Markdown; empty when there is none.
+  final String description;
   final int color;
   final DateTime createdAt;
 
@@ -29,6 +33,7 @@ class TodoList {
   factory TodoList.fromJson(Map<String, dynamic> j) => TodoList(
     id: j['id'] as String,
     name: j['name'] as String,
+    description: j['description'] as String? ?? '',
     color: j['color'] as int,
     createdAt: fromApiTime(j['created_at'])!,
     due: fromApiDate(j['due']),
@@ -37,20 +42,26 @@ class TodoList {
   Map<String, dynamic> toJson() => {
     'id': id,
     'name': name,
+    'description': description,
     'color': color,
     'created_at': toApiTime(createdAt),
     'due': toApiDate(due),
   };
 
   /// [due] can be cleared by passing `null` explicitly.
-  TodoList copyWith({String? name, int? color, Object? due = _unset}) =>
-      TodoList(
-        id: id,
-        name: name ?? this.name,
-        color: color ?? this.color,
-        createdAt: createdAt,
-        due: identical(due, _unset) ? this.due : due as DateTime?,
-      );
+  TodoList copyWith({
+    String? name,
+    String? description,
+    int? color,
+    Object? due = _unset,
+  }) => TodoList(
+    id: id,
+    name: name ?? this.name,
+    description: description ?? this.description,
+    color: color ?? this.color,
+    createdAt: createdAt,
+    due: identical(due, _unset) ? this.due : due as DateTime?,
+  );
 }
 
 class TodoItem {
@@ -60,6 +71,7 @@ class TodoItem {
     required this.title,
     required this.done,
     required this.createdAt,
+    this.description = '',
     this.assigneeId,
     this.due,
     this.doneAt,
@@ -68,6 +80,9 @@ class TodoItem {
   final String id;
   final String listId;
   final String title;
+
+  /// Markdown; empty when there is none.
+  final String description;
   final bool done;
   final DateTime createdAt;
   final String? assigneeId;
@@ -87,6 +102,7 @@ class TodoItem {
     id: j['id'] as String,
     listId: j['list_id'] as String,
     title: j['title'] as String,
+    description: j['description'] as String? ?? '',
     done: j['done'] as bool? ?? false,
     createdAt: fromApiTime(j['created_at'])!,
     assigneeId: j['assignee_id'] as String?,
@@ -98,6 +114,7 @@ class TodoItem {
     'id': id,
     'list_id': listId,
     'title': title,
+    'description': description,
     'done': done,
     'created_at': toApiTime(createdAt),
     'assignee_id': assigneeId,
@@ -108,6 +125,7 @@ class TodoItem {
   /// Nullable fields can be cleared by passing `null` explicitly.
   TodoItem copyWith({
     String? title,
+    String? description,
     bool? done,
     Object? assigneeId = _unset,
     Object? due = _unset,
@@ -116,6 +134,7 @@ class TodoItem {
     id: id,
     listId: listId,
     title: title ?? this.title,
+    description: description ?? this.description,
     done: done ?? this.done,
     createdAt: createdAt,
     assigneeId: identical(assigneeId, _unset)

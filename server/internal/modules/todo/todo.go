@@ -19,6 +19,7 @@ type List struct {
 	ID          uuid.UUID  `json:"id" gorm:"type:uuid;primaryKey"`
 	HouseholdID uuid.UUID  `json:"household_id"`
 	Name        string     `json:"name"`
+	Description string     `json:"description"` // markdown
 	Color       int64      `json:"color"`
 	Due         *core.Date `json:"due"`
 	CreatedAt   time.Time  `json:"created_at"`
@@ -33,6 +34,7 @@ type Item struct {
 	HouseholdID uuid.UUID  `json:"household_id"`
 	ListID      uuid.UUID  `json:"list_id"`
 	Title       string     `json:"title"`
+	Description string     `json:"description"` // markdown
 	Done        bool       `json:"done"`
 	DoneAt      *time.Time `json:"done_at"`
 	AssigneeID  *uuid.UUID `json:"assignee_id"`
@@ -98,10 +100,11 @@ func (m Module) Routes(r *gin.RouterGroup) {
 
 func (m Module) createList(c *gin.Context) {
 	var req struct {
-		ID    uuid.UUID  `json:"id"`
-		Name  string     `json:"name" binding:"required"`
-		Color int64      `json:"color"`
-		Due   *core.Date `json:"due"`
+		ID          uuid.UUID  `json:"id"`
+		Name        string     `json:"name" binding:"required"`
+		Description string     `json:"description"`
+		Color       int64      `json:"color"`
+		Due         *core.Date `json:"due"`
 	}
 	if !core.Bind(c, &req) {
 		return
@@ -113,7 +116,8 @@ func (m Module) createList(c *gin.Context) {
 		req.Color = 0xFF26A69A
 	}
 	actor := core.ActorOf(c)
-	row := List{ID: req.ID, HouseholdID: actor.HouseholdID, Name: req.Name, Color: req.Color, Due: req.Due}
+	row := List{ID: req.ID, HouseholdID: actor.HouseholdID, Name: req.Name,
+		Description: req.Description, Color: req.Color, Due: req.Due}
 	err := core.Write(c.Request.Context(), m.DB, actor, core.MutationID(c), func(tx *gorm.DB) error {
 		return core.CreateIdempotent(tx, &row, actor.HouseholdID, row.ID)
 	})
@@ -132,14 +136,17 @@ func (m Module) updateList(c *gin.Context) {
 	if !ok {
 		return
 	}
-	var name string
+	var name, description string
 	var color int64
 	var due core.Date
-	cols, err := p.Apply(map[string]any{"name": &name, "color": &color, "due": &due})
+	cols, err := p.Apply(map[string]any{
+		"name": &name, "description": &description, "color": &color, "due": &due,
+	})
 	if err != nil {
 		core.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
+	clearToEmpty(cols, "description")
 	actor := core.ActorOf(c)
 	var row List
 	err = core.Write(c.Request.Context(), m.DB, actor, core.MutationID(c), func(tx *gorm.DB) error {
@@ -157,11 +164,12 @@ func (m Module) deleteList(c *gin.Context) {
 
 func (m Module) createItem(c *gin.Context) {
 	var req struct {
-		ID         uuid.UUID  `json:"id"`
-		ListID     uuid.UUID  `json:"list_id" binding:"required"`
-		Title      string     `json:"title" binding:"required"`
-		AssigneeID *uuid.UUID `json:"assignee_id"`
-		Due        *core.Date `json:"due"`
+		ID          uuid.UUID  `json:"id"`
+		ListID      uuid.UUID  `json:"list_id" binding:"required"`
+		Title       string     `json:"title" binding:"required"`
+		Description string     `json:"description"`
+		AssigneeID  *uuid.UUID `json:"assignee_id"`
+		Due         *core.Date `json:"due"`
 	}
 	if !core.Bind(c, &req) {
 		return
@@ -172,7 +180,7 @@ func (m Module) createItem(c *gin.Context) {
 	actor := core.ActorOf(c)
 	row := Item{
 		ID: req.ID, HouseholdID: actor.HouseholdID, ListID: req.ListID,
-		Title: req.Title, AssigneeID: req.AssigneeID, Due: req.Due,
+		Title: req.Title, Description: req.Description, AssigneeID: req.AssigneeID, Due: req.Due,
 	}
 	err := core.Write(c.Request.Context(), m.DB, actor, core.MutationID(c), func(tx *gorm.DB) error {
 		return core.CreateIdempotent(tx, &row, actor.HouseholdID, row.ID)
@@ -193,18 +201,21 @@ func (m Module) updateItem(c *gin.Context) {
 		return
 	}
 	var (
-		title    string
-		done     bool
-		assignee uuid.UUID
-		due      core.Date
+		title       string
+		description string
+		done        bool
+		assignee    uuid.UUID
+		due         core.Date
 	)
 	cols, err := p.Apply(map[string]any{
-		"title": &title, "done": &done, "assignee_id": &assignee, "due": &due,
+		"title": &title, "description": &description, "done": &done,
+		"assignee_id": &assignee, "due": &due,
 	})
 	if err != nil {
 		core.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
+	clearToEmpty(cols, "description")
 	if d, ok := cols["done"]; ok {
 		if d == true {
 			cols["done_at"] = gorm.Expr("COALESCE(done_at, now())")
@@ -301,6 +312,13 @@ func (m Module) delete(c *gin.Context, model any) {
 	}
 	m.itemsChanged(actor.HouseholdID) // also for a list: its tasks are gone
 	c.Status(http.StatusNoContent)
+}
+
+// clearToEmpty turns an explicit null of a NOT NULL text column into "".
+func clearToEmpty(cols map[string]any, col string) {
+	if v, ok := cols[col]; ok && v == nil {
+		cols[col] = ""
+	}
 }
 
 // update: an UPDATE scoped to the household, then reads the row back.
