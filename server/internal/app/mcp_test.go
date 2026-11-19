@@ -166,10 +166,48 @@ func TestMCP(t *testing.T) {
 	if !upd.Done || upd.Assignee != "" {
 		t.Fatalf("update_todo: %+v", upd)
 	}
-	var comment struct{ ID, Task, Body string }
-	tool(t, s, "add_comment", map[string]any{"id": added.ID, "body": "  Bez laktozy "}, &comment)
-	if comment.Task != added.ID || comment.Body != "Bez laktozy" {
-		t.Fatalf("add_comment: %+v", comment)
+	type comment struct{ ID, Task, Author, At, Body string }
+	var cm comment
+	tool(t, s, "add_comment", map[string]any{"id": added.ID, "body": "  Bez laktozy "}, &cm)
+	if cm.Task != added.ID || cm.Body != "Bez laktozy" || cm.Author == "" || cm.At == "" {
+		t.Fatalf("add_comment: %+v", cm)
+	}
+	// Comments: a count on the task, the thread via list_comments or with_comments.
+	type withComments struct {
+		ID           string
+		CommentCount int `json:"comment_count"`
+		Comments     []comment
+	}
+	findTask := func(todos []withComments) withComments {
+		for _, it := range todos {
+			if it.ID == added.ID {
+				return it
+			}
+		}
+		t.Fatalf("task %s not listed", added.ID)
+		return withComments{}
+	}
+	var counted struct{ Todos []withComments }
+	tool(t, s, "list_todos", map[string]any{"list": "zakupy", "include_done": true}, &counted)
+	if it := findTask(counted.Todos); it.CommentCount != 1 || len(it.Comments) != 0 {
+		t.Fatalf("list_todos comment_count: %+v", it)
+	}
+	tool(t, s, "list_todos", map[string]any{"list": "zakupy", "include_done": true, "with_comments": true}, &counted)
+	if it := findTask(counted.Todos); it.CommentCount != 1 || len(it.Comments) != 1 ||
+		it.Comments[0].Body != "Bez laktozy" || it.Comments[0].Author != cm.Author {
+		t.Fatalf("list_todos with_comments: %+v", it)
+	}
+	var thread struct {
+		Task, List, Title string
+		Comments          []comment
+	}
+	tool(t, s, "list_comments", map[string]any{"id": added.ID}, &thread)
+	if thread.Title != "Mleko" || thread.List != "Zakupy" || len(thread.Comments) != 1 ||
+		thread.Comments[0].ID != cm.ID || thread.Comments[0].Author != cm.Author {
+		t.Fatalf("list_comments: %+v", thread)
+	}
+	if msg := tool(t, s, "list_comments", map[string]any{"id": "00000000-0000-0000-0000-000000000001"}, nil); !strings.Contains(msg, "no such task") {
+		t.Fatalf("list_comments unknown task: %q", msg)
 	}
 	tool(t, s, "delete_todo", map[string]any{"id": added.ID}, &struct{}{})
 

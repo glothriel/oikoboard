@@ -14,10 +14,11 @@ Code: `server/internal/mcp/` (tools), `server/internal/core/oauth.go` (authoriza
 `YYYY-MM-DD`, times `YYYY-MM-DDTHH:MM` in the household timezone (`households.timezone`):
 
 `family` (today, people, lists, calendars) · `list_todos` · `create_todo_list` · `add_todo` · `update_todo` ·
-`delete_todo` · `add_comment` · `agenda` · `create_event` (optionally recurring, RRULE) · `update_event` · `delete_event`.
+`delete_todo` · `list_comments` · `add_comment` · `agenda` · `create_event` (optionally recurring, RRULE) · `update_event` · `delete_event`.
 
 Tools call the **REST API in-process** with the caller's token, so writes use the same handlers, validation and
-change feed as the app, and reads use the same views. `core.ToolAllowed` limits OAuth tokens to module data and view
+change feed as the app, and reads use the same views — except comments (threads and counts for many tasks at once), which are one
+household-scoped query on `todo_comments`. `core.ToolAllowed` limits OAuth tokens to module data and view
 snapshots — no household management, invites, calendar connections or account settings.
 
 ## OAuth (ChatGPT, Claude…)

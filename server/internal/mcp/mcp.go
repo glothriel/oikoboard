@@ -24,7 +24,9 @@ import (
 // the API in-process with the caller's token, so writes go through the
 // same handlers, validation and change feed as the app's, and reads use the
 // same views. Names of people, lists and calendars are resolved here, and
-// times are in the household's timezone.
+// times are in the household's timezone. Comments (threads and counts of many
+// tasks at once) are read straight from the database in one household-scoped
+// query rather than through a view per task.
 
 // MCP returns the /mcp handler. api is the REST router (/api/v1/...).
 func Handler(db *gorm.DB, auth *core.Auth, api http.Handler) http.Handler {
@@ -114,9 +116,10 @@ type person struct {
 }
 
 type todoList struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-	Due  string `json:"due,omitempty"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Due         string `json:"due,omitempty"`
 }
 
 type calendarRef struct {
@@ -295,12 +298,15 @@ func (t tools) register(s *sdk.Server) {
 	sdk.AddTool(s, &sdk.Tool{Name: "family", Description: "Today's date and time, the timezone, " +
 		"family members, todo lists and calendars. Call this first."}, t.familyTool)
 	sdk.AddTool(s, &sdk.Tool{Name: "list_todos", Description: "Tasks on the family's todo lists " +
-		"(shopping lists are todo lists too). Open tasks only unless include_done."}, t.listTodos)
+		"(shopping lists are todo lists too). Open tasks only unless include_done. comment_count says " +
+		"how many comments a task has; read them with list_comments, or pass with_comments."}, t.listTodos)
 	sdk.AddTool(s, &sdk.Tool{Name: "create_todo_list", Description: "Create a todo list."}, t.createTodoList)
 	sdk.AddTool(s, &sdk.Tool{Name: "add_todo", Description: "Add a task to a todo list."}, t.addTodo)
 	sdk.AddTool(s, &sdk.Tool{Name: "update_todo", Description: "Change a task: title, description, assignee, " +
 		"due date, or mark it done / not done. Only the given fields change."}, t.updateTodo)
 	sdk.AddTool(s, &sdk.Tool{Name: "delete_todo", Description: "Delete a task."}, t.deleteTodo)
+	sdk.AddTool(s, &sdk.Tool{Name: "list_comments", Description: "A task's comments (its discussion), " +
+		"oldest first."}, t.listComments)
 	sdk.AddTool(s, &sdk.Tool{Name: "add_comment", Description: "Add a comment (a note in the task's " +
 		"discussion, signed by the caller) to a task."}, t.addComment)
 	sdk.AddTool(s, &sdk.Tool{Name: "agenda", Description: "Calendar events and tasks due in a range " +
@@ -368,13 +374,15 @@ type todoItem struct {
 }
 
 type todoOut struct {
-	ID          string `json:"id"`
-	List        string `json:"list"`
-	Title       string `json:"title"`
-	Description string `json:"description,omitempty"`
-	Done        bool   `json:"done,omitempty"`
-	Assignee    string `json:"assignee,omitempty"`
-	Due         string `json:"due,omitempty"`
+	ID           string       `json:"id"`
+	List         string       `json:"list"`
+	Title        string       `json:"title"`
+	Description  string       `json:"description,omitempty"`
+	Done         bool         `json:"done,omitempty"`
+	Assignee     string       `json:"assignee,omitempty"`
+	Due          string       `json:"due,omitempty"`
+	CommentCount int          `json:"comment_count,omitempty"`
+	Comments     []commentOut `json:"comments,omitempty"`
 }
 
 func (f *family) todoOut(it todoItem) todoOut {
@@ -394,9 +402,10 @@ func (f *family) todoOut(it todoItem) todoOut {
 }
 
 type listTodosIn struct {
-	List        string `json:"list,omitempty" jsonschema:"list name or id; all lists when empty"`
-	Assignee    string `json:"assignee,omitempty" jsonschema:"only tasks assigned to this person (name or id)"`
-	IncludeDone bool   `json:"include_done,omitempty" jsonschema:"also return completed tasks"`
+	List         string `json:"list,omitempty" jsonschema:"list name or id; all lists when empty"`
+	Assignee     string `json:"assignee,omitempty" jsonschema:"only tasks assigned to this person (name or id)"`
+	IncludeDone  bool   `json:"include_done,omitempty" jsonschema:"also return completed tasks"`
+	WithComments bool   `json:"with_comments,omitempty" jsonschema:"include each task's comments (default false: only comment_count)"`
 }
 
 type todosOut struct {
@@ -436,6 +445,30 @@ func (t tools) listTodos(ctx context.Context, _ *sdk.CallToolRequest, in listTod
 			}
 			out.Todos = append(out.Todos, f.todoOut(it))
 		}
+	}
+	ids := make([]string, len(out.Todos))
+	for i, o := range out.Todos {
+		ids[i] = o.ID
+	}
+	if in.WithComments {
+		threads, err := t.comments(ctx, ids)
+		if err != nil {
+			return nil, out, err
+		}
+		for i := range out.Todos {
+			for _, c := range threads[out.Todos[i].ID] {
+				out.Todos[i].Comments = append(out.Todos[i].Comments, f.commentOut(c, false))
+			}
+			out.Todos[i].CommentCount = len(out.Todos[i].Comments)
+		}
+		return nil, out, nil
+	}
+	counts, err := t.commentCounts(ctx, ids)
+	if err != nil {
+		return nil, out, err
+	}
+	for i := range out.Todos {
+		out.Todos[i].CommentCount = counts[out.Todos[i].ID]
 	}
 	return nil, out, nil
 }
@@ -509,14 +542,15 @@ func (t tools) createTodoList(ctx context.Context, _ *sdk.CallToolRequest, in cr
 		body["due"] = d
 	}
 	var l struct {
-		ID   string     `json:"id"`
-		Name string     `json:"name"`
-		Due  *core.Date `json:"due"`
+		ID          string     `json:"id"`
+		Name        string     `json:"name"`
+		Description string     `json:"description"`
+		Due         *core.Date `json:"due"`
 	}
 	if err := t.call(ctx, http.MethodPost, "/todo/lists", body, &l); err != nil {
 		return nil, todoList{}, err
 	}
-	out := todoList{ID: l.ID, Name: l.Name}
+	out := todoList{ID: l.ID, Name: l.Name, Description: l.Description}
 	if l.Due != nil {
 		out.Due = l.Due.String()
 	}
@@ -605,10 +639,102 @@ type addCommentIn struct {
 	Body string `json:"body" jsonschema:"comment text, markdown; mention a member as [@Name](member:<id from family>) to notify them"`
 }
 
+// comment is a row of todo_comments (the API's and the database's shape).
+type comment struct {
+	ID        string    `json:"id"`
+	ItemID    string    `json:"item_id"`
+	AuthorID  *string   `json:"author_id"`
+	Body      string    `json:"body"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type commentOut struct {
-	ID   string `json:"id"`
-	Task string `json:"task"`
-	Body string `json:"body"`
+	ID     string `json:"id"`
+	Task   string `json:"task,omitempty"`
+	Author string `json:"author,omitempty"`
+	At     string `json:"at"`
+	Body   string `json:"body"`
+}
+
+func (f *family) commentOut(c comment, withTask bool) commentOut {
+	o := commentOut{ID: c.ID, Author: f.memberName(c.AuthorID), At: f.fmtTime(c.CreatedAt, false), Body: c.Body}
+	if withTask {
+		o.Task = c.ItemID
+	}
+	return o
+}
+
+// comments reads the threads of the given tasks (oldest first), by task id.
+func (t tools) comments(ctx context.Context, itemIDs []string) (map[string][]comment, error) {
+	out := map[string][]comment{}
+	if len(itemIDs) == 0 {
+		return out, nil
+	}
+	var rows []comment
+	err := t.db.WithContext(ctx).Table("todo_comments").
+		Select("id::text AS id, item_id::text AS item_id, author_id::text AS author_id, body, created_at").
+		Where("household_id = ? AND item_id IN ?", callerOf(ctx).actor.HouseholdID, itemIDs).
+		Order("created_at, id").Scan(&rows).Error
+	for _, c := range rows {
+		out[c.ItemID] = append(out[c.ItemID], c)
+	}
+	return out, err
+}
+
+// commentCounts counts the comments of the given tasks, by task id.
+func (t tools) commentCounts(ctx context.Context, itemIDs []string) (map[string]int, error) {
+	out := map[string]int{}
+	if len(itemIDs) == 0 {
+		return out, nil
+	}
+	var rows []struct {
+		ItemID string
+		N      int
+	}
+	err := t.db.WithContext(ctx).Table("todo_comments").Select("item_id::text AS item_id, count(*) AS n").
+		Where("household_id = ? AND item_id IN ?", callerOf(ctx).actor.HouseholdID, itemIDs).
+		Group("item_id").Scan(&rows).Error
+	for _, r := range rows {
+		out[r.ItemID] = r.N
+	}
+	return out, err
+}
+
+type commentsOut struct {
+	Task     string       `json:"task"`
+	List     string       `json:"list"`
+	Title    string       `json:"title"`
+	Comments []commentOut `json:"comments"`
+}
+
+func (t tools) listComments(ctx context.Context, _ *sdk.CallToolRequest, in idIn) (*sdk.CallToolResult, commentsOut, error) {
+	out := commentsOut{Comments: []commentOut{}}
+	id, err := uuid.Parse(in.ID)
+	if err != nil {
+		return nil, out, errors.New("id must be a task id from list_todos")
+	}
+	f, err := t.family(ctx, true, false)
+	if err != nil {
+		return nil, out, err
+	}
+	var it todoItem
+	if err := t.db.WithContext(ctx).Table("todo_items").Select("id::text AS id, list_id::text AS list_id, title").
+		Where("household_id = ? AND id = ?", callerOf(ctx).actor.HouseholdID, id).Take(&it).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, out, errors.New("no such task — use a task id from list_todos")
+		}
+		return nil, out, err
+	}
+	task := f.todoOut(it)
+	out.Task, out.List, out.Title = task.ID, task.List, task.Title
+	threads, err := t.comments(ctx, []string{task.ID})
+	if err != nil {
+		return nil, out, err
+	}
+	for _, c := range threads[task.ID] {
+		out.Comments = append(out.Comments, f.commentOut(c, false))
+	}
+	return nil, out, nil
 }
 
 func (t tools) addComment(ctx context.Context, _ *sdk.CallToolRequest, in addCommentIn) (*sdk.CallToolResult, commentOut, error) {
@@ -616,16 +742,16 @@ func (t tools) addComment(ctx context.Context, _ *sdk.CallToolRequest, in addCom
 	if err != nil {
 		return nil, commentOut{}, errors.New("id must be a task id from list_todos")
 	}
-	var c struct {
-		ID     string `json:"id"`
-		ItemID string `json:"item_id"`
-		Body   string `json:"body"`
+	f, err := t.family(ctx, false, false)
+	if err != nil {
+		return nil, commentOut{}, err
 	}
+	var c comment
 	body := map[string]any{"item_id": id.String(), "body": strings.TrimSpace(in.Body)}
 	if err := t.call(ctx, http.MethodPost, "/todo/comments", body, &c); err != nil {
 		return nil, commentOut{}, err
 	}
-	return nil, commentOut{ID: c.ID, Task: c.ItemID, Body: c.Body}, nil
+	return nil, f.commentOut(c, true), nil
 }
 
 func (t tools) deleteTodo(ctx context.Context, _ *sdk.CallToolRequest, in idIn) (*sdk.CallToolResult, deletedOut, error) {
