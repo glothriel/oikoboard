@@ -4,7 +4,6 @@ import 'dart:math';
 
 import 'package:web_socket_channel/web_socket_channel.dart';
 
-import '../change.dart';
 import '../sync/outbox.dart';
 import '../sync/view_cache.dart';
 
@@ -101,15 +100,10 @@ class SyncClient {
   final _random = Random();
 
   final _status = StreamController<bool>.broadcast();
-  final _changes = StreamController<Change>.broadcast();
-  final _seenSeqs = <int>{}; // LinkedHashSet — keeps insertion order
   var connected = false;
 
   /// true = connected and authenticated.
   Stream<bool> get status => _status.stream;
-
-  /// Changes from all subscriptions (deduplicated) — for notifications.
-  Stream<Change> get changes => _changes.stream;
 
   /// Subscribes to a view. Cancelling the stream sends `unsub`.
   ///
@@ -279,10 +273,8 @@ class SyncClient {
       case 'upsert':
         final row = (msg['row'] as Map).cast<String, dynamic>();
         (sub.state[msg['entity'] as String] ??= {})[msg['id'] as String] = row;
-        _notify(msg);
       case 'remove':
         sub.state[msg['entity'] as String]?.remove(msg['id']);
-        _notify(msg);
       case 'error':
         sub.controller.addError(Exception('${msg['code']}: ${msg['msg']}'));
         return;
@@ -372,29 +364,6 @@ class SyncClient {
     return null;
   }
 
-  void _notify(Map<String, dynamic> msg) {
-    final seq = msg['seq'] as int;
-    if (!_seenSeqs.add(seq)) return; // same change via another subscription
-    if (_seenSeqs.length > 500) _seenSeqs.remove(_seenSeqs.first);
-    final actor = msg['actor'] as String?;
-    if (actor == null) return;
-    _changes.add(
-      Change(
-        seq: seq,
-        collection: msg['entity'] as String,
-        entityId: msg['id'] as String,
-        op: switch (msg['op']) {
-          'insert' => ChangeOp.created,
-          'delete' => ChangeOp.deleted,
-          _ => ChangeOp.updated,
-        },
-        data: (msg['row'] as Map?)?.cast<String, dynamic>() ?? const {},
-        actorId: actor,
-        at: DateTime.now(),
-      ),
-    );
-  }
-
   void dispose() {
     _disposed = true;
     _retry?.cancel();
@@ -408,6 +377,5 @@ class SyncClient {
     }
     _subs.clear();
     _status.close();
-    _changes.close();
   }
 }

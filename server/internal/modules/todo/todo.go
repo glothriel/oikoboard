@@ -84,7 +84,7 @@ func (m Module) itemsChanged(hh uuid.UUID) {
 func (Module) Name() string { return "todo" }
 
 func (m Module) Views() []core.View {
-	return []core.View{listsView{}, listView{}, openView{}, commentsView{}}
+	return []core.View{listsView{}, listView{}, openView{}, commentsView{}, inboxView{}}
 }
 
 func (m Module) Routes(r *gin.RouterGroup) {
@@ -96,6 +96,7 @@ func (m Module) Routes(r *gin.RouterGroup) {
 	r.DELETE("/todo/items/:id", m.deleteItem)
 	r.POST("/todo/comments", m.createComment)
 	r.DELETE("/todo/comments/:id", m.deleteComment)
+	r.PATCH("/todo/inbox/:id", m.updateInbox)
 }
 
 // --- handlers ---
@@ -121,7 +122,11 @@ func (m Module) createList(c *gin.Context) {
 	row := List{ID: req.ID, HouseholdID: actor.HouseholdID, Name: req.Name,
 		Description: req.Description, Color: req.Color, Due: req.Due}
 	err := core.Write(c.Request.Context(), m.DB, actor, core.MutationID(c), func(tx *gorm.DB) error {
-		return core.CreateIdempotent(tx, &row, actor.HouseholdID, row.ID)
+		created, err := core.CreateIdempotentNew(tx, &row, actor.HouseholdID, row.ID)
+		if err != nil || !created {
+			return err
+		}
+		return notifyList(tx, actor, List{}, row)
 	})
 	if err == nil && row.Due != nil {
 		m.itemsChanged(actor.HouseholdID)
@@ -152,7 +157,14 @@ func (m Module) updateList(c *gin.Context) {
 	actor := core.ActorOf(c)
 	var row List
 	err = core.Write(c.Request.Context(), m.DB, actor, core.MutationID(c), func(tx *gorm.DB) error {
-		return update(tx, &row, actor.HouseholdID, id, cols)
+		var before List
+		if err := tx.Where("household_id = ? AND id = ?", actor.HouseholdID, id).First(&before).Error; err != nil {
+			return err
+		}
+		if err := update(tx, &row, actor.HouseholdID, id, cols); err != nil {
+			return err
+		}
+		return notifyList(tx, actor, before, row)
 	})
 	if err == nil {
 		m.itemsChanged(actor.HouseholdID) // the list's name and due show in the calendar
@@ -191,7 +203,11 @@ func (m Module) createItem(c *gin.Context) {
 		DueTime: req.DueTime,
 	}
 	err := core.Write(c.Request.Context(), m.DB, actor, core.MutationID(c), func(tx *gorm.DB) error {
-		return core.CreateIdempotent(tx, &row, actor.HouseholdID, row.ID)
+		created, err := core.CreateIdempotentNew(tx, &row, actor.HouseholdID, row.ID)
+		if err != nil || !created {
+			return err
+		}
+		return notifyItem(tx, actor, Item{}, row)
 	})
 	if err == nil {
 		m.itemsChanged(actor.HouseholdID)
@@ -238,7 +254,14 @@ func (m Module) updateItem(c *gin.Context) {
 	actor := core.ActorOf(c)
 	var row Item
 	err = core.Write(c.Request.Context(), m.DB, actor, core.MutationID(c), func(tx *gorm.DB) error {
-		return update(tx, &row, actor.HouseholdID, id, cols)
+		var before Item
+		if err := tx.Where("household_id = ? AND id = ?", actor.HouseholdID, id).First(&before).Error; err != nil {
+			return err
+		}
+		if err := update(tx, &row, actor.HouseholdID, id, cols); err != nil {
+			return err
+		}
+		return notifyItem(tx, actor, before, row)
 	})
 	if err == nil {
 		m.itemsChanged(actor.HouseholdID)
@@ -272,7 +295,11 @@ func (m Module) createComment(c *gin.Context) {
 		row.AuthorID = &actor.MemberID
 	}
 	err := core.Write(c.Request.Context(), m.DB, actor, core.MutationID(c), func(tx *gorm.DB) error {
-		return core.CreateIdempotent(tx, &row, actor.HouseholdID, row.ID)
+		created, err := core.CreateIdempotentNew(tx, &row, actor.HouseholdID, row.ID)
+		if err != nil || !created {
+			return err
+		}
+		return notifyComment(tx, actor, row)
 	})
 	respond(c, http.StatusCreated, &row, err)
 }

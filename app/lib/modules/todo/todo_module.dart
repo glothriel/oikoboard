@@ -5,12 +5,13 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/api/api_client.dart' show toApiDate;
-import '../../core/change.dart';
 import '../../core/family.dart';
 import '../../core/l10n.dart';
+import '../../core/mock/mock_auth_api.dart' show mockFamily;
 import '../../core/mock/mock_store.dart';
 import '../../core/module.dart';
 import '../../core/widgets.dart';
+import 'inbox.dart';
 import 'models.dart';
 import 'repository.dart';
 import 'todo_screen.dart';
@@ -40,6 +41,11 @@ class TodoModule extends FamilyModule {
   );
 
   @override
+  List<Widget> buildAppBarActions(BuildContext context) => [
+    TodoInboxButton(path: path),
+  ];
+
+  @override
   List<Widget> buildWallActions(BuildContext context) => const [
     WallTodoFilterButton(),
   ];
@@ -57,33 +63,6 @@ class TodoModule extends FamilyModule {
             ..sort((a, b) => a.createdAt.compareTo(b.createdAt)),
         ),
     ];
-  }
-
-  @override
-  String? describeChange(AppLocalizations l, Change change) {
-    if (change.collection == listsEntity) {
-      final name = '${change.data['name']}';
-      return switch (change.op) {
-        ChangeOp.created => l.changeListCreated(name),
-        ChangeOp.updated => l.changeListUpdated(name),
-        ChangeOp.deleted => l.changeListDeleted(name),
-      };
-    }
-    if (change.collection == commentsEntity) {
-      return change.op == ChangeOp.created
-          ? l.changeCommentAdded('${change.data['body']}')
-          : null;
-    }
-    if (change.collection != itemsEntity) return null;
-    final t = '${change.data['title']}';
-    return switch (change.op) {
-      ChangeOp.created => l.changeTaskAdded(t),
-      ChangeOp.updated =>
-        change.data['done'] == true
-            ? l.changeTaskChecked(t)
-            : l.changeTaskChanged(t),
-      ChangeOp.deleted => l.changeTaskDeleted(t),
-    };
   }
 
   @override
@@ -105,26 +84,65 @@ class TodoModule extends FamilyModule {
           ),
         });
 
-    void item(
+    String item(
       String listId,
       String title, {
       bool done = false,
       String? who,
       int? dueInDays,
-    }) => store.seed(itemsEntity, {
-      'id': 'seed-${n + 1}',
-      'list_id': listId,
-      'title': title,
-      'done': done,
-      'created_at': ts(),
-      'assignee_id': who,
-      'due': toApiDate(
-        dueInDays == null
-            ? null
-            : DateTime(now.year, now.month, now.day + dueInDays),
-      ),
-      'done_at': done ? now.toIso8601String() : null,
-    });
+    }) {
+      final id = 'seed-${n + 1}';
+      store.seed(itemsEntity, {
+        'id': id,
+        'list_id': listId,
+        'title': title,
+        'done': done,
+        'created_at': ts(),
+        'assignee_id': who,
+        'due': toApiDate(
+          dueInDays == null
+              ? null
+              : DateTime(now.year, now.month, now.day + dueInDays),
+        ),
+        'done_at': done ? now.toIso8601String() : null,
+      });
+      return id;
+    }
+
+    // A comment, and the inbox entries the server would have made for it.
+    void comment(
+      String itemId,
+      String listId,
+      String title,
+      String author,
+      String body, {
+      Map<String, InboxKind> notify = const {},
+    }) {
+      final id = 'seed-comment-${n + 1}';
+      final at = ts();
+      store.seed(commentsEntity, {
+        'id': id,
+        'item_id': itemId,
+        'author_id': author,
+        'body': body,
+        'created_at': at,
+      });
+      for (final MapEntry(key: member, value: kind) in notify.entries) {
+        store.seed(inboxEntity, {
+          'id': 'seed-inbox-${n++}',
+          'member_id': member,
+          'kind': kind.name,
+          'list_id': listId,
+          'item_id': itemId,
+          'comment_id': id,
+          'actor_id': author,
+          'title': title,
+          'excerpt': body,
+          'read_at': null,
+          'created_at': at,
+        });
+      }
+    }
 
     list('zakupy', 'Zakupy', 0xFF26A69A);
     list('dom', 'Dom', 0xFF5C6BC0);
@@ -143,7 +161,23 @@ class TodoModule extends FamilyModule {
     item('dom', 'Wynieść śmieci', done: true, who: 'kuba');
 
     item('wakacje', 'Zarezerwować nocleg', who: 'mama');
-    item('wakacje', 'Paszport dla Oli', dueInDays: 14);
+    final passport = item('wakacje', 'Paszport dla Oli', dueInDays: 14);
+    comment(
+      passport,
+      'wakacje',
+      'Paszport dla Oli',
+      'mama',
+      'Kto ma aktualne zdjęcie? [@Tata](member:tata) **potrzebne do piątku**',
+      notify: {'tata': InboxKind.mention},
+    );
+    comment(
+      passport,
+      'wakacje',
+      'Paszport dla Oli',
+      'ola',
+      'Ja mam, zrobione w szkole 📸',
+      notify: {'tata': InboxKind.reply, 'mama': InboxKind.reply},
+    );
     item('wakacje', 'Kupić krem z filtrem');
   }
 
@@ -164,6 +198,18 @@ class TodoModule extends FamilyModule {
   Future<void> simulate(MockStore store, Random random, String actorId) async {
     final repo = MockTodoRepository(store, actorId: actorId);
     final items = store.list(itemsEntity).map(TodoItem.fromJson).toList();
+    if (items.isNotEmpty && random.nextInt(4) == 0) {
+      // A comment, now and then mentioning someone.
+      final item = items[random.nextInt(items.length)];
+      final who = mockFamily[random.nextInt(mockFamily.length)];
+      await repo.addComment(
+        item.id,
+        random.nextBool()
+            ? '[@${who.name}](member:${who.id}) możesz zerknąć?'
+            : 'Ok, ogarnę to.',
+      );
+      return;
+    }
     if (items.isNotEmpty && random.nextBool()) {
       final item = items[random.nextInt(items.length)];
       await repo.updateItem(item, item.toggled());

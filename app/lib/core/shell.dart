@@ -8,7 +8,6 @@ import '../modules/registry.dart';
 import 'api/api_client.dart';
 import 'ai/ai_screen.dart';
 import 'backend.dart';
-import 'change.dart';
 import 'data.dart';
 import 'family.dart';
 import 'invite_dialog.dart';
@@ -26,7 +25,7 @@ class _Destination {
 }
 
 /// Shared frame of the app: the navigation bar (bottom on a phone, side on a
-/// wide screen), the app bar and notices about changes by other members.
+/// wide screen) and the app bar.
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key, required this.navigationShell});
   final StatefulNavigationShell navigationShell;
@@ -89,37 +88,6 @@ class _AppShellState extends ConsumerState<AppShell> {
     super.dispose();
   }
 
-  void _onChange(Change change) {
-    if (!mounted || change.actorId == ref.read(currentMemberProvider)) return;
-    final l = context.l10n;
-    final text = modules
-        .map((m) => m.describeChange(l, change))
-        .nonNulls
-        .firstOrNull;
-    if (text == null) return;
-    final member = ref.read(familyProvider).byId(change.actorId);
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 3),
-          content: Row(
-            children: [
-              if (member != null) MemberAvatar(member, radius: 12),
-              const SizedBox(width: 12),
-              // not a current member (e.g. removed since)
-              Expanded(
-                child: Text(
-                  l.shellChangeNotice(member?.name ?? l.commonSomeone, text),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-  }
-
   void _go(int index) => widget.navigationShell.goBranch(
     index,
     initialLocation: index == widget.navigationShell.currentIndex,
@@ -127,9 +95,6 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(changeEventsProvider, (_, next) {
-      if (next.value case final change?) _onChange(change);
-    });
     final index = widget.navigationShell.currentIndex;
     final width = MediaQuery.sizeOf(context).width;
     final destinations = _destinations(context.l10n);
@@ -138,12 +103,13 @@ class _AppShellState extends ConsumerState<AppShell> {
       title: Text(
         index == 0 ? context.l10n.appName : destinations[index].title,
       ),
-      actions: const [
-        _UnsyncedButton(),
-        _OfflineBadge(),
-        _SimulatorButton(),
-        _AccountMenu(),
-        SizedBox(width: 8),
+      actions: [
+        for (final m in modules) ...m.buildAppBarActions(context),
+        const _UnsyncedButton(),
+        const _OfflineBadge(),
+        const _SimulatorButton(),
+        const _AccountMenu(),
+        const SizedBox(width: 8),
       ],
     );
 

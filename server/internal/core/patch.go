@@ -51,18 +51,25 @@ func (p Patch) Apply(fields map[string]any) (map[string]any, error) {
 
 func derefAny(p any) any { return reflect.ValueOf(p).Elem().Interface() }
 
-var ErrIDConflict = errors.New("id zajęte")
+var ErrIDConflict = errors.New("id is taken")
 
-// CreateIdempotent wstawia wiersz o id nadanym przez klienta. Ponowienie
-// tego samego POST-a (retry) nie tworzy duplikatu — zwraca istniejący wiersz.
+// CreateIdempotent inserts a row with a client-assigned id. Retrying the same
+// POST doesn't create a duplicate — it returns the existing row.
 func CreateIdempotent(tx *gorm.DB, row any, householdID, id any) error {
+	_, err := CreateIdempotentNew(tx, row, householdID, id)
+	return err
+}
+
+// CreateIdempotentNew is [CreateIdempotent] that also says whether the row is
+// new (false on a retry), for side effects that must happen only once.
+func CreateIdempotentNew(tx *gorm.DB, row any, householdID, id any) (bool, error) {
 	res := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(row)
 	if res.Error != nil {
-		return res.Error
+		return false, res.Error
 	}
 	err := tx.Where("household_id = ? AND id = ?", householdID, id).First(row).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return ErrIDConflict
+		return false, ErrIDConflict
 	}
-	return err
+	return res.RowsAffected == 1, err
 }

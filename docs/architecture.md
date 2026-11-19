@@ -22,6 +22,11 @@ Flutter app (web + Android)                    Go server                        
   provider. Details: [calendar.md](calendar.md).
 - **AI chats (ChatGPT, Claude…)** connect over MCP + OAuth and act as the member who connected them; the MCP tools wrap
   the REST API. Details: [mcp.md](mcp.md).
+- **Mentions and the inbox:** markdown text (task/list descriptions, comments) mentions a member as
+  `[@Name](member:<id>)`; the app shows the current name and edits it as plain `@Name`. Instead of notices about every
+  change, the server writes `todo_inbox` rows in the same transaction as the write: a mention, a reply in a thread the
+  member takes part in (assignee, commenter, earlier recipient) or an assignment — never to the actor, and description
+  mentions only when newly added. The app shows them in an inbox in the app bar.
 - **App data access** goes through repository interfaces with `Api*` and `Mock*` implementations; the mock (no server)
   must keep working.
 

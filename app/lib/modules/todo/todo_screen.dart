@@ -6,6 +6,7 @@ import '../../core/family.dart';
 import '../../core/format.dart';
 import '../../core/l10n.dart';
 import '../../core/markdown.dart';
+import '../../core/mentions.dart';
 import '../../core/undo_delete.dart';
 import '../../core/widgets.dart';
 import 'models.dart';
@@ -187,7 +188,10 @@ class _TodoListEditor extends ConsumerStatefulWidget {
 class _TodoListEditorState extends ConsumerState<_TodoListEditor> {
   late final _name = TextEditingController(text: widget.list?.name);
   late final _description = TextEditingController(
-    text: widget.list?.description,
+    text: decodeMentions(
+      widget.list?.description ?? '',
+      ref.read(familyProvider),
+    ),
   );
   late int _color = widget.list?.color ?? widget.color;
   late DateTime? _due = widget.list?.due;
@@ -207,7 +211,10 @@ class _TodoListEditorState extends ConsumerState<_TodoListEditor> {
   Future<void> _save() async {
     final name = _name.text.trim();
     if (name.isEmpty) return;
-    final description = _description.text.trim();
+    final description = encodeMentions(
+      _description.text.trim(),
+      ref.read(familyProvider),
+    );
     final repo = ref.read(todoRepositoryProvider);
     final list = widget.list;
     final String id;
@@ -704,7 +711,7 @@ class _TodoItemEditor extends ConsumerStatefulWidget {
 class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
   late final _title = TextEditingController(text: widget.item.title);
   late final _description = TextEditingController(
-    text: widget.item.description,
+    text: decodeMentions(widget.item.description, ref.read(familyProvider)),
   );
   late String? _assignee = widget.item.assigneeId;
   late DateTime? _due = widget.item.due;
@@ -731,7 +738,10 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
     final title = _title.text.trim();
     return widget.item.copyWith(
       title: title.isEmpty ? null : title,
-      description: _description.text.trim(),
+      description: encodeMentions(
+        _description.text.trim(),
+        ref.read(familyProvider),
+      ),
       assigneeId: _assignee,
       due: _due,
       dueTime: _due == null ? null : _dueTime,
@@ -912,7 +922,7 @@ class TodoCommentList extends ConsumerWidget {
                 ],
               ),
             ),
-            subtitle: Text(c.body, style: theme.textTheme.bodyMedium),
+            subtitle: MarkdownText(c.body),
             trailing: c.authorId == me
                 ? IconButton(
                     tooltip: l.todoCommentDelete,
@@ -958,7 +968,12 @@ class _TodoCommentComposerState extends ConsumerState<TodoCommentComposer> {
     final body = _controller.text.trim();
     if (body.isEmpty) return;
     _controller.clear();
-    ref.read(todoRepositoryProvider).addComment(widget.itemId, body);
+    ref
+        .read(todoRepositoryProvider)
+        .addComment(
+          widget.itemId,
+          encodeMentions(body, ref.read(familyProvider)),
+        );
   }
 
   @override
@@ -978,30 +993,39 @@ class _TodoCommentComposerState extends ConsumerState<TodoCommentComposer> {
               const SingleActivator(LogicalKeyboardKey.enter, meta: true):
                   _send,
             },
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    minLines: 1,
-                    maxLines: 6,
-                    keyboardType: TextInputType.multiline,
-                    textInputAction: TextInputAction.newline,
-                    decoration: InputDecoration(
-                      hintText: l.todoCommentHint,
-                      isDense: true,
-                      border: InputBorder.none,
+                MentionSuggestions(controller: _controller),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        minLines: 1,
+                        maxLines: 6,
+                        keyboardType: TextInputType.multiline,
+                        textInputAction: TextInputAction.newline,
+                        decoration: InputDecoration(
+                          hintText: l.todoCommentHint,
+                          isDense: true,
+                          border: InputBorder.none,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                ListenableBuilder(
-                  listenable: _controller,
-                  builder: (context, _) => IconButton(
-                    tooltip: l.todoCommentSend,
-                    icon: const Icon(Icons.send),
-                    onPressed: _controller.text.trim().isEmpty ? null : _send,
-                  ),
+                    ListenableBuilder(
+                      listenable: _controller,
+                      builder: (context, _) => IconButton(
+                        tooltip: l.todoCommentSend,
+                        icon: const Icon(Icons.send),
+                        onPressed: _controller.text.trim().isEmpty
+                            ? null
+                            : _send,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

@@ -3,7 +3,6 @@ import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
-import '../../core/change.dart';
 import '../../core/format.dart';
 import '../../core/l10n.dart';
 import '../../core/mock/mock_store.dart';
@@ -35,25 +34,6 @@ class CalendarModule extends FamilyModule {
     path: path,
     child: const _CalendarWallTile(),
   );
-
-  @override
-  String? describeChange(AppLocalizations l, Change change) {
-    if (change.collection == calendarsEntity) {
-      final n = '${change.data['name']}';
-      return switch (change.op) {
-        ChangeOp.created => l.changeCalendarConnected(n),
-        ChangeOp.deleted => l.changeCalendarDisconnected(n),
-        ChangeOp.updated => null,
-      };
-    }
-    if (change.collection != eventsEntity) return null;
-    final t = '${change.data['title']}';
-    return switch (change.op) {
-      ChangeOp.created => l.changeEventCreated(t),
-      ChangeOp.updated => l.changeEventUpdated(t),
-      ChangeOp.deleted => l.changeEventDeleted(t),
-    };
-  }
 
   @override
   void seedMock(MockStore store) {

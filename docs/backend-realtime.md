@@ -146,6 +146,7 @@ albo należały** do tego zbioru.
 | `todo.list`       | `list_id`       | ta lista + wszystkie jej `todo_items`               | ekran listy |
 | `todo.open`       | —               | niezrobione `todo_items` gospodarstwa               | ściana, liczniki przy listach |
 | `todo.comments`   | `item_id`       | `todo_comments` of one task (its thread)            | task editor |
+| `todo.inbox`      | `member_id`     | the member's `todo_inbox` (last 100)                | inbox in the app bar |
 | `calendar.range`  | `from`, `to`    | `calendar_events` nachodzące na przedział           | miesiąc w kalendarzu, ściana |
 
 Liczby („4 do zrobienia”) liczy klient z encji, a nie serwer. Dzięki temu widoki to zwykłe filtry,
@@ -406,7 +407,6 @@ a `AutoMigrate` nie radzi sobie dobrze ze zmianami schematu. GORM służy jako O
   (z kilkusekundowym `keepAlive`, żeby przełączanie zakładek nie robiło churnu).
 - `ApiTodoRepository` / `ApiCalendarRepository` implement the same interfaces as the mocks:
   `watch*` = a view subscription, writes = outbox mutations (see "Offline writes").
-- Snackbar „Ola: dodano „Masło”” bierze się z `actor` w wiadomości `upsert`/`remove`.
 
 ---
 

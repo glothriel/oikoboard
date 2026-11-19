@@ -215,6 +215,7 @@ Also needed: Docker with Compose v2.32+ (for `watch` with `action: restart`) and
 1. Database and server (API on `:8090`, Postgres on `:5433`):
    ```bash
    ./local-dev            # same as ./local-dev start
+   ./local-dev start --mock-login   # sign-in without Google: a "who are you?" page (sample family, any e-mail)
    ```
    This runs `docker compose -f docker-compose.dev.yml up --watch`: Postgres plus the server via
    `go run ./cmd/oikoboard` (migrations + seed when the DB is empty + server). `./server` is bind-mounted, and any change

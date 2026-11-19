@@ -213,3 +213,53 @@ class TodoComment {
     'author_id': authorId,
   };
 }
+
+enum InboxKind { mention, reply, assigned }
+
+/// One thing in the signed-in member's inbox (the server's `todo_inbox`).
+class InboxEntry {
+  const InboxEntry({
+    required this.id,
+    required this.kind,
+    required this.listId,
+    required this.title,
+    required this.createdAt,
+    this.itemId,
+    this.commentId,
+    this.actorId,
+    this.excerpt = '',
+    this.readAt,
+  });
+
+  final String id;
+  final InboxKind kind;
+  final String listId;
+
+  /// Null: a mention in the list's description.
+  final String? itemId;
+
+  /// Null: about a description or an assignment.
+  final String? commentId;
+  final String? actorId;
+
+  /// The task's (or list's) title and the comment's text when it happened.
+  final String title;
+  final String excerpt;
+  final DateTime createdAt;
+  final DateTime? readAt;
+
+  bool get unread => readAt == null;
+
+  factory InboxEntry.fromJson(Map<String, dynamic> j) => InboxEntry(
+    id: j['id'] as String,
+    kind: InboxKind.values.byName(j['kind'] as String),
+    listId: j['list_id'] as String,
+    itemId: j['item_id'] as String?,
+    commentId: j['comment_id'] as String?,
+    actorId: j['actor_id'] as String?,
+    title: j['title'] as String,
+    excerpt: (j['excerpt'] as String?) ?? '',
+    createdAt: fromApiTime(j['created_at'])!,
+    readAt: fromApiTime(j['read_at']),
+  );
+}

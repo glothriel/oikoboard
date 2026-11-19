@@ -188,12 +188,6 @@ abstract class AppLocalizations {
   /// **'No connection to the server'**
   String get commonNoServerConnection;
 
-  /// No description provided for @commonSomeone.
-  ///
-  /// In en, this message translates to:
-  /// **'Someone'**
-  String get commonSomeone;
-
   /// No description provided for @commonDeleted.
   ///
   /// In en, this message translates to:
@@ -584,12 +578,6 @@ abstract class AppLocalizations {
   /// **'No connection — reconnecting…'**
   String get shellOffline;
 
-  /// who: the member who made the change; what: the change description
-  ///
-  /// In en, this message translates to:
-  /// **'{who}: {what}'**
-  String shellChangeNotice(String who, String what);
-
   /// No description provided for @wallGreetingMorning.
   ///
   /// In en, this message translates to:
@@ -661,78 +649,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Disconnect'**
   String get aiDisconnect;
-
-  /// No description provided for @changeListCreated.
-  ///
-  /// In en, this message translates to:
-  /// **'new list “{name}”'**
-  String changeListCreated(String name);
-
-  /// No description provided for @changeListUpdated.
-  ///
-  /// In en, this message translates to:
-  /// **'changed list “{name}”'**
-  String changeListUpdated(String name);
-
-  /// No description provided for @changeListDeleted.
-  ///
-  /// In en, this message translates to:
-  /// **'deleted list “{name}”'**
-  String changeListDeleted(String name);
-
-  /// No description provided for @changeTaskAdded.
-  ///
-  /// In en, this message translates to:
-  /// **'added “{title}”'**
-  String changeTaskAdded(String title);
-
-  /// No description provided for @changeTaskChecked.
-  ///
-  /// In en, this message translates to:
-  /// **'checked off “{title}” ✓'**
-  String changeTaskChecked(String title);
-
-  /// No description provided for @changeTaskChanged.
-  ///
-  /// In en, this message translates to:
-  /// **'changed “{title}”'**
-  String changeTaskChanged(String title);
-
-  /// No description provided for @changeTaskDeleted.
-  ///
-  /// In en, this message translates to:
-  /// **'deleted “{title}”'**
-  String changeTaskDeleted(String title);
-
-  /// No description provided for @changeCalendarConnected.
-  ///
-  /// In en, this message translates to:
-  /// **'connected calendar “{name}”'**
-  String changeCalendarConnected(String name);
-
-  /// No description provided for @changeCalendarDisconnected.
-  ///
-  /// In en, this message translates to:
-  /// **'disconnected calendar “{name}”'**
-  String changeCalendarDisconnected(String name);
-
-  /// No description provided for @changeEventCreated.
-  ///
-  /// In en, this message translates to:
-  /// **'new event “{title}”'**
-  String changeEventCreated(String title);
-
-  /// No description provided for @changeEventUpdated.
-  ///
-  /// In en, this message translates to:
-  /// **'changed event “{title}”'**
-  String changeEventUpdated(String title);
-
-  /// No description provided for @changeEventDeleted.
-  ///
-  /// In en, this message translates to:
-  /// **'deleted event “{title}”'**
-  String changeEventDeleted(String title);
 
   /// No description provided for @todoModuleTitle.
   ///
@@ -1021,12 +937,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Board'**
   String get wallLayoutKanban;
-
-  /// No description provided for @changeCommentAdded.
-  ///
-  /// In en, this message translates to:
-  /// **'commented: “{body}”'**
-  String changeCommentAdded(String body);
 
   /// No description provided for @calendarModuleTitle.
   ///
@@ -1495,6 +1405,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{field}: {before} → {after}'**
   String syncDiffLine(String field, String before, String after);
+
+  /// No description provided for @todoInbox.
+  ///
+  /// In en, this message translates to:
+  /// **'Inbox'**
+  String get todoInbox;
+
+  /// No description provided for @todoInboxUnread.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Inbox: {count} unread} other{Inbox: {count} unread}}'**
+  String todoInboxUnread(int count);
+
+  /// No description provided for @todoInboxEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here yet. Mentions, replies in your threads and tasks assigned to you show up here.'**
+  String get todoInboxEmpty;
+
+  /// No description provided for @todoInboxMarkAllRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark all as read'**
+  String get todoInboxMarkAllRead;
+
+  /// No description provided for @todoInboxMention.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} mentioned you in “{title}”'**
+  String todoInboxMention(String name, String title);
+
+  /// No description provided for @todoInboxReply.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} replied in “{title}”'**
+  String todoInboxReply(String name, String title);
+
+  /// No description provided for @todoInboxAssigned.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} assigned you “{title}”'**
+  String todoInboxAssigned(String name, String title);
 }
 
 class _AppLocalizationsDelegate

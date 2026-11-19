@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'api/api_client.dart';
 import 'api/sync_client.dart';
 import 'backend.dart';
-import 'change.dart';
 import 'session.dart';
 import 'sync/outbox.dart';
 import 'sync/text_store.dart';
@@ -86,14 +85,6 @@ final syncClientProvider = Provider<SyncClient>((ref) {
   ref.onDispose(status.cancel);
   ref.onDispose(client.dispose);
   return client;
-});
-
-/// Changes made by others (for notifications), regardless of backend.
-final changeEventsProvider = StreamProvider<Change>((ref) {
-  return switch (ref.watch(backendProvider)) {
-    MockBackend(:final store) => store.changes,
-    ApiBackend() => ref.watch(syncClientProvider).changes,
-  };
 });
 
 /// Whether we are connected to the server (mock: always). A reconnect that

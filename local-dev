@@ -3,6 +3,7 @@
 
     ./local-dev                # = start
     ./local-dev start          # postgres + Go server (go run, auto-reload on changes in ./server)
+    ./local-dev start --mock-login   # same, sign-in shows a "who are you?" page instead of Google
     ./local-dev prod           # the production image locally (docker compose up --build, web app on :8090)
     ./local-dev app            # Flutter app on the host (Chrome, talks to localhost:8090)
     ./local-dev app --mock     # Flutter app without a server (in-memory data)
@@ -63,11 +64,11 @@ def compose_env() -> dict:
     return env
 
 
-def compose(*args: str, file: str = "docker-compose.dev.yml") -> int:
+def compose(*args: str, file: str = "docker-compose.dev.yml", extra_env: dict | None = None) -> int:
     cmd = ["docker", "compose", "-f", file, *args]
     print("+", " ".join(cmd), flush=True)
     try:
-        return subprocess.call(cmd, cwd=ROOT, env=compose_env())
+        return subprocess.call(cmd, cwd=ROOT, env={**compose_env(), **(extra_env or {})})
     except KeyboardInterrupt:
         return 130
 
@@ -76,7 +77,16 @@ def cmd_start(args) -> int:
     """postgres + Go server with auto-reload"""
     if not shutil.which("docker"):
         return fail("docker not found on PATH")
-    return compose("up", "--watch")
+    extra = {}
+    if args.mock_login:
+        info("mock sign-in: Google is replaced by a \"who are you?\" page (sample family, any e-mail)")
+        extra["OIKO_MOCK_OAUTH"] = "1"
+    return compose("up", "--watch", extra_env=extra)
+
+
+def start_parser(p: argparse.ArgumentParser) -> None:
+    p.add_argument("--mock-login", action="store_true",
+                   help='sign-in without Google: a "who are you?" page (OIKO_MOCK_OAUTH=1)')
 
 
 def cmd_prod(args) -> int:
@@ -211,7 +221,7 @@ def app_parser(p: argparse.ArgumentParser) -> None:
 
 # name → (handler, optional function adding the command's arguments)
 COMMANDS = {
-    "start": (cmd_start, None),
+    "start": (cmd_start, start_parser),
     "prod": (cmd_prod, None),
     "app": (cmd_app, app_parser),
 }

@@ -74,14 +74,18 @@ void main() {
     await tester.tap(find.byTooltip('Send'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Lactose-free'), findsOneWidget);
-    expect(store.list(commentsEntity).single['item_id'], task()['id']);
+    List<Map<String, dynamic>> comments() => store
+        .list(commentsEntity)
+        .where((c) => c['item_id'] == task()['id'])
+        .toList();
+    expect(comments(), hasLength(1));
     // Deleting hides it at once with an Undo snackbar; Undo brings it back
     // and nothing reaches the store until the snackbar is gone.
     await tester.tap(find.byTooltip('Delete comment'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Lactose-free'), findsNothing);
     expect(find.text('Comment deleted'), findsWidgets);
-    expect(store.list(commentsEntity), hasLength(1));
+    expect(comments(), hasLength(1));
     await tester.tap(find.text('Undo').last); // the sheet's own, on top
     await tester.pumpAndSettle();
     expect(find.textContaining('Lactose-free'), findsOneWidget);
@@ -96,7 +100,7 @@ void main() {
       () => Future<void>.delayed(const Duration(milliseconds: 50)),
     );
     await tester.pump();
-    expect(store.list(commentsEntity), isEmpty);
+    expect(comments(), isEmpty);
     // Closing the comments view goes back to the task sheet.
     await tester.tap(find.byTooltip('Close'));
     await tester.pumpAndSettle();
@@ -254,7 +258,7 @@ void main() {
     await tester.tap(find.byTooltip('Close'));
     await tester.pumpAndSettle();
     expect(
-      find.descendant(of: find.byType(Badge), matching: find.text('1')),
+      find.descendant(of: find.byTooltip('Comments'), matching: find.text('1')),
       findsOneWidget,
     );
     expect(tester.takeException(), isNull);

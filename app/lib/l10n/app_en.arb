@@ -15,7 +15,6 @@
   "commonReadOnly": "read-only",
   "commonError": "Error",
   "commonNoServerConnection": "No connection to the server",
-  "commonSomeone": "Someone",
   "commonDeleted": "Deleted “{name}”",
   "@commonDeleted": {
     "placeholders": {
@@ -159,18 +158,6 @@
   "shellAiChat": "AI chat (MCP)",
   "shellInviteToFamily": "Invite to family",
   "shellOffline": "No connection — reconnecting…",
-  "shellChangeNotice": "{who}: {what}",
-  "@shellChangeNotice": {
-    "description": "who: the member who made the change; what: the change description",
-    "placeholders": {
-      "who": {
-        "type": "String"
-      },
-      "what": {
-        "type": "String"
-      }
-    }
-  },
   "wallGreetingMorning": "Good morning",
   "wallGreetingDay": "Hi",
   "wallGreetingEvening": "Good evening",
@@ -200,102 +187,6 @@
     }
   },
   "aiDisconnect": "Disconnect",
-  "changeListCreated": "new list “{name}”",
-  "@changeListCreated": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "changeListUpdated": "changed list “{name}”",
-  "@changeListUpdated": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "changeListDeleted": "deleted list “{name}”",
-  "@changeListDeleted": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "changeTaskAdded": "added “{title}”",
-  "@changeTaskAdded": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
-  "changeTaskChecked": "checked off “{title}” ✓",
-  "@changeTaskChecked": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
-  "changeTaskChanged": "changed “{title}”",
-  "@changeTaskChanged": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
-  "changeTaskDeleted": "deleted “{title}”",
-  "@changeTaskDeleted": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
-  "changeCalendarConnected": "connected calendar “{name}”",
-  "@changeCalendarConnected": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "changeCalendarDisconnected": "disconnected calendar “{name}”",
-  "@changeCalendarDisconnected": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "changeEventCreated": "new event “{title}”",
-  "@changeEventCreated": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
-  "changeEventUpdated": "changed event “{title}”",
-  "@changeEventUpdated": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
-  "changeEventDeleted": "deleted event “{title}”",
-  "@changeEventDeleted": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
   "todoModuleTitle": "Lists",
   "todoError": "Error: {error}",
   "@todoError": {
@@ -419,14 +310,6 @@
   "todoDayListDue": "List due",
   "wallLayoutToday": "Today",
   "wallLayoutKanban": "Board",
-  "changeCommentAdded": "commented: “{body}”",
-  "@changeCommentAdded": {
-    "placeholders": {
-      "body": {
-        "type": "String"
-      }
-    }
-  },
   "calendarModuleTitle": "Calendar",
   "calendarViewDay": "Day",
   "calendarViewThreeDays": "3 days",
@@ -596,6 +479,50 @@
         "type": "String"
       },
       "after": {
+        "type": "String"
+      }
+    }
+  },
+  "todoInbox": "Inbox",
+  "todoInboxUnread": "{count, plural, one{Inbox: {count} unread} other{Inbox: {count} unread}}",
+  "@todoInboxUnread": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "todoInboxEmpty": "Nothing here yet. Mentions, replies in your threads and tasks assigned to you show up here.",
+  "todoInboxMarkAllRead": "Mark all as read",
+  "todoInboxMention": "{name} mentioned you in “{title}”",
+  "@todoInboxMention": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "todoInboxReply": "{name} replied in “{title}”",
+  "@todoInboxReply": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "todoInboxAssigned": "{name} assigned you “{title}”",
+  "@todoInboxAssigned": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "title": {
         "type": "String"
       }
     }

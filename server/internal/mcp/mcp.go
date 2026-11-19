@@ -443,7 +443,7 @@ func (t tools) listTodos(ctx context.Context, _ *sdk.CallToolRequest, in listTod
 type addTodoIn struct {
 	List        string `json:"list" jsonschema:"list name or id"`
 	Title       string `json:"title"`
-	Description string `json:"description,omitempty" jsonschema:"details, markdown"`
+	Description string `json:"description,omitempty" jsonschema:"details, markdown; mention a member as [@Name](member:<id from family>)"`
 	Assignee    string `json:"assignee,omitempty" jsonschema:"person (name or id)"`
 	Due         string `json:"due,omitempty" jsonschema:"due date YYYY-MM-DD, or YYYY-MM-DDTHH:MM for a time (it then gets its own event in the calendar)"`
 	Done        bool   `json:"done,omitempty" jsonschema:"add it already completed"`
@@ -484,7 +484,7 @@ func (t tools) addTodo(ctx context.Context, _ *sdk.CallToolRequest, in addTodoIn
 
 type createTodoListIn struct {
 	Name        string `json:"name"`
-	Description string `json:"description,omitempty" jsonschema:"details, markdown"`
+	Description string `json:"description,omitempty" jsonschema:"details, markdown; mention a member as [@Name](member:<id from family>)"`
 	Due         string `json:"due,omitempty" jsonschema:"due date of the whole list YYYY-MM-DD"`
 }
 
@@ -526,7 +526,7 @@ func (t tools) createTodoList(ctx context.Context, _ *sdk.CallToolRequest, in cr
 type updateTodoIn struct {
 	ID          string  `json:"id"`
 	Title       *string `json:"title,omitempty"`
-	Description *string `json:"description,omitempty" jsonschema:"details, markdown; empty string removes it"`
+	Description *string `json:"description,omitempty" jsonschema:"details, markdown (mention a member as [@Name](member:<id from family>)); empty string removes it"`
 	Assignee    *string `json:"assignee,omitempty" jsonschema:"person (name or id); empty string removes the assignee"`
 	Due         *string `json:"due,omitempty" jsonschema:"YYYY-MM-DD, or YYYY-MM-DDTHH:MM for a time; empty string removes the due date"`
 	Done        *bool   `json:"done,omitempty"`
@@ -602,7 +602,7 @@ type deletedOut struct {
 
 type addCommentIn struct {
 	ID   string `json:"id" jsonschema:"task id from list_todos"`
-	Body string `json:"body" jsonschema:"comment text, markdown"`
+	Body string `json:"body" jsonschema:"comment text, markdown; mention a member as [@Name](member:<id from family>) to notify them"`
 }
 
 type commentOut struct {

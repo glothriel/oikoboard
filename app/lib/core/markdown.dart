@@ -1,10 +1,14 @@
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'package:markdown/markdown.dart' as md;
 import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'family.dart';
 import 'l10n.dart';
+import 'mentions.dart';
 
-/// Rendered markdown (descriptions of lists and tasks); links open outside the app.
+/// Rendered markdown (descriptions, comments); links open outside the app and
+/// mentions show as the member's current name.
 class MarkdownText extends StatelessWidget {
   const MarkdownText(this.data, {super.key});
   final String data;
@@ -81,14 +85,56 @@ class MarkdownText extends StatelessWidget {
     data: data,
     softLineBreak: true,
     styleSheet: _styleSheet(Theme.of(context)),
+    inlineSyntaxes: [_MentionSyntax()],
+    builders: {'mention': _MentionBuilder()},
     onTapLink: (_, href, _) {
       final uri = href == null ? null : Uri.tryParse(href);
-      if (uri != null) launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (uri != null && uri.scheme != 'member') {
+        launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
     },
   );
 }
 
-/// A multi-line markdown field with a small edit / preview toggle.
+/// `[@Name](member:<id>)` → a `mention` element (before the link syntax).
+class _MentionSyntax extends md.InlineSyntax {
+  _MentionSyntax() : super(mentionLinkPattern.pattern);
+
+  @override
+  bool onMatch(md.InlineParser parser, Match match) {
+    parser.addNode(
+      md.Element.text('mention', match[1]!)..attributes['id'] = match[2]!,
+    );
+    return true;
+  }
+}
+
+class _MentionBuilder extends MarkdownElementBuilder {
+  @override
+  Widget? visitElementAfterWithContext(
+    BuildContext context,
+    md.Element element,
+    TextStyle? preferredStyle,
+    TextStyle? parentStyle,
+  ) {
+    final name =
+        familyOf(context).byId(element.attributes['id'])?.name ??
+        element.textContent;
+    return Text.rich(
+      TextSpan(
+        text: '@$name',
+        style: (parentStyle ?? const TextStyle()).copyWith(
+          color: Theme.of(context).colorScheme.primary,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+/// A multi-line markdown field with a small edit / preview toggle. Mentions
+/// are `@Name` in [controller] (see [decodeMentions]); typing `@` suggests
+/// members.
 class MarkdownField extends StatefulWidget {
   const MarkdownField({
     super.key,
@@ -149,9 +195,11 @@ class _MarkdownFieldState extends State<MarkdownField> {
                     l.markdownNothing,
                     style: TextStyle(color: theme.colorScheme.outline),
                   )
-                : MarkdownText(widget.controller.text),
+                : MarkdownText(
+                    encodeMentions(widget.controller.text, familyOf(context)),
+                  ),
           )
-        else
+        else ...[
           TextField(
             controller: widget.controller,
             minLines: 3,
@@ -159,6 +207,8 @@ class _MarkdownFieldState extends State<MarkdownField> {
             keyboardType: TextInputType.multiline,
             decoration: const InputDecoration(border: OutlineInputBorder()),
           ),
+          MentionSuggestions(controller: widget.controller),
+        ],
       ],
     );
   }

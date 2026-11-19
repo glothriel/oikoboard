@@ -30,6 +30,8 @@ services:
       OIKO_DATABASE_URL: postgres://oiko:oiko@postgres:5432/oiko?sslmode=disable
       OIKO_ADDR: ":8090"
       OIKO_SEED: "1" # sample family in an empty database
+      # passed through only when set (`./local-dev start --mock-login`), so server/.env still applies otherwise
+      OIKO_MOCK_OAUTH:
     ports:
       - "${OIKO_HOST_PORT:-8090}:8090"
     volumes:

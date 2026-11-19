@@ -55,9 +55,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonNoServerConnection => 'No connection to the server';
 
   @override
-  String get commonSomeone => 'Someone';
-
-  @override
   String commonDeleted(String name) {
     return 'Deleted “$name”';
   }
@@ -284,11 +281,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shellOffline => 'No connection — reconnecting…';
 
   @override
-  String shellChangeNotice(String who, String what) {
-    return '$who: $what';
-  }
-
-  @override
   String get wallGreetingMorning => 'Good morning';
 
   @override
@@ -328,66 +320,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiDisconnect => 'Disconnect';
-
-  @override
-  String changeListCreated(String name) {
-    return 'new list “$name”';
-  }
-
-  @override
-  String changeListUpdated(String name) {
-    return 'changed list “$name”';
-  }
-
-  @override
-  String changeListDeleted(String name) {
-    return 'deleted list “$name”';
-  }
-
-  @override
-  String changeTaskAdded(String title) {
-    return 'added “$title”';
-  }
-
-  @override
-  String changeTaskChecked(String title) {
-    return 'checked off “$title” ✓';
-  }
-
-  @override
-  String changeTaskChanged(String title) {
-    return 'changed “$title”';
-  }
-
-  @override
-  String changeTaskDeleted(String title) {
-    return 'deleted “$title”';
-  }
-
-  @override
-  String changeCalendarConnected(String name) {
-    return 'connected calendar “$name”';
-  }
-
-  @override
-  String changeCalendarDisconnected(String name) {
-    return 'disconnected calendar “$name”';
-  }
-
-  @override
-  String changeEventCreated(String title) {
-    return 'new event “$title”';
-  }
-
-  @override
-  String changeEventUpdated(String title) {
-    return 'changed event “$title”';
-  }
-
-  @override
-  String changeEventDeleted(String title) {
-    return 'deleted event “$title”';
-  }
 
   @override
   String get todoModuleTitle => 'Lists';
@@ -558,11 +490,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wallLayoutKanban => 'Board';
-
-  @override
-  String changeCommentAdded(String body) {
-    return 'commented: “$body”';
-  }
 
   @override
   String get calendarModuleTitle => 'Calendar';
@@ -841,5 +768,41 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String syncDiffLine(String field, String before, String after) {
     return '$field: $before → $after';
+  }
+
+  @override
+  String get todoInbox => 'Inbox';
+
+  @override
+  String todoInboxUnread(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Inbox: $count unread',
+      one: 'Inbox: $count unread',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get todoInboxEmpty =>
+      'Nothing here yet. Mentions, replies in your threads and tasks assigned to you show up here.';
+
+  @override
+  String get todoInboxMarkAllRead => 'Mark all as read';
+
+  @override
+  String todoInboxMention(String name, String title) {
+    return '$name mentioned you in “$title”';
+  }
+
+  @override
+  String todoInboxReply(String name, String title) {
+    return '$name replied in “$title”';
+  }
+
+  @override
+  String todoInboxAssigned(String name, String title) {
+    return '$name assigned you “$title”';
   }
 }

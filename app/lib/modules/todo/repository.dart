@@ -5,6 +5,7 @@ import '../../core/api/sync_client.dart';
 import '../../core/backend.dart';
 import '../../core/data.dart';
 import '../../core/family.dart';
+import '../../core/mentions.dart';
 import '../../core/mock/mock_store.dart';
 import '../../core/sync/outbox.dart';
 import '../../core/undo_delete.dart';
@@ -13,9 +14,10 @@ import 'models.dart';
 const listsEntity = 'todo_lists';
 const itemsEntity = 'todo_items';
 const commentsEntity = 'todo_comments';
+const inboxEntity = 'todo_inbox';
 
 /// The interface the UI uses. The `watch*` methods match the server's views
-/// (todo.lists, todo.list, todo.open, todo.comments).
+/// (todo.lists, todo.list, todo.open, todo.comments, todo.inbox).
 abstract interface class TodoRepository {
   Stream<List<TodoList>> watchLists();
   Stream<List<TodoItem>> watchListItems(String listId);
@@ -49,7 +51,16 @@ abstract interface class TodoRepository {
 
   /// Only the author can delete a comment.
   Future<void> deleteComment(TodoComment comment);
+
+  /// The signed-in member's inbox, newest first.
+  Stream<List<InboxEntry>> watchInbox();
+
+  /// Marks the unread ones of [entries] read.
+  Future<void> markRead(Iterable<InboxEntry> entries);
 }
+
+List<InboxEntry> _sortInbox(Iterable<InboxEntry> e) =>
+    e.toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
 List<TodoComment> _sortComments(Iterable<TodoComment> c) =>
     c.toList()..sort((a, b) => a.createdAt.compareTo(b.createdAt));
@@ -263,6 +274,25 @@ class ApiTodoRepository implements TodoRepository {
       label: comment.body,
     ),
   );
+
+  @override
+  Stream<List<InboxEntry>> watchInbox() => sync
+      .watch('todo.inbox', {
+        'member_id': actorId,
+      }, (e, r) => e == inboxEntity && r['member_id'] == actorId)
+      .map((v) => _sortInbox(v.rows(inboxEntity).map(InboxEntry.fromJson)));
+
+  @override
+  Future<void> markRead(Iterable<InboxEntry> entries) async {
+    final now = toApiTime(DateTime.now());
+    for (final e in entries.where((e) => e.unread)) {
+      outbox.enqueue(
+        Mutation.patch('/todo/inbox/${e.id}', inboxEntity, e.id, {
+          'read_at': now,
+        }, label: e.title),
+      );
+    }
+  }
 }
 
 // --- mock ---
@@ -305,21 +335,33 @@ class MockTodoRepository implements TodoRepository {
       due: due,
     );
     await store.put(listsEntity, list.toJson(), actorId: actorId);
+    await _notify(
+      _Notices()..mentions(description),
+      listId: list.id,
+      title: name,
+    );
     return list;
   }
 
   @override
-  Future<void> updateList(TodoList list, TodoList updated) => store.patch(
-    listsEntity,
-    list.id,
-    changedFields(list.toJson(), updated.toJson(), const [
-      'name',
-      'description',
-      'color',
-      'due',
-    ]),
-    actorId: actorId,
-  );
+  Future<void> updateList(TodoList list, TodoList updated) async {
+    await store.patch(
+      listsEntity,
+      list.id,
+      changedFields(list.toJson(), updated.toJson(), const [
+        'name',
+        'description',
+        'color',
+        'due',
+      ]),
+      actorId: actorId,
+    );
+    await _notify(
+      _Notices()..mentions(updated.description, list.description),
+      listId: list.id,
+      title: updated.name,
+    );
+  }
 
   @override
   Future<void> deleteList(TodoList list) async {
@@ -328,6 +370,7 @@ class MockTodoRepository implements TodoRepository {
         .where((d) => d['list_id'] == list.id)
         .map(TodoItem.fromJson);
     await Future.wait(items.map(deleteItem));
+    await _deleteInbox((e) => e['list_id'] == list.id);
     await store.delete(listsEntity, list.id, actorId: actorId);
   }
 
@@ -348,24 +391,44 @@ class MockTodoRepository implements TodoRepository {
       due: due,
     );
     await store.put(itemsEntity, item.toJson(), actorId: actorId);
+    if (assigneeId != null) {
+      await _notify(
+        _Notices()..add(assigneeId, InboxKind.assigned),
+        listId: listId,
+        itemId: item.id,
+        title: title,
+      );
+    }
     return item;
   }
 
   @override
-  Future<void> updateItem(TodoItem item, TodoItem updated) => store.patch(
-    itemsEntity,
-    item.id,
-    changedFields(item.toJson(), updated.toJson(), const [
-      'title',
-      'description',
-      'done',
-      'done_at',
-      'assignee_id',
-      'due',
-      'due_time',
-    ]),
-    actorId: actorId,
-  );
+  Future<void> updateItem(TodoItem item, TodoItem updated) async {
+    await store.patch(
+      itemsEntity,
+      item.id,
+      changedFields(item.toJson(), updated.toJson(), const [
+        'title',
+        'description',
+        'done',
+        'done_at',
+        'assignee_id',
+        'due',
+        'due_time',
+      ]),
+      actorId: actorId,
+    );
+    final n = _Notices()..mentions(updated.description, item.description);
+    if (updated.assigneeId case final a? when a != item.assigneeId) {
+      n.add(a, InboxKind.assigned);
+    }
+    await _notify(
+      n,
+      listId: item.listId,
+      itemId: item.id,
+      title: updated.title,
+    );
+  }
 
   @override
   Future<void> deleteItem(TodoItem item) async {
@@ -378,6 +441,7 @@ class MockTodoRepository implements TodoRepository {
     for (final c in comments) {
       await store.delete(commentsEntity, c, actorId: actorId);
     }
+    await _deleteInbox((e) => e['item_id'] == id);
     await store.delete(itemsEntity, id, actorId: actorId);
   }
 
@@ -391,21 +455,124 @@ class MockTodoRepository implements TodoRepository {
       );
 
   @override
-  Future<void> addComment(String itemId, String body) => store.put(
-    commentsEntity,
-    TodoComment(
+  Future<void> addComment(String itemId, String body) async {
+    final comment = TodoComment(
       id: uuid.v4(),
       itemId: itemId,
       body: body.trim(),
       createdAt: DateTime.now(),
       authorId: actorId,
-    ).toJson(),
-    actorId: actorId,
-  );
+    );
+    await store.put(commentsEntity, comment.toJson(), actorId: actorId);
+    final item = store
+        .list(itemsEntity)
+        .map(TodoItem.fromJson)
+        .where((i) => i.id == itemId)
+        .firstOrNull;
+    if (item == null) return;
+    final n = _Notices()..mentions(comment.body);
+    // everyone in the thread: the assignee, commenters, earlier recipients
+    for (final id in [
+      ?item.assigneeId,
+      for (final c in store.list(commentsEntity))
+        if (c['item_id'] == itemId) ?c['author_id'] as String?,
+      for (final e in store.list(inboxEntity))
+        if (e['item_id'] == itemId) e['member_id'] as String,
+    ]) {
+      n.add(id, InboxKind.reply);
+    }
+    await _notify(
+      n,
+      listId: item.listId,
+      itemId: itemId,
+      commentId: comment.id,
+      title: item.title,
+      excerpt: comment.body,
+    );
+  }
 
   @override
-  Future<void> deleteComment(TodoComment comment) =>
-      store.delete(commentsEntity, comment.id, actorId: actorId);
+  Future<void> deleteComment(TodoComment comment) async {
+    await _deleteInbox((e) => e['comment_id'] == comment.id);
+    await store.delete(commentsEntity, comment.id, actorId: actorId);
+  }
+
+  /// The server's ON DELETE CASCADE of inbox entries.
+  Future<void> _deleteInbox(bool Function(Map<String, dynamic>) where) async {
+    for (final e in store.list(inboxEntity).where(where)) {
+      await store.delete(inboxEntity, e['id'] as String, actorId: actorId);
+    }
+  }
+
+  @override
+  Stream<List<InboxEntry>> watchInbox() => store
+      .watch(inboxEntity)
+      .map(
+        (docs) => _sortInbox(
+          docs.where((d) => d['member_id'] == actorId).map(InboxEntry.fromJson),
+        ),
+      );
+
+  @override
+  Future<void> markRead(Iterable<InboxEntry> entries) async {
+    final now = toApiTime(DateTime.now());
+    for (final e in entries.where((e) => e.unread)) {
+      await store.patch(inboxEntity, e.id, {'read_at': now}, actorId: actorId);
+    }
+  }
+
+  /// What the server does on a write: inbox entries for everyone in [n]
+  /// but the actor.
+  Future<void> _notify(
+    _Notices n, {
+    required String listId,
+    String? itemId,
+    String? commentId,
+    required String title,
+    String excerpt = '',
+  }) async {
+    for (final MapEntry(key: member, value: kind) in n.kinds.entries) {
+      if (member == actorId) continue;
+      await store.put(inboxEntity, {
+        'id': uuid.v4(),
+        'member_id': member,
+        'kind': kind.name,
+        'list_id': listId,
+        'item_id': itemId,
+        'comment_id': commentId,
+        'actor_id': actorId,
+        'title': title,
+        'excerpt': excerpt,
+        'read_at': null,
+        'created_at': toApiTime(DateTime.now()),
+      }, actorId: actorId);
+    }
+  }
+}
+
+/// Who gets an inbox entry about one write: one per member, the most
+/// specific kind wins (as on the server).
+class _Notices {
+  final kinds = <String, InboxKind>{};
+
+  static const _rank = {
+    InboxKind.reply: 1,
+    InboxKind.mention: 2,
+    InboxKind.assigned: 3,
+  };
+
+  void add(String member, InboxKind kind) {
+    final prev = kinds[member];
+    if (prev == null || _rank[kind]! > _rank[prev]!) kinds[member] = kind;
+  }
+
+  /// Members newly mentioned in [text] (not already in [before]).
+  void mentions(String text, [String before = '']) {
+    final old = mentionedIds(before);
+    for (final id in mentionedIds(text)) {
+      if (!old.contains(id)) add(id, InboxKind.mention);
+    }
+  }
 }
 
 // --- providers ---
@@ -493,6 +660,15 @@ final todoListItemsProvider = Provider.autoDispose
             (i) => _withoutPending(i, ref.watch(pendingDeletesProvider)),
           ),
     );
+
+final todoInboxProvider = StreamProvider<List<InboxEntry>>(
+  (ref) => ref.watch(todoRepositoryProvider).watchInbox(),
+);
+
+final todoUnreadCountProvider = Provider<int>(
+  (ref) =>
+      ref.watch(todoInboxProvider).value?.where((e) => e.unread).length ?? 0,
+);
 
 class SelectedTodoList extends Notifier<String?> {
   @override

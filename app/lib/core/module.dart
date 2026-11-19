@@ -4,13 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
-import 'change.dart';
 import 'l10n.dart';
 import 'mock/mock_store.dart';
 
 /// Contract of an app module (a “view”). A new feature = a new implementation
 /// of this class + registering it in `modules/registry.dart`. Navigation, the
-/// wall, change notices and the simulator are built from the module list.
+/// wall and the simulator are built from the module list.
 abstract class FamilyModule {
   const FamilyModule();
 
@@ -31,6 +30,9 @@ abstract class FamilyModule {
   /// Optional tile on the home screen (the “wall”).
   Widget? buildWallTile(BuildContext context) => null;
 
+  /// Buttons in the app bar, on every screen (e.g. an inbox).
+  List<Widget> buildAppBarActions(BuildContext context) => const [];
+
   /// Buttons in the wall header (e.g. a filter for the module's tiles).
   List<Widget> buildWallActions(BuildContext context) => const [];
 
@@ -39,10 +41,6 @@ abstract class FamilyModule {
   List<Widget> buildWallColumns(BuildContext context, WidgetRef ref) => [
     ?buildWallTile(context),
   ];
-
-  /// Description of a change made by another member (for a notice), or null
-  /// if the change doesn't concern this module.
-  String? describeChange(AppLocalizations l, Change change) => null;
 
   // --- mock only ---
 

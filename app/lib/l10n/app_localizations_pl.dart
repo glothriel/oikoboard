@@ -55,9 +55,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get commonNoServerConnection => 'Brak połączenia z serwerem';
 
   @override
-  String get commonSomeone => 'Ktoś';
-
-  @override
   String commonDeleted(String name) {
     return 'Usunięto „$name”';
   }
@@ -284,11 +281,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get shellOffline => 'Brak połączenia — łączę ponownie…';
 
   @override
-  String shellChangeNotice(String who, String what) {
-    return '$who: $what';
-  }
-
-  @override
   String get wallGreetingMorning => 'Dzień dobry';
 
   @override
@@ -328,66 +320,6 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get aiDisconnect => 'Odłącz';
-
-  @override
-  String changeListCreated(String name) {
-    return 'nowa lista „$name”';
-  }
-
-  @override
-  String changeListUpdated(String name) {
-    return 'zmieniona lista „$name”';
-  }
-
-  @override
-  String changeListDeleted(String name) {
-    return 'usunięta lista „$name”';
-  }
-
-  @override
-  String changeTaskAdded(String title) {
-    return 'dodano „$title”';
-  }
-
-  @override
-  String changeTaskChecked(String title) {
-    return 'odhaczono „$title” ✓';
-  }
-
-  @override
-  String changeTaskChanged(String title) {
-    return 'zmieniono „$title”';
-  }
-
-  @override
-  String changeTaskDeleted(String title) {
-    return 'usunięto „$title”';
-  }
-
-  @override
-  String changeCalendarConnected(String name) {
-    return 'podłączony kalendarz „$name”';
-  }
-
-  @override
-  String changeCalendarDisconnected(String name) {
-    return 'odłączony kalendarz „$name”';
-  }
-
-  @override
-  String changeEventCreated(String title) {
-    return 'nowe wydarzenie „$title”';
-  }
-
-  @override
-  String changeEventUpdated(String title) {
-    return 'zmienione wydarzenie „$title”';
-  }
-
-  @override
-  String changeEventDeleted(String title) {
-    return 'usunięte wydarzenie „$title”';
-  }
 
   @override
   String get todoModuleTitle => 'Listy';
@@ -560,11 +492,6 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get wallLayoutKanban => 'Tablica';
-
-  @override
-  String changeCommentAdded(String body) {
-    return 'skomentował(a): „$body”';
-  }
 
   @override
   String get calendarModuleTitle => 'Kalendarz';
@@ -850,5 +777,43 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String syncDiffLine(String field, String before, String after) {
     return '$field: $before → $after';
+  }
+
+  @override
+  String get todoInbox => 'Powiadomienia';
+
+  @override
+  String todoInboxUnread(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Powiadomienia: $count nieprzeczytanego',
+      many: 'Powiadomienia: $count nieprzeczytanych',
+      few: 'Powiadomienia: $count nieprzeczytane',
+      one: 'Powiadomienia: $count nieprzeczytane',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get todoInboxEmpty =>
+      'Na razie pusto. Tu pojawią się wzmianki o Tobie, odpowiedzi w Twoich wątkach i przypisane Ci zadania.';
+
+  @override
+  String get todoInboxMarkAllRead => 'Oznacz wszystkie jako przeczytane';
+
+  @override
+  String todoInboxMention(String name, String title) {
+    return '$name oznacza Cię w „$title”';
+  }
+
+  @override
+  String todoInboxReply(String name, String title) {
+    return '$name odpowiada w „$title”';
+  }
+
+  @override
+  String todoInboxAssigned(String name, String title) {
+    return '$name przypisuje Ci „$title”';
   }
 }
