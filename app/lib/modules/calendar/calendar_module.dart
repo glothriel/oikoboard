@@ -206,27 +206,31 @@ class _CalendarWallTile extends ConsumerWidget {
         if (list.isEmpty)
           Text('—', style: TextStyle(color: theme.colorScheme.outline)),
         for (final e in list)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 3),
-            child: Row(
-              children: [
-                ColorDot(eventColor(e, context)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    e.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+          InkWell(
+            onTap: () => showEventEditor(context, event: e),
+            borderRadius: BorderRadius.circular(4),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(
+                children: [
+                  ColorDot(eventColor(e, context)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      e.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                ),
-                Text(
-                  [
-                    if (showDay) relativeDay(l, e.start),
-                    if (!e.allDay) hm(e.start),
-                  ].join(' '),
-                  style: theme.textTheme.bodySmall,
-                ),
-              ],
+                  Text(
+                    [
+                      if (showDay) relativeDay(l, e.start),
+                      if (!e.allDay) hm(e.start),
+                    ].join(' '),
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ),
             ),
           ),
       ],

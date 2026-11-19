@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/api/api_client.dart' show toApiDate;
 import '../../core/family.dart';
+import '../../core/format.dart';
 import '../../core/l10n.dart';
 import '../../core/mock/mock_auth_api.dart' show mockFamily;
 import '../../core/mock/mock_store.dart';
@@ -259,21 +260,24 @@ class _TodoWallTile extends ConsumerWidget {
     }
 
     final open = items.where((i) => !i.done).toList();
-    // Overdue first, all of them, oldest first.
-    final overdue = open.where((i) => i.overdue).toList()
-      ..sort((a, b) => a.dueAt!.compareTo(b.dueAt!));
-    final rest = open.where((i) => !i.overdue).toList()
-      ..sort((a, b) {
-        // Mine first, then by due date (tasks without one last).
-        final mine = (a.assigneeId == me ? 0 : 1).compareTo(
-          b.assigneeId == me ? 0 : 1,
-        );
-        if (mine != 0) return mine;
-        if (a.due == null || b.due == null) {
-          return (a.due == null ? 1 : 0).compareTo(b.due == null ? 1 : 0);
-        }
-        return a.dueAt!.compareTo(b.dueAt!);
-      });
+    final today = dateOnly(DateTime.now());
+    int byDue(TodoItem a, TodoItem b) {
+      if (a.due == null || b.due == null) {
+        return (a.due == null ? 1 : 0).compareTo(b.due == null ? 1 : 0);
+      }
+      final c = a.dueAt!.compareTo(b.dueAt!);
+      return c != 0 ? c : TodoItem.byPosition(a, b);
+    }
+
+    // Overdue and due today: everyone's, all of them. Below, my next five.
+    final overdue = open.where((i) => i.overdue).toList()..sort(byDue);
+    final dueToday = open.where((i) => !i.overdue && i.dueOn(today)).toList()
+      ..sort(byDue);
+    final mine =
+        open
+            .where((i) => i.assigneeId == me && !i.overdue && !i.dueOn(today))
+            .toList()
+          ..sort(byDue);
 
     Widget tile(TodoItem i) => WallTaskTile(i);
 
@@ -326,12 +330,36 @@ class _TodoWallTile extends ConsumerWidget {
           ),
           for (final i in overdue) tile(i),
         ],
-        if (rest.isNotEmpty) const Divider(height: 20),
-        for (final i in rest.take(5)) tile(i),
+        if (dueToday.isNotEmpty) ...[
+          const Divider(height: 20),
+          Text(
+            l10n.todoTodaySection(dueToday.length),
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: dueTodayColor(context),
+            ),
+          ),
+          for (final i in dueToday) tile(i),
+        ],
+        if (mine.isNotEmpty) ...[
+          const Divider(height: 20),
+          Text(
+            l10n.todoMineSection,
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: theme.colorScheme.outline,
+            ),
+          ),
+          for (final i in mine.take(5)) tile(i),
+        ],
       ],
     );
   }
 }
+
+/// Amber for tasks due today, readable on both light and dark surfaces.
+Color dueTodayColor(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? Colors.amber.shade300
+    : Colors.amber.shade900;
 
 /// An open task on the wall: the checkbox ticks it, tapping the row opens
 /// the editor (a tap anywhere must not finish the task).
@@ -353,7 +381,13 @@ class WallTaskTile extends ConsumerWidget {
       ),
       title: Text(
         i.title,
-        style: TextStyle(color: i.overdue ? theme.colorScheme.error : null),
+        style: TextStyle(
+          color: i.overdue
+              ? theme.colorScheme.error
+              : i.dueOn(dateOnly(DateTime.now()))
+              ? dueTodayColor(context)
+              : null,
+        ),
       ),
       subtitle: i.due == null
           ? null

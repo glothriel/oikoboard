@@ -37,6 +37,11 @@ void main() {
     for (final m in modules) {
       m.seedMock(store);
     }
+    // The wall's today view lists only my own tasks below overdue/today.
+    final milk = store
+        .list(itemsEntity)
+        .singleWhere((i) => i['title'] == 'Mleko');
+    store.seed(itemsEntity, {...milk, 'assignee_id': 'mama'});
     final container = ProviderContainer(
       overrides: [backendProvider.overrideWithValue(MockBackend(store))],
     );
@@ -220,6 +225,11 @@ void main() {
     for (final m in modules) {
       m.seedMock(store);
     }
+    // The wall's today view lists only my own tasks below overdue/today.
+    final milk = store
+        .list(itemsEntity)
+        .singleWhere((i) => i['title'] == 'Mleko');
+    store.seed(itemsEntity, {...milk, 'assignee_id': 'mama'});
     final container = ProviderContainer(
       overrides: [backendProvider.overrideWithValue(MockBackend(store))],
     );

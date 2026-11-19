@@ -818,6 +818,18 @@ abstract class AppLocalizations {
   /// **'Overdue ({count})'**
   String todoOverdueSection(int count);
 
+  /// No description provided for @todoTodaySection.
+  ///
+  /// In en, this message translates to:
+  /// **'Today ({count})'**
+  String todoTodaySection(int count);
+
+  /// No description provided for @todoMineSection.
+  ///
+  /// In en, this message translates to:
+  /// **'My tasks'**
+  String get todoMineSection;
+
   /// Number of open tasks in a list
   ///
   /// In en, this message translates to:

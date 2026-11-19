@@ -250,6 +250,15 @@
       }
     }
   },
+  "todoTodaySection": "Today ({count})",
+  "@todoTodaySection": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "todoMineSection": "My tasks",
   "todoOpenCount": "{count, plural, one{{count} to do} other{{count} to do}}",
   "@todoOpenCount": {
     "description": "Number of open tasks in a list",

@@ -120,6 +120,8 @@
   "todoAllDone": "Wszystko zrobione 🎉",
   "todoDoneSection": "Zrobione ({count})",
   "todoOverdueSection": "Zaległe ({count})",
+  "todoTodaySection": "Dziś ({count})",
+  "todoMineSection": "Moje zadania",
   "todoOpenCount": "{count, plural, one{{count} do zrobienia} few{{count} do zrobienia} many{{count} do zrobienia} other{{count} do zrobienia}}",
   "todoDue": "termin: {day}",
   "todoDueLabel": "Termin: {day}",

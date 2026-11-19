@@ -9,6 +9,7 @@ import '../../core/l10n.dart';
 import '../../core/widgets.dart';
 import '../todo/models.dart';
 import '../todo/repository.dart';
+import '../todo/todo_screen.dart' show showTodoItemEditor;
 
 /// The tasks due on [day] — opened from the day's due-tasks event.
 Future<void> showTodoDaySheet(BuildContext context, DateTime day) =>
@@ -94,10 +95,18 @@ class _TodoDaySheetState extends ConsumerState<_TodoDaySheet> {
                 shrinkWrap: true,
                 children: [
                   for (final i in items)
-                    CheckboxListTile(
+                    // Tapping the row opens the task; only the checkbox
+                    // ticks it.
+                    ListTile(
                       contentPadding: EdgeInsets.zero,
-                      controlAffinity: ListTileControlAffinity.leading,
-                      value: i.done,
+                      leading: Checkbox(
+                        value: i.done,
+                        onChanged: (_) {
+                          final next = i.toggled();
+                          setState(() => _shown[i.id] = next);
+                          ref.read(todoRepositoryProvider).updateItem(i, next);
+                        },
+                      ),
                       title: Text(
                         i.title,
                         style: i.done
@@ -116,17 +125,13 @@ class _TodoDaySheetState extends ConsumerState<_TodoDaySheet> {
                                 Text(lists[i.listId]!.name),
                               ],
                             ),
-                      secondary: family.byId(i.assigneeId) == null
+                      trailing: family.byId(i.assigneeId) == null
                           ? null
                           : MemberAvatar(
                               family.byId(i.assigneeId)!,
                               radius: 14,
                             ),
-                      onChanged: (_) {
-                        final next = i.toggled();
-                        setState(() => _shown[i.id] = next);
-                        ref.read(todoRepositoryProvider).updateItem(i, next);
-                      },
+                      onTap: () => showTodoItemEditor(context, i),
                     ),
                 ],
               ),

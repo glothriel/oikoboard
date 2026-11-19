@@ -67,16 +67,27 @@ void main() {
     expect(find.text(chip), findsWidgets); // month grid + today's agenda
     await tester.tap(find.text(chip).last); // the agenda card opens it
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(CheckboxListTile, 'Odkurzyć pokój'), findsOne);
-
-    await tester.tap(find.widgetWithText(CheckboxListTile, 'Odkurzyć pokój'));
-    await tester.pumpAndSettle();
-    final item = store
+    final row = find.widgetWithText(ListTile, 'Odkurzyć pokój');
+    expect(row, findsOne);
+    Map<String, dynamic> item() => store
         .list(itemsEntity)
         .singleWhere((i) => i['title'] == 'Odkurzyć pokój');
-    expect(item['done'], true);
+
+    // Tapping the row opens the task editor and does not tick it.
+    await tester.tap(find.text('Odkurzyć pokój'));
+    await tester.pumpAndSettle();
+    expect(item()['done'], false);
+    final title = find.widgetWithText(TextField, 'Odkurzyć pokój');
+    expect(title, findsOne);
+    Navigator.of(tester.element(title)).pop();
+    await tester.pumpAndSettle();
+
+    // Only the checkbox ticks it.
+    await tester.tap(find.descendant(of: row, matching: find.byType(Checkbox)));
+    await tester.pumpAndSettle();
+    expect(item()['done'], true);
     // Still in the sheet (ticked), gone from the calendar.
-    expect(find.widgetWithText(CheckboxListTile, 'Odkurzyć pokój'), findsOne);
+    expect(row, findsOne);
     await tester.tapAt(const Offset(10, 10)); // close the sheet
     await tester.pumpAndSettle();
     expect(find.text(chip), findsNothing);

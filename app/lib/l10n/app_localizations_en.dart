@@ -416,6 +416,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String todoTodaySection(int count) {
+    return 'Today ($count)';
+  }
+
+  @override
+  String get todoMineSection => 'My tasks';
+
+  @override
   String todoOpenCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
