@@ -17,13 +17,21 @@ import (
 )
 
 // Due tasks in the calendar: one all-day event per day that has open tasks
-// (or lists) due, in the household's todo target calendar. These events are owned by
+// (or lists) due, and a short timed event per open task with a due time, in
+// the household's todo target calendar. These events are owned by
 // Oikoboard — they are derived from the tasks and reconciled against the
 // mirror (desired vs. actual), so changes made to them elsewhere are undone.
 // See docs/calendar.md.
 
-// KindTodoDay marks the daily due-tasks event.
-const KindTodoDay = "todo-day"
+// KindTodoDay marks the daily due-tasks event, KindTodoTask the event of a
+// task due at a time.
+const (
+	KindTodoDay  = "todo-day"
+	KindTodoTask = "todo-task"
+)
+
+// todoTaskLength: how long a timed task's event is.
+const todoTaskLength = 15 * time.Minute
 
 // Days around today kept in sync; older events are left alone (history).
 const (
@@ -81,7 +89,7 @@ func (s *Syncer) ReconcileTodos(ctx context.Context, hh uuid.UUID) error {
 		return err
 	}
 	var rows []remoteRow
-	if err := db.Where("household_id = ? AND kind = ?", hh, KindTodoDay).Find(&rows).Error; err != nil {
+	if err := db.Where("household_id = ? AND kind IN ?", hh, []string{KindTodoDay, KindTodoTask}).Find(&rows).Error; err != nil {
 		return err
 	}
 	have := map[uuid.UUID][]remoteRow{}
@@ -96,7 +104,7 @@ func (s *Syncer) ReconcileTodos(ctx context.Context, hh uuid.UUID) error {
 		if cal.TodoTarget && cal.Writable {
 			from, to := todoWindow(cal)
 			var err error
-			if want, err = todoDays(db, hh, from, to); err != nil {
+			if want, err = todoEvents(db, hh, from, to); err != nil {
 				return err
 			}
 			// Days outside the window aren't touched.
@@ -138,25 +146,30 @@ func todoWindow(cal *Calendar) (from, to core.Date) {
 	return today.AddDays(-todoDaysBack), today.AddDays(todoDaysAhead)
 }
 
-// todoDays computes the desired events: remote id → event. A day lists the
-// lists due that day (unless all their tasks are done) and the open tasks due.
-func todoDays(db *gorm.DB, hh uuid.UUID, from, to core.Date) (map[string]RemoteEvent, error) {
+// todoEvents computes the desired events: remote id → event. A day lists the
+// lists due that day (unless all their tasks are done) and the open tasks due
+// without a time; an open task due at a time has an event of its own.
+func todoEvents(db *gorm.DB, hh uuid.UUID, from, to core.Date) (map[string]RemoteEvent, error) {
 	// Reads the todo module's tables directly: the event is a projection of them.
 	var entries []struct {
-		IsList     bool
-		Title      string
-		Due        core.Date
-		AssigneeID *uuid.UUID
-		Assignee   string
+		ID          uuid.UUID
+		IsList      bool
+		Title       string
+		Description string
+		Due         core.Date
+		DueTime     *core.TimeOfDay
+		AssigneeID  *uuid.UUID
+		Assignee    string
 	}
-	if err := db.Raw(`SELECT true AS is_list, l.name AS title, l.due, NULL::uuid AS assignee_id, '' AS assignee,
-			l.created_at, l.id
+	if err := db.Raw(`SELECT l.id, true AS is_list, l.name AS title, '' AS description, l.due, NULL::time AS due_time,
+			NULL::uuid AS assignee_id, '' AS assignee, l.created_at
 		FROM todo_lists l
 		WHERE l.household_id = ? AND l.due BETWEEN ? AND ?
 		  AND (EXISTS (SELECT 1 FROM todo_items i WHERE i.list_id = l.id AND NOT i.done)
 		       OR NOT EXISTS (SELECT 1 FROM todo_items i WHERE i.list_id = l.id))
 		UNION ALL
-		SELECT false, i.title, i.due, i.assignee_id, coalesce(m.name, ''), i.created_at, i.id
+		SELECT i.id, false, i.title, i.description, i.due, i.due_time, i.assignee_id, coalesce(m.name, ''),
+			i.created_at
 		FROM todo_items i LEFT JOIN members m ON m.id = i.assignee_id
 		WHERE i.household_id = ? AND NOT i.done AND i.due BETWEEN ? AND ?
 		ORDER BY due, is_list DESC, created_at, id`, hh, from, to, hh, from, to).Scan(&entries).Error; err != nil {
@@ -168,8 +181,31 @@ func todoDays(db *gorm.DB, hh uuid.UUID, from, to core.Date) (map[string]RemoteE
 		lines   []string
 		members []uuid.UUID
 	}
+	var tz string
+	if err := db.Raw(`SELECT timezone FROM households WHERE id = ?`, hh).Scan(&tz).Error; err != nil {
+		return nil, err
+	}
+	loc, err := time.LoadLocation(tz)
+	if err != nil {
+		loc = time.UTC
+	}
+	out := map[string]RemoteEvent{}
 	var days []*day
 	for _, t := range entries {
+		if t.DueTime != nil {
+			start := t.DueTime.On(t.Due, loc)
+			var members []uuid.UUID
+			if t.AssigneeID != nil {
+				members = []uuid.UUID{*t.AssigneeID}
+			}
+			id := TodoTaskRemoteID(t.ID)
+			out[id] = RemoteEvent{
+				RemoteID: id, Status: "confirmed", Kind: KindTodoTask,
+				Title: "Zadanie: " + t.Title, Description: t.Description,
+				Start: start, End: start.Add(todoTaskLength), MemberIDs: members,
+			}
+			continue
+		}
 		if len(days) == 0 || !days[len(days)-1].date.Equal(t.Due.Time) {
 			days = append(days, &day{date: t.Due})
 		}
@@ -189,7 +225,6 @@ func todoDays(db *gorm.DB, hh uuid.UUID, from, to core.Date) (map[string]RemoteE
 			d.members = append(d.members, *t.AssigneeID)
 		}
 	}
-	out := make(map[string]RemoteEvent, len(days))
 	for _, d := range days {
 		title := fmt.Sprintf("Zadania: %d", len(d.titles))
 		if len(d.titles) == 1 {
@@ -210,6 +245,11 @@ func todoDays(db *gorm.DB, hh uuid.UUID, from, to core.Date) (map[string]RemoteE
 // (stable, so a retried or repeated create can't duplicate it).
 func TodoDayRemoteID(hh uuid.UUID, d core.Date) string {
 	return RemoteIDFor(uuid.NewSHA1(idSpace, []byte(hh.String()+"/"+KindTodoDay+"/"+d.String())))
+}
+
+// TodoTaskRemoteID: the provider id of the event of a task due at a time.
+func TodoTaskRemoteID(item uuid.UUID) string {
+	return RemoteIDFor(uuid.NewSHA1(idSpace, []byte(item.String()+"/"+KindTodoTask)))
 }
 
 func sameManaged(r remoteRow, w RemoteEvent) bool {

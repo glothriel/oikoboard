@@ -296,13 +296,17 @@ func (t tools) register(s *sdk.Server) {
 		"family members, todo lists and calendars. Call this first."}, t.familyTool)
 	sdk.AddTool(s, &sdk.Tool{Name: "list_todos", Description: "Tasks on the family's todo lists " +
 		"(shopping lists are todo lists too). Open tasks only unless include_done."}, t.listTodos)
+	sdk.AddTool(s, &sdk.Tool{Name: "create_todo_list", Description: "Create a todo list."}, t.createTodoList)
 	sdk.AddTool(s, &sdk.Tool{Name: "add_todo", Description: "Add a task to a todo list."}, t.addTodo)
 	sdk.AddTool(s, &sdk.Tool{Name: "update_todo", Description: "Change a task: title, description, assignee, " +
 		"due date, or mark it done / not done. Only the given fields change."}, t.updateTodo)
 	sdk.AddTool(s, &sdk.Tool{Name: "delete_todo", Description: "Delete a task."}, t.deleteTodo)
+	sdk.AddTool(s, &sdk.Tool{Name: "add_comment", Description: "Add a comment (a note in the task's " +
+		"discussion, signed by the caller) to a task."}, t.addComment)
 	sdk.AddTool(s, &sdk.Tool{Name: "agenda", Description: "Calendar events and tasks due in a range " +
 		"of days."}, t.agenda)
-	sdk.AddTool(s, &sdk.Tool{Name: "create_event", Description: "Create a calendar event."}, t.createEvent)
+	sdk.AddTool(s, &sdk.Tool{Name: "create_event", Description: "Create a calendar event, optionally " +
+		"recurring (returns its first occurrence)."}, t.createEvent)
 	sdk.AddTool(s, &sdk.Tool{Name: "update_event", Description: "Change a calendar event (an occurrence " +
 		"id from agenda). Only the given fields change."}, t.updateEvent)
 	sdk.AddTool(s, &sdk.Tool{Name: "delete_event", Description: "Delete a calendar event (an occurrence " +
@@ -353,13 +357,14 @@ func (t tools) familyTool(ctx context.Context, _ *sdk.CallToolRequest, _ none) (
 }
 
 type todoItem struct {
-	ID          string     `json:"id"`
-	ListID      string     `json:"list_id"`
-	Title       string     `json:"title"`
-	Description string     `json:"description"`
-	Done        bool       `json:"done"`
-	AssigneeID  *string    `json:"assignee_id"`
-	Due         *core.Date `json:"due"`
+	ID          string          `json:"id"`
+	ListID      string          `json:"list_id"`
+	Title       string          `json:"title"`
+	Description string          `json:"description"`
+	Done        bool            `json:"done"`
+	AssigneeID  *string         `json:"assignee_id"`
+	Due         *core.Date      `json:"due"`
+	DueTime     *core.TimeOfDay `json:"due_time"`
 }
 
 type todoOut struct {
@@ -381,6 +386,9 @@ func (f *family) todoOut(it todoItem) todoOut {
 	}
 	if it.Due != nil {
 		o.Due = it.Due.String()
+		if it.DueTime != nil {
+			o.Due += " " + it.DueTime.String()
+		}
 	}
 	return o
 }
@@ -437,7 +445,8 @@ type addTodoIn struct {
 	Title       string `json:"title"`
 	Description string `json:"description,omitempty" jsonschema:"details, markdown"`
 	Assignee    string `json:"assignee,omitempty" jsonschema:"person (name or id)"`
-	Due         string `json:"due,omitempty" jsonschema:"due date YYYY-MM-DD"`
+	Due         string `json:"due,omitempty" jsonschema:"due date YYYY-MM-DD, or YYYY-MM-DDTHH:MM for a time (it then gets its own event in the calendar)"`
+	Done        bool   `json:"done,omitempty" jsonschema:"add it already completed"`
 }
 
 func (t tools) addTodo(ctx context.Context, _ *sdk.CallToolRequest, in addTodoIn) (*sdk.CallToolResult, todoOut, error) {
@@ -457,17 +466,61 @@ func (t tools) addTodo(ctx context.Context, _ *sdk.CallToolRequest, in addTodoIn
 		}
 	}
 	if in.Due != "" {
-		d, err := core.ParseDate(in.Due)
-		if err != nil {
-			return nil, todoOut{}, errors.New("due must be YYYY-MM-DD")
+		if body["due"], body["due_time"], err = parseDue(in.Due); err != nil {
+			return nil, todoOut{}, err
 		}
-		body["due"] = d
 	}
 	var it todoItem
 	if err := t.call(ctx, http.MethodPost, "/todo/items", body, &it); err != nil {
 		return nil, todoOut{}, err
 	}
+	if in.Done {
+		if err := t.call(ctx, http.MethodPatch, "/todo/items/"+it.ID, map[string]any{"done": true}, &it); err != nil {
+			return nil, todoOut{}, err
+		}
+	}
 	return nil, f.todoOut(it), nil
+}
+
+type createTodoListIn struct {
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty" jsonschema:"details, markdown"`
+	Due         string `json:"due,omitempty" jsonschema:"due date of the whole list YYYY-MM-DD"`
+}
+
+func (t tools) createTodoList(ctx context.Context, _ *sdk.CallToolRequest, in createTodoListIn) (*sdk.CallToolResult, todoList, error) {
+	f, err := t.family(ctx, true, false)
+	if err != nil {
+		return nil, todoList{}, err
+	}
+	name := strings.TrimSpace(in.Name)
+	if name == "" {
+		return nil, todoList{}, errors.New("name is required")
+	}
+	if _, err := f.list(name); err == nil {
+		return nil, todoList{}, fmt.Errorf("a list named %q already exists", name)
+	}
+	body := map[string]any{"name": name, "description": strings.TrimSpace(in.Description)}
+	if in.Due != "" {
+		d, err := core.ParseDate(in.Due)
+		if err != nil {
+			return nil, todoList{}, errors.New("due must be YYYY-MM-DD")
+		}
+		body["due"] = d
+	}
+	var l struct {
+		ID   string     `json:"id"`
+		Name string     `json:"name"`
+		Due  *core.Date `json:"due"`
+	}
+	if err := t.call(ctx, http.MethodPost, "/todo/lists", body, &l); err != nil {
+		return nil, todoList{}, err
+	}
+	out := todoList{ID: l.ID, Name: l.Name}
+	if l.Due != nil {
+		out.Due = l.Due.String()
+	}
+	return nil, out, nil
 }
 
 type updateTodoIn struct {
@@ -475,7 +528,7 @@ type updateTodoIn struct {
 	Title       *string `json:"title,omitempty"`
 	Description *string `json:"description,omitempty" jsonschema:"details, markdown; empty string removes it"`
 	Assignee    *string `json:"assignee,omitempty" jsonschema:"person (name or id); empty string removes the assignee"`
-	Due         *string `json:"due,omitempty" jsonschema:"YYYY-MM-DD; empty string removes the due date"`
+	Due         *string `json:"due,omitempty" jsonschema:"YYYY-MM-DD, or YYYY-MM-DDTHH:MM for a time; empty string removes the due date"`
 	Done        *bool   `json:"done,omitempty"`
 }
 
@@ -507,13 +560,11 @@ func (t tools) updateTodo(ctx context.Context, _ *sdk.CallToolRequest, in update
 		}
 	}
 	if in.Due != nil {
-		body["due"] = nil
+		body["due"], body["due_time"] = nil, nil
 		if *in.Due != "" {
-			d, err := core.ParseDate(*in.Due)
-			if err != nil {
-				return nil, todoOut{}, errors.New("due must be YYYY-MM-DD")
+			if body["due"], body["due_time"], err = parseDue(*in.Due); err != nil {
+				return nil, todoOut{}, err
 			}
-			body["due"] = d
 		}
 	}
 	var it todoItem
@@ -523,12 +574,58 @@ func (t tools) updateTodo(ctx context.Context, _ *sdk.CallToolRequest, in update
 	return nil, f.todoOut(it), nil
 }
 
+// parseDue reads a task's due "YYYY-MM-DD" or "YYYY-MM-DDTHH:MM" (household
+// local time) into the API's due and due_time (nil without a time).
+func parseDue(s string) (due, dueTime any, err error) {
+	date, clock, timed := strings.Cut(strings.Replace(strings.TrimSpace(s), " ", "T", 1), "T")
+	d, err := core.ParseDate(date)
+	if err != nil {
+		return nil, nil, errors.New("due must be YYYY-MM-DD or YYYY-MM-DDTHH:MM")
+	}
+	if !timed {
+		return d, nil, nil
+	}
+	tm, err := core.ParseTimeOfDay(clock)
+	if err != nil {
+		return nil, nil, errors.New("due must be YYYY-MM-DD or YYYY-MM-DDTHH:MM")
+	}
+	return d, tm, nil
+}
+
 type idIn struct {
 	ID string `json:"id"`
 }
 
 type deletedOut struct {
 	Deleted string `json:"deleted"`
+}
+
+type addCommentIn struct {
+	ID   string `json:"id" jsonschema:"task id from list_todos"`
+	Body string `json:"body" jsonschema:"comment text, markdown"`
+}
+
+type commentOut struct {
+	ID   string `json:"id"`
+	Task string `json:"task"`
+	Body string `json:"body"`
+}
+
+func (t tools) addComment(ctx context.Context, _ *sdk.CallToolRequest, in addCommentIn) (*sdk.CallToolResult, commentOut, error) {
+	id, err := uuid.Parse(in.ID)
+	if err != nil {
+		return nil, commentOut{}, errors.New("id must be a task id from list_todos")
+	}
+	var c struct {
+		ID     string `json:"id"`
+		ItemID string `json:"item_id"`
+		Body   string `json:"body"`
+	}
+	body := map[string]any{"item_id": id.String(), "body": strings.TrimSpace(in.Body)}
+	if err := t.call(ctx, http.MethodPost, "/todo/comments", body, &c); err != nil {
+		return nil, commentOut{}, err
+	}
+	return nil, commentOut{ID: c.ID, Task: c.ItemID, Body: c.Body}, nil
 }
 
 func (t tools) deleteTodo(ctx context.Context, _ *sdk.CallToolRequest, in idIn) (*sdk.CallToolResult, deletedOut, error) {
@@ -681,6 +778,7 @@ type createEventIn struct {
 	Members     []string `json:"members,omitempty" jsonschema:"people taking part (names or ids)"`
 	Location    string   `json:"location,omitempty"`
 	Description string   `json:"description,omitempty"`
+	Recurrence  []string `json:"recurrence,omitempty" jsonschema:"makes a recurring event: iCalendar lines, e.g. [\"RRULE:FREQ=WEEKLY;BYDAY=MO,WE\"] or [\"RRULE:FREQ=MONTHLY;COUNT=6\"]; EXDATE/RDATE lines are allowed too"`
 }
 
 // span turns start/end strings into API times. A date-only start makes an
@@ -734,6 +832,16 @@ func (t tools) createEvent(ctx context.Context, _ *sdk.CallToolRequest, in creat
 	body := map[string]any{"calendar_id": cal.ID, "title": strings.TrimSpace(in.Title), "starts_at": start,
 		"ends_at": end, "all_day": allDay, "member_ids": members, "location": in.Location,
 		"description": in.Description}
+	if len(in.Recurrence) > 0 {
+		lines := make([]string, len(in.Recurrence))
+		for i, l := range in.Recurrence {
+			lines[i] = strings.TrimSpace(l)
+			if !strings.Contains(lines[i], ":") {
+				lines[i] = "RRULE:" + lines[i] // a bare "FREQ=..." rule
+			}
+		}
+		body["recurrence"] = lines
+	}
 	var e event
 	if err := t.call(ctx, http.MethodPost, "/calendar/events", body, &e); err != nil {
 		return nil, eventOut{}, err

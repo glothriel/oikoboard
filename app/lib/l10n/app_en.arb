@@ -384,6 +384,20 @@
       }
     }
   },
+  "todoDayAt": "{day}, {time}",
+  "@todoDayAt": {
+    "description": "A due date with a time, e.g. 'Today, 17:30'",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "todoSetTime": "Add time",
+  "todoRemoveTime": "Remove time",
   "todoTask": "Task",
   "todoWhoDoesIt": "Who will do it?",
   "todoSetDue": "Set due date",

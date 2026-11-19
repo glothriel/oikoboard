@@ -164,3 +164,54 @@ func (d *Date) Scan(src any) error {
 	}
 	return nil
 }
+
+// TimeOfDay is a wall-clock time (a `time` column): "15:04" in JSON.
+type TimeOfDay struct{ Hour, Minute int }
+
+func ParseTimeOfDay(s string) (TimeOfDay, error) {
+	for _, layout := range []string{"15:04", "15:04:05"} {
+		if t, err := time.Parse(layout, s); err == nil {
+			return TimeOfDay{t.Hour(), t.Minute()}, nil
+		}
+	}
+	return TimeOfDay{}, fmt.Errorf("expected a time (HH:MM): %q", s)
+}
+
+func (t TimeOfDay) String() string { return fmt.Sprintf("%02d:%02d", t.Hour, t.Minute) }
+
+// On is the moment of t on date d in loc.
+func (t TimeOfDay) On(d Date, loc *time.Location) time.Time {
+	return time.Date(d.Year(), d.Month(), d.Day(), t.Hour, t.Minute, 0, 0, loc)
+}
+
+func (t TimeOfDay) MarshalJSON() ([]byte, error) { return json.Marshal(t.String()) }
+
+func (t *TimeOfDay) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+	p, err := ParseTimeOfDay(s)
+	*t = p
+	return err
+}
+
+func (t TimeOfDay) Value() (driver.Value, error) { return t.String() + ":00", nil }
+
+func (t *TimeOfDay) Scan(src any) error {
+	switch v := src.(type) {
+	case time.Time:
+		*t = TimeOfDay{v.Hour(), v.Minute()}
+		return nil
+	case string:
+		p, err := ParseTimeOfDay(v)
+		*t = p
+		return err
+	case []byte:
+		p, err := ParseTimeOfDay(string(v))
+		*t = p
+		return err
+	default:
+		return fmt.Errorf("TimeOfDay: unsupported type %T", src)
+	}
+}

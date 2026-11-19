@@ -507,6 +507,17 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String todoDayAt(String day, String time) {
+    return '$day, $time';
+  }
+
+  @override
+  String get todoSetTime => 'Dodaj godzinę';
+
+  @override
+  String get todoRemoveTime => 'Usuń godzinę';
+
+  @override
   String get todoTask => 'Zadanie';
 
   @override

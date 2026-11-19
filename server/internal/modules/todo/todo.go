@@ -39,9 +39,11 @@ type Item struct {
 	DoneAt      *time.Time `json:"done_at"`
 	AssigneeID  *uuid.UUID `json:"assignee_id"`
 	Due         *core.Date `json:"due"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
-	Version     int        `json:"version" gorm:"default:1"`
+	// DueTime: optional time of Due (household local time).
+	DueTime   *core.TimeOfDay `json:"due_time"`
+	CreatedAt time.Time       `json:"created_at"`
+	UpdatedAt time.Time       `json:"updated_at"`
+	Version   int             `json:"version" gorm:"default:1"`
 }
 
 func (Item) TableName() string { return "todo_items" }
@@ -164,14 +166,19 @@ func (m Module) deleteList(c *gin.Context) {
 
 func (m Module) createItem(c *gin.Context) {
 	var req struct {
-		ID          uuid.UUID  `json:"id"`
-		ListID      uuid.UUID  `json:"list_id" binding:"required"`
-		Title       string     `json:"title" binding:"required"`
-		Description string     `json:"description"`
-		AssigneeID  *uuid.UUID `json:"assignee_id"`
-		Due         *core.Date `json:"due"`
+		ID          uuid.UUID       `json:"id"`
+		ListID      uuid.UUID       `json:"list_id" binding:"required"`
+		Title       string          `json:"title" binding:"required"`
+		Description string          `json:"description"`
+		AssigneeID  *uuid.UUID      `json:"assignee_id"`
+		Due         *core.Date      `json:"due"`
+		DueTime     *core.TimeOfDay `json:"due_time"`
 	}
 	if !core.Bind(c, &req) {
+		return
+	}
+	if req.DueTime != nil && req.Due == nil {
+		core.Fail(c, http.StatusBadRequest, "bad_request", "due_time needs due")
 		return
 	}
 	if req.ID == uuid.Nil {
@@ -181,6 +188,7 @@ func (m Module) createItem(c *gin.Context) {
 	row := Item{
 		ID: req.ID, HouseholdID: actor.HouseholdID, ListID: req.ListID,
 		Title: req.Title, Description: req.Description, AssigneeID: req.AssigneeID, Due: req.Due,
+		DueTime: req.DueTime,
 	}
 	err := core.Write(c.Request.Context(), m.DB, actor, core.MutationID(c), func(tx *gorm.DB) error {
 		return core.CreateIdempotent(tx, &row, actor.HouseholdID, row.ID)
@@ -206,16 +214,20 @@ func (m Module) updateItem(c *gin.Context) {
 		done        bool
 		assignee    uuid.UUID
 		due         core.Date
+		dueTime     core.TimeOfDay
 	)
 	cols, err := p.Apply(map[string]any{
 		"title": &title, "description": &description, "done": &done,
-		"assignee_id": &assignee, "due": &due,
+		"assignee_id": &assignee, "due": &due, "due_time": &dueTime,
 	})
 	if err != nil {
 		core.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
 	clearToEmpty(cols, "description")
+	if d, ok := cols["due"]; ok && d == nil {
+		cols["due_time"] = nil // no date, no time
+	}
 	if d, ok := cols["done"]; ok {
 		if d == true {
 			cols["done_at"] = gorm.Expr("COALESCE(done_at, now())")

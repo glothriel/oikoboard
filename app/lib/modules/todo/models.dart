@@ -1,5 +1,13 @@
+import 'package:material_ui/material_ui.dart' show TimeOfDay;
+
 import '../../core/api/api_client.dart'
-    show fromApiDate, fromApiTime, toApiDate, toApiTime;
+    show
+        fromApiClock,
+        fromApiDate,
+        fromApiTime,
+        toApiClock,
+        toApiDate,
+        toApiTime;
 import '../../core/format.dart';
 
 const _unset = Object();
@@ -74,6 +82,7 @@ class TodoItem {
     this.description = '',
     this.assigneeId,
     this.due,
+    this.dueTime,
     this.doneAt,
   });
 
@@ -87,13 +96,26 @@ class TodoItem {
   final DateTime createdAt;
   final String? assigneeId;
 
-  /// Due date (local midnight; no time of day).
+  /// Due date (local midnight).
   final DateTime? due;
+
+  /// Optional time of [due]; null without a [due].
+  final TimeOfDay? dueTime;
   final DateTime? doneAt;
 
-  /// Open and due before today.
-  bool get overdue =>
-      !done && due != null && due!.isBefore(dateOnly(DateTime.now()));
+  /// [due] at [dueTime] (or midnight): for sorting.
+  DateTime? get dueAt => due == null || dueTime == null
+      ? due
+      : due!.add(Duration(hours: dueTime!.hour, minutes: dueTime!.minute));
+
+  /// Open and due before today, or today at a time already past.
+  bool get overdue {
+    if (done || due == null) return false;
+    final now = DateTime.now();
+    return dueTime == null
+        ? due!.isBefore(dateOnly(now))
+        : dueAt!.isBefore(now);
+  }
 
   /// Open and due on [day].
   bool dueOn(DateTime day) => !done && due != null && isSameDay(due!, day);
@@ -107,6 +129,7 @@ class TodoItem {
     createdAt: fromApiTime(j['created_at'])!,
     assigneeId: j['assignee_id'] as String?,
     due: fromApiDate(j['due']),
+    dueTime: fromApiClock(j['due_time']),
     doneAt: fromApiTime(j['done_at']),
   );
 
@@ -119,16 +142,19 @@ class TodoItem {
     'created_at': toApiTime(createdAt),
     'assignee_id': assigneeId,
     'due': toApiDate(due),
+    'due_time': toApiClock(dueTime),
     'done_at': toApiTime(doneAt),
   };
 
-  /// Nullable fields can be cleared by passing `null` explicitly.
+  /// Nullable fields can be cleared by passing `null` explicitly; clearing
+  /// [due] clears [dueTime] too.
   TodoItem copyWith({
     String? title,
     String? description,
     bool? done,
     Object? assigneeId = _unset,
     Object? due = _unset,
+    Object? dueTime = _unset,
     Object? doneAt = _unset,
   }) => TodoItem(
     id: id,
@@ -141,6 +167,11 @@ class TodoItem {
         ? this.assigneeId
         : assigneeId as String?,
     due: identical(due, _unset) ? this.due : due as DateTime?,
+    dueTime: !identical(due, _unset) && due == null
+        ? null
+        : identical(dueTime, _unset)
+        ? this.dueTime
+        : dueTime as TimeOfDay?,
     doneAt: identical(doneAt, _unset) ? this.doneAt : doneAt as DateTime?,
   );
 

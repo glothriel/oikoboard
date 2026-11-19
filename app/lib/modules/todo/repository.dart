@@ -74,6 +74,7 @@ class ApiTodoRepository implements TodoRepository {
     'done',
     'assignee_id',
     'due',
+    'due_time',
   ];
 
   @override
@@ -361,6 +362,7 @@ class MockTodoRepository implements TodoRepository {
       'done_at',
       'assignee_id',
       'due',
+      'due_time',
     ]),
     actorId: actorId,
   );

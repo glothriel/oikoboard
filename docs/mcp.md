@@ -13,8 +13,8 @@ Code: `server/internal/mcp/` (tools), `server/internal/core/oauth.go` (authoriza
 (`family` returns them as `me`) and changes are recorded as theirs. Tools are task-oriented and resolve people, lists and calendars by name; dates are
 `YYYY-MM-DD`, times `YYYY-MM-DDTHH:MM` in the household timezone (`households.timezone`):
 
-`family` (today, people, lists, calendars) · `list_todos` · `add_todo` · `update_todo` · `delete_todo` · `agenda` ·
-`create_event` · `update_event` · `delete_event`.
+`family` (today, people, lists, calendars) · `list_todos` · `create_todo_list` · `add_todo` · `update_todo` ·
+`delete_todo` · `add_comment` · `agenda` · `create_event` (optionally recurring, RRULE) · `update_event` · `delete_event`.
 
 Tools call the **REST API in-process** with the caller's token, so writes use the same handlers, validation and
 change feed as the app, and reads use the same views. `core.ToolAllowed` limits OAuth tokens to module data and view

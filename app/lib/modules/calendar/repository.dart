@@ -353,7 +353,8 @@ class MockCalendarRepository implements CalendarRepository {
   }
 
   /// What the server's due-task reconciliation would put into the target
-  /// calendar: one all-day event per day with open tasks (or lists) due.
+  /// calendar: one all-day event per day with open tasks (or lists) due, and
+  /// a 15-minute event per open task due at a time.
   List<CalendarEvent> _todoDays() {
     final target = store
         .list(calendarsEntity)
@@ -371,9 +372,28 @@ class MockCalendarRepository implements CalendarRepository {
       }
       (byDay[due] ??= []).add((title: 'Lista: ${l['name']}', assignee: null));
     }
+    final timed = <CalendarEvent>[];
     for (final t in items) {
       final due = fromApiDate(t['due']);
       if (due == null || t['done'] == true) continue;
+      final time = fromApiClock(t['due_time']);
+      if (time != null) {
+        final start = due.add(Duration(hours: time.hour, minutes: time.minute));
+        timed.add(
+          CalendarEvent(
+            id: 'todo-task-${t['id']}',
+            calendarId: target['id'] as String,
+            title: 'Zadanie: ${t['title']}',
+            description: t['description'] as String? ?? '',
+            start: start,
+            end: start.add(const Duration(minutes: 15)),
+            allDay: false,
+            memberIds: [?t['assignee_id'] as String?],
+            kind: CalendarEvent.todoTaskKind,
+          ),
+        );
+        continue;
+      }
       (byDay[due] ??= []).add((
         title: 'Zadanie: ${t['title']}',
         assignee: t['assignee_id'] as String?,
@@ -396,6 +416,7 @@ class MockCalendarRepository implements CalendarRepository {
           }.toList(),
           kind: CalendarEvent.todoDayKind,
         ),
+      ...timed,
     ];
   }
 

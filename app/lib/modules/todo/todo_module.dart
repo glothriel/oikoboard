@@ -215,7 +215,7 @@ class _TodoWallTile extends ConsumerWidget {
     final open = items.where((i) => !i.done).toList();
     // Overdue first, all of them, oldest first.
     final overdue = open.where((i) => i.overdue).toList()
-      ..sort((a, b) => a.due!.compareTo(b.due!));
+      ..sort((a, b) => a.dueAt!.compareTo(b.dueAt!));
     final rest = open.where((i) => !i.overdue).toList()
       ..sort((a, b) {
         // Mine first, then by due date (tasks without one last).
@@ -226,7 +226,7 @@ class _TodoWallTile extends ConsumerWidget {
         if (a.due == null || b.due == null) {
           return (a.due == null ? 1 : 0).compareTo(b.due == null ? 1 : 0);
         }
-        return a.due!.compareTo(b.due!);
+        return a.dueAt!.compareTo(b.dueAt!);
       });
 
     Widget tile(TodoItem i) => WallTaskTile(i);
@@ -309,7 +309,9 @@ class WallTaskTile extends ConsumerWidget {
         i.title,
         style: TextStyle(color: i.overdue ? theme.colorScheme.error : null),
       ),
-      subtitle: i.due == null ? null : DueLabel(i.due!, overdue: i.overdue),
+      subtitle: i.due == null
+          ? null
+          : DueLabel(i.due!, time: i.dueTime, overdue: i.overdue),
       trailing: assignee == null ? null : MemberAvatar(assignee, radius: 12),
       onTap: () => showTodoItemEditor(context, i),
     );

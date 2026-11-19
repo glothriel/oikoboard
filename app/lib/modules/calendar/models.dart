@@ -39,8 +39,10 @@ class CalendarEvent {
     this.kind = '',
   });
 
-  /// [kind] of the event the server keeps for a day's due tasks.
+  /// [kind] of the event the server keeps for a day's due tasks, and of the
+  /// one it keeps for a task due at a time.
   static const todoDayKind = 'todo-day';
+  static const todoTaskKind = 'todo-task';
 
   final String id;
   final String calendarId;
@@ -69,6 +71,10 @@ class CalendarEvent {
 
   bool get recurring => recurrence.isNotEmpty;
   bool get isTodoDay => kind == todoDayKind;
+  bool get isTodoTask => kind == todoTaskKind;
+
+  /// Stands for due tasks rather than for an event.
+  bool get isTodo => isTodoDay || isTodoTask;
 
   bool occursOn(DateTime day) => overlaps(
     DateTime(day.year, day.month, day.day),

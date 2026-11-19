@@ -611,7 +611,7 @@ class _EventChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (event.isTodoDay) return TodoDayChip(event, height: 18);
+    if (event.isTodo) return TodoDayChip(event, height: 18);
     final color = eventColor(event, context);
     return Container(
       height: 18,
@@ -633,8 +633,9 @@ class _EventChip extends StatelessWidget {
   }
 }
 
-/// A day's due tasks: outlined, with a checklist icon — it stands for the
-/// tasks, not for an event. Tapping it opens them (if [onTap] is set).
+/// A day's due tasks (or a task due at a time): outlined, with a checklist
+/// icon — it stands for the tasks, not for an event. Tapping it opens them
+/// (if [onTap] is set).
 class TodoDayChip extends StatelessWidget {
   const TodoDayChip(this.event, {super.key, this.height, this.onTap});
   final CalendarEvent event;
@@ -664,7 +665,9 @@ class TodoDayChip extends StatelessWidget {
           const SizedBox(width: 3),
           Expanded(
             child: Text(
-              event.title,
+              event.isTodoTask
+                  ? '${hm(event.start)} ${event.title}'
+                  : event.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.labelSmall,
@@ -756,7 +759,7 @@ class EventCard extends StatelessWidget {
                               size: 16,
                               color: theme.colorScheme.outline,
                             ),
-                          if (event.isTodoDay)
+                          if (event.isTodo)
                             Icon(
                               Icons.checklist,
                               size: 16,
@@ -817,8 +820,8 @@ Future<void> showEventEditor(
   DateTime? day,
   DateTime? start,
 }) {
-  if (event != null && event.isTodoDay) {
-    return showTodoDaySheet(context, event.start);
+  if (event != null && event.isTodo) {
+    return showTodoDaySheet(context, dateOnly(event.start));
   }
   return showDialog<void>(
     context: context,

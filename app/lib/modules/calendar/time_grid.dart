@@ -429,7 +429,7 @@ class _Tile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (event.isTodoDay) {
+    if (event.isTodo) {
       return TodoDayChip(
         event,
         height: height,

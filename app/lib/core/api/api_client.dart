@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:material_ui/material_ui.dart' show TimeOfDay;
 import 'package:uuid/uuid.dart';
 
 const uuid = Uuid();
@@ -108,4 +109,16 @@ DateTime? fromApiDate(Object? s) {
   if (s == null) return null;
   final d = DateTime.parse((s as String).substring(0, 10));
   return DateTime(d.year, d.month, d.day);
+}
+
+/// Wall-clock times (no date) travel as "HH:MM" ("HH:MM:SS" from the change
+/// feed).
+String? toApiClock(TimeOfDay? t) => t == null
+    ? null
+    : '${t.hour.toString().padLeft(2, '0')}:'
+          '${t.minute.toString().padLeft(2, '0')}';
+TimeOfDay? fromApiClock(Object? s) {
+  if (s == null) return null;
+  final p = (s as String).split(':');
+  return TimeOfDay(hour: int.parse(p[0]), minute: int.parse(p[1]));
 }

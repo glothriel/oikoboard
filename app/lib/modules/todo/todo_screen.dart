@@ -116,16 +116,37 @@ void toggleTodoDone(
     );
 }
 
+/// Time picker for a due time.
+Future<TimeOfDay?> pickDueTime(BuildContext context, TimeOfDay? initial) =>
+    showTimePicker(
+      context: context,
+      initialTime: initial ?? const TimeOfDay(hour: 9, minute: 0),
+    );
+
+/// The due date, with its time if it has one: “Today, 17:30”.
+String dueText(BuildContext context, DateTime due, [TimeOfDay? time]) {
+  final l = context.l10n;
+  final day = relativeDay(l, due);
+  return time == null ? day : l.todoDayAt(day, time.format(context));
+}
+
 /// “Due: Fri, 20 Nov” in the error color when overdue; for lists and tasks.
 class DueLabel extends StatelessWidget {
-  const DueLabel(this.due, {super.key, required this.overdue, this.style});
+  const DueLabel(
+    this.due, {
+    super.key,
+    required this.overdue,
+    this.time,
+    this.style,
+  });
   final DateTime due;
+  final TimeOfDay? time;
   final bool overdue;
   final TextStyle? style;
 
   @override
   Widget build(BuildContext context) => Text(
-    context.l10n.todoDue(relativeDay(context.l10n, due)),
+    context.l10n.todoDue(dueText(context, due, time)),
     style: (style ?? const TextStyle()).copyWith(
       color: overdue ? Theme.of(context).colorScheme.error : null,
     ),
@@ -299,21 +320,29 @@ class _TodoListEditorState extends ConsumerState<_TodoListEditor> {
   }
 }
 
-/// "Set due date" / "Due: …" with a clear button; for lists and tasks.
+/// "Set due date" / "Due: …" with a clear button; for lists and tasks. With
+/// [onPickTime] (tasks), a set date can also get a time.
 class _DueRow extends StatelessWidget {
   const _DueRow({
     required this.due,
     required this.onPick,
     required this.onClear,
+    this.time,
+    this.onPickTime,
+    this.onClearTime,
   });
   final DateTime? due;
   final VoidCallback onPick;
   final VoidCallback onClear;
+  final TimeOfDay? time;
+  final VoidCallback? onPickTime;
+  final VoidCallback? onClearTime;
 
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
-    return Row(
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         const Icon(Icons.event_outlined),
         const SizedBox(width: 8),
@@ -329,6 +358,19 @@ class _DueRow extends StatelessWidget {
             icon: const Icon(Icons.close),
             onPressed: onClear,
           ),
+        if (due != null && onPickTime != null) ...[
+          TextButton.icon(
+            onPressed: onPickTime,
+            icon: const Icon(Icons.schedule),
+            label: Text(time == null ? l.todoSetTime : time!.format(context)),
+          ),
+          if (time != null)
+            IconButton(
+              tooltip: l.todoRemoveTime,
+              icon: const Icon(Icons.close),
+              onPressed: onClearTime,
+            ),
+        ],
       ],
     );
   }
@@ -612,7 +654,7 @@ class TodoItemTile extends ConsumerWidget {
         ),
         subtitle: item.due == null
             ? null
-            : DueLabel(item.due!, overdue: item.overdue),
+            : DueLabel(item.due!, time: item.dueTime, overdue: item.overdue),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -666,6 +708,7 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
   );
   late String? _assignee = widget.item.assigneeId;
   late DateTime? _due = widget.item.due;
+  late TimeOfDay? _dueTime = widget.item.dueTime;
 
   @override
   void dispose() {
@@ -679,19 +722,24 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
     if (picked != null) setState(() => _due = picked);
   }
 
-  void _save() {
+  Future<void> _pickDueTime() async {
+    final picked = await pickDueTime(context, _dueTime);
+    if (picked != null) setState(() => _dueTime = picked);
+  }
+
+  TodoItem _edited() {
     final title = _title.text.trim();
-    ref
-        .read(todoRepositoryProvider)
-        .updateItem(
-          widget.item,
-          widget.item.copyWith(
-            title: title.isEmpty ? null : title,
-            description: _description.text.trim(),
-            assigneeId: _assignee,
-            due: _due,
-          ),
-        );
+    return widget.item.copyWith(
+      title: title.isEmpty ? null : title,
+      description: _description.text.trim(),
+      assigneeId: _assignee,
+      due: _due,
+      dueTime: _due == null ? null : _dueTime,
+    );
+  }
+
+  void _save() {
+    ref.read(todoRepositoryProvider).updateItem(widget.item, _edited());
     Navigator.pop(context);
   }
 
@@ -709,18 +757,7 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
 
   /// Saves the edits, ticks (or unticks) the task and closes the sheet.
   void _toggleDone() {
-    final title = _title.text.trim();
-    toggleTodoDone(
-      context,
-      ref,
-      widget.item,
-      edited: widget.item.copyWith(
-        title: title.isEmpty ? null : title,
-        description: _description.text.trim(),
-        assigneeId: _assignee,
-        due: _due,
-      ),
-    );
+    toggleTodoDone(context, ref, widget.item, edited: _edited());
     Navigator.pop(context);
   }
 
@@ -796,7 +833,13 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
         _DueRow(
           due: _due,
           onPick: _pickDue,
-          onClear: () => setState(() => _due = null),
+          onClear: () => setState(() {
+            _due = null;
+            _dueTime = null;
+          }),
+          time: _dueTime,
+          onPickTime: _pickDueTime,
+          onClearTime: () => setState(() => _dueTime = null),
         ),
         const SizedBox(height: 16),
         MarkdownField(controller: _description, label: l.todoDescription),

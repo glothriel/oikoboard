@@ -78,16 +78,21 @@ Tasks with a due date (`todo_items.due`, a date) and lists with one (`todo_lists
 "Zadanie: <title>", "Lista: <name>" or "Zadania: N", the entries listed in the description, the assignees as members. The app renders these as a task chip that opens the day's tasks; the
 events API refuses to edit them (409 `managed_event`).
 
+A task with a due **time** (`todo_items.due_time`, household local time; only together with `due`) is not in its
+day's event: it gets a 15-minute event of its own at that time, `kind = "todo-task"`, title "Zadanie: <title>",
+the task's description, the assignee as member. The app shows it as the same task chip.
+
 - **Target:** the first writable calendar linked to the household; changeable (`PATCH /calendars/:id
   {"todo_target": true}`). Unlinking the target first deletes its task events, then the oldest remaining writable
   calendar takes over.
 - **Reconciliation, not event handling** (`todo_sync.go`): desired state = open tasks and lists (unless all their tasks are done) due from 30 days back to a year
-  ahead, grouped by date (in the calendar's time zone); actual state = the mirror's `todo-day` rows of the household.
+  ahead, grouped by date (in the calendar's time zone); actual state = the mirror's `todo-day` and `todo-task` rows of the household.
   The differences are written to the provider (`Put` / `Delete`) and applied to the mirror. A moved, finished or
   deleted task therefore just changes the desired state — an emptied day loses its event. Older events are left alone.
 - **Runs** after task writes (debounced 2 s per household), after linking or retargeting, and after every sync poll.
 - **Oikoboard owns these events:** an edit or deletion made in Google is undone by the next reconciliation.
-- **Ids** are derived from (household, date), so a repeated create can't duplicate a day.
+- **Ids** are derived from (household, date) for a day and from the task id for a timed task, so a repeated create
+  can't duplicate an event.
 
 ## Connecting an account
 

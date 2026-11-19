@@ -176,3 +176,106 @@ func TestTodoCalendar(t *testing.T) {
 func rangeParams(from, to time.Time) string {
 	return url.QueryEscape(`{"from":"` + from.Format(time.RFC3339) + `","to":"` + to.Format(time.RFC3339) + `"}`)
 }
+
+// todoTasks: the events of tasks due at a time, by title, waiting until there are n.
+func (c *client) todoTasks(n int) map[string]todoDay {
+	c.e.t.Helper()
+	var out map[string]todoDay
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		var res struct {
+			Data struct {
+				Events []struct {
+					todoDay
+					EndsAt time.Time `json:"ends_at"`
+					AllDay bool      `json:"all_day"`
+				} `json:"calendar_events"`
+			}
+		}
+		now := time.Now()
+		c.do("GET", "/views/calendar.range?params="+rangeParams(now.AddDate(0, 0, -40), now.AddDate(0, 2, 0)), nil, &res)
+		out = map[string]todoDay{}
+		for _, e := range res.Data.Events {
+			if e.Kind == "todo-task" {
+				if e.AllDay || e.EndsAt.Sub(e.StartsAt) != 15*time.Minute {
+					c.e.t.Fatalf("task event span: %+v", e)
+				}
+				out[e.Title] = e.todoDay
+			}
+		}
+		if len(out) == n || time.Now().After(deadline) {
+			return out
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+}
+
+func TestTodoDueTime(t *testing.T) {
+	e := setup(t, mockCalendars)
+	a := e.newFamily("Kowalscy")
+	warsaw, _ := time.LoadLocation("Europe/Warsaw")
+	today := core.DateOf(time.Now().In(warsaw))
+	day := func(n int) string { return today.AddDays(n).String() }
+	_, lists := a.view("todo.lists", nil)
+	list := lists["todo_lists"][0]["id"]
+	type item struct {
+		ID, Due string
+		DueTime *string `json:"due_time"`
+	}
+
+	if st := a.do("POST", "/todo/items", map[string]any{"list_id": list, "title": "x", "due_time": "10:00"}, nil); st != http.StatusBadRequest {
+		t.Fatalf("time without a date: %d", st)
+	}
+	var it item
+	if st := a.do("POST", "/todo/items", map[string]any{"list_id": list, "title": "Odebrać paczkę", "due": day(3),
+		"due_time": "17:30"}, &it); st != http.StatusCreated || it.DueTime == nil || *it.DueTime != "17:30" {
+		t.Fatalf("add: %d %+v", st, it)
+	}
+
+	// Its own event at that time; the day keeps no line for it.
+	ev := a.todoTasks(1)["Zadanie: Odebrać paczkę"]
+	if want := time.Date(today.Year(), today.Month(), today.Day()+3, 17, 30, 0, 0, warsaw); !ev.StartsAt.Equal(want) {
+		t.Fatalf("task event: %+v, want %v", ev, want)
+	}
+	if d := a.todoDays(3)[day(3)]; d.ID != "" {
+		t.Fatalf("timed task in the day event: %+v", d)
+	}
+	if st := a.do("PATCH", "/calendar/events/"+ev.ID, map[string]any{"title": "x"}, nil); st != http.StatusConflict {
+		t.Fatalf("patch managed: %d", st)
+	}
+
+	// Another time moves the event.
+	a.do("PATCH", "/todo/items/"+it.ID, map[string]any{"due_time": "08:15"}, nil)
+	deadline := time.Now().Add(5 * time.Second)
+	for a.todoTasks(1)["Zadanie: Odebrać paczkę"].StartsAt.In(warsaw).Hour() != 8 {
+		if time.Now().After(deadline) {
+			t.Fatalf("not moved: %+v", a.todoTasks(1))
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	// Without the time, back to the day's event.
+	a.do("PATCH", "/todo/items/"+it.ID, map[string]any{"due_time": nil}, &it)
+	if it.DueTime != nil || it.Due != day(3) {
+		t.Fatalf("clear time: %+v", it)
+	}
+	if n := len(a.todoTasks(0)); n != 0 {
+		t.Fatalf("task event kept: %d", n)
+	}
+	if d := a.todoDays(4)[day(3)]; d.Title != "Zadanie: Odebrać paczkę" {
+		t.Fatalf("day event: %+v", d)
+	}
+
+	// Clearing the date clears the time; done tasks lose their event.
+	a.do("PATCH", "/todo/items/"+it.ID, map[string]any{"due_time": "12:00"}, nil)
+	a.todoTasks(1)
+	if st := a.do("PATCH", "/todo/items/"+it.ID, map[string]any{"due": nil}, &it); st != http.StatusOK || it.DueTime != nil {
+		t.Fatalf("clear due: %d %+v", st, it)
+	}
+	a.do("PATCH", "/todo/items/"+it.ID, map[string]any{"due": day(1), "due_time": "12:00"}, nil)
+	a.todoTasks(1)
+	a.do("PATCH", "/todo/items/"+it.ID, map[string]any{"done": true}, nil)
+	if n := len(a.todoTasks(0)); n != 0 {
+		t.Fatalf("done task event kept: %d", n)
+	}
+}

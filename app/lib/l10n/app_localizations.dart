@@ -920,6 +920,24 @@ abstract class AppLocalizations {
   /// **'Due: {day}'**
   String todoDueLabel(String day);
 
+  /// A due date with a time, e.g. 'Today, 17:30'
+  ///
+  /// In en, this message translates to:
+  /// **'{day}, {time}'**
+  String todoDayAt(String day, String time);
+
+  /// No description provided for @todoSetTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Add time'**
+  String get todoSetTime;
+
+  /// No description provided for @todoRemoveTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove time'**
+  String get todoRemoveTime;
+
   /// No description provided for @todoTask.
   ///
   /// In en, this message translates to:

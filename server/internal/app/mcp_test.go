@@ -166,7 +166,36 @@ func TestMCP(t *testing.T) {
 	if !upd.Done || upd.Assignee != "" {
 		t.Fatalf("update_todo: %+v", upd)
 	}
+	var comment struct{ ID, Task, Body string }
+	tool(t, s, "add_comment", map[string]any{"id": added.ID, "body": "  Bez laktozy "}, &comment)
+	if comment.Task != added.ID || comment.Body != "Bez laktozy" {
+		t.Fatalf("add_comment: %+v", comment)
+	}
 	tool(t, s, "delete_todo", map[string]any{"id": added.ID}, &struct{}{})
+
+	// A new list, usable by name right away; tasks can be added already done.
+	var newList struct{ ID, Name, Due string }
+	tool(t, s, "create_todo_list", map[string]any{"name": "Remont", "due": fam.Today}, &newList)
+	if newList.ID == "" || newList.Name != "Remont" || newList.Due != fam.Today {
+		t.Fatalf("create_todo_list: %+v", newList)
+	}
+	if msg := tool(t, s, "create_todo_list", map[string]any{"name": "remont"}, nil); !strings.Contains(msg, "exists") {
+		t.Fatalf("duplicate list: %q", msg)
+	}
+	var timed todo
+	tool(t, s, "add_todo", map[string]any{"list": "remont", "title": "Fachowiec", "due": fam.Today + "T09:30"}, &timed)
+	if timed.Due != fam.Today+" 09:30" {
+		t.Fatalf("add_todo with a time: %+v", timed)
+	}
+	tool(t, s, "update_todo", map[string]any{"id": timed.ID, "due": fam.Today}, &timed)
+	if timed.Due != fam.Today {
+		t.Fatalf("update_todo without a time: %+v", timed)
+	}
+	var doneTodo todo
+	tool(t, s, "add_todo", map[string]any{"list": "remont", "title": "Farba", "done": true}, &doneTodo)
+	if doneTodo.List != "Remont" || !doneTodo.Done {
+		t.Fatalf("add_todo done: %+v", doneTodo)
+	}
 	if msg := tool(t, s, "delete_todo", map[string]any{"id": added.ID}, nil); msg == "" {
 		t.Fatal("deleting twice should fail")
 	}
@@ -177,6 +206,7 @@ func TestMCP(t *testing.T) {
 		ID, Title, Start, End, Calendar string
 		Members                         []string
 		AllDay                          bool `json:"all_day"`
+		Recurring                       bool
 	}
 	var created ev
 	tool(t, s, "create_event", map[string]any{"title": "Dentysta", "start": day + "T16:30", "members": []string{"Kuba"}}, &created)
@@ -188,7 +218,27 @@ func TestMCP(t *testing.T) {
 	if !trip.AllDay || trip.Start != day || trip.End != day {
 		t.Fatalf("all-day: %+v", trip)
 	}
+	var weekly ev
+	tool(t, s, "create_event", map[string]any{"title": "Joga", "start": day + "T07:00",
+		"recurrence": []string{"FREQ=WEEKLY;COUNT=3"}}, &weekly)
+	if !weekly.Recurring || weekly.Start != day+" 07:00" {
+		t.Fatalf("recurring create_event: %+v", weekly)
+	}
 	var ag struct{ Events []ev }
+	tool(t, s, "agenda", map[string]any{"from": day, "days": 21}, &ag)
+	n := 0
+	for _, x := range ag.Events {
+		if x.Title == "Joga" {
+			n++
+		}
+	}
+	if n != 3 {
+		t.Fatalf("recurring occurrences: %d", n)
+	}
+	if msg := tool(t, s, "create_event", map[string]any{"title": "x", "start": day,
+		"recurrence": []string{"BOGUS:1"}}, nil); msg == "" {
+		t.Fatal("bad recurrence should fail")
+	}
 	tool(t, s, "agenda", map[string]any{"from": day, "member": "Kuba"}, &ag)
 	inAgenda := false
 	for _, x := range ag.Events {
