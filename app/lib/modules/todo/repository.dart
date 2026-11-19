@@ -4,6 +4,7 @@ import '../../core/api/api_client.dart';
 import '../../core/api/sync_client.dart';
 import '../../core/backend.dart';
 import '../../core/data.dart';
+import '../../core/device_prefs.dart';
 import '../../core/family.dart';
 import '../../core/mentions.dart';
 import '../../core/mock/mock_store.dart';
@@ -86,6 +87,7 @@ class ApiTodoRepository implements TodoRepository {
     'assignee_id',
     'due',
     'due_time',
+    'position',
   ];
 
   @override
@@ -203,6 +205,7 @@ class ApiTodoRepository implements TodoRepository {
           'title': title,
           'assignee_id': assigneeId,
           'due': toApiDate(due),
+          'position': item.position,
         },
         label: title,
       ),
@@ -415,6 +418,7 @@ class MockTodoRepository implements TodoRepository {
         'assignee_id',
         'due',
         'due_time',
+        'position',
       ]),
       actorId: actorId,
     );
@@ -575,6 +579,32 @@ class _Notices {
   }
 }
 
+/// Moves `open[from]` to index [to] of the list without it, by giving it a
+/// position between its new neighbours; renumbers the tasks when there is no
+/// room left between them.
+void moveTodoItem(TodoRepository repo, List<TodoItem> open, int from, int to) {
+  if (from == to) return;
+  final rest = [...open];
+  final item = rest.removeAt(from);
+  final prev = to > 0 ? rest[to - 1].position : null;
+  final next = to < rest.length ? rest[to].position : null;
+  final pos = switch ((prev, next)) {
+    (final p?, final n?) => (p + n) / 2,
+    (final p?, null) => p + 1,
+    (null, final n?) => n - 1,
+    _ => item.position,
+  };
+  if (pos != prev && pos != next) {
+    repo.updateItem(item, item.copyWith(position: pos));
+    return;
+  }
+  rest.insert(to, item);
+  final base = rest.first.position.floorToDouble();
+  for (final (i, t) in rest.indexed) {
+    repo.updateItem(t, t.copyWith(position: base + i));
+  }
+}
+
 // --- providers ---
 
 final todoRepositoryProvider = Provider<TodoRepository>(
@@ -611,12 +641,56 @@ final _todoLists = StreamProvider<List<TodoList>>(
   (ref) => ref.watch(todoRepositoryProvider).watchLists(),
 );
 
+/// The lists in [order] first, then the rest (e.g. new ones) as they came.
+List<TodoList> orderLists(List<TodoList> lists, List<String> order) {
+  if (order.isEmpty) return lists;
+  final rank = {for (final (i, id) in order.indexed) id: i};
+  final indexed = lists.indexed.toList()
+    ..sort((a, b) {
+      final ra = rank[a.$2.id] ?? order.length + a.$1;
+      final rb = rank[b.$2.id] ?? order.length + b.$1;
+      return ra.compareTo(rb);
+    });
+  return [for (final (_, l) in indexed) l];
+}
+
+/// The order of the lists, remembered per member on this device: each person
+/// can put their own list first. Lists not in it go to the end.
+class TodoListOrder extends AsyncNotifier<List<String>> {
+  String get _key => 'oiko.todo_list_order.${ref.read(currentMemberProvider)}';
+
+  @override
+  Future<List<String>> build() async {
+    ref.watch(currentMemberProvider);
+    final v = await DevicePrefs.get(_key);
+    return v == null || v.isEmpty ? const [] : v.split(',');
+  }
+
+  /// Moves the list at [from] to [to] (indices into [lists], as shown).
+  Future<void> move(List<TodoList> lists, int from, int to) async {
+    final ids = [for (final l in lists) l.id];
+    ids.insert(to, ids.removeAt(from));
+    // Keep ids of lists not shown (e.g. pending delete) after the visible ones.
+    final order = [...ids, ...?state.value?.where((id) => !ids.contains(id))];
+    state = AsyncData(order);
+    await DevicePrefs.set(_key, order.join(','));
+  }
+}
+
+final todoListOrderProvider =
+    AsyncNotifierProvider<TodoListOrder, List<String>>(TodoListOrder.new);
+
+/// The lists, without pending deletes, in this member's order.
 final todoListsProvider = Provider<AsyncValue<List<TodoList>>>((ref) {
   final pending = ref.watch(pendingDeletesProvider);
+  final order = ref.watch(todoListOrderProvider).value ?? const <String>[];
   return ref
       .watch(_todoLists)
       .whenData(
-        (l) => l.where((l) => !pending.contains(todoListKey(l.id))).toList(),
+        (l) => orderLists(
+          l.where((l) => !pending.contains(todoListKey(l.id))).toList(),
+          order,
+        ),
       );
 });
 

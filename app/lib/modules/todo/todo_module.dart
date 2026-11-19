@@ -60,7 +60,7 @@ class TodoModule extends FamilyModule {
           key: ValueKey(l.id),
           list: l,
           items: items.where((i) => i.listId == l.id).toList()
-            ..sort((a, b) => a.createdAt.compareTo(b.createdAt)),
+            ..sort(TodoItem.byPosition),
         ),
     ];
   }

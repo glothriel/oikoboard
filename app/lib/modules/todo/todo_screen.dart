@@ -396,32 +396,37 @@ class _ListsPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ListView(
+    return ReorderableListView(
       padding: const EdgeInsets.all(8),
+      buildDefaultDragHandles: false,
+      onReorderItem: (from, to) =>
+          ref.read(todoListOrderProvider.notifier).move(lists, from, to),
+      footer: ListTile(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        leading: const Icon(Icons.add),
+        title: Text(context.l10n.todoNewList),
+        onTap: () => _addList(context, ref, lists.length),
+      ),
       children: [
-        for (final l in lists)
-          ListTile(
-            selected: l.id == selectedId,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+        for (final (index, l) in lists.indexed)
+          ReorderableDelayedDragStartListener(
+            key: ValueKey(l.id),
+            index: index,
+            child: ListTile(
+              selected: l.id == selectedId,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              leading: ColorDot(Color(l.color), size: 14),
+              title: Text(l.name),
+              subtitle: l.due == null
+                  ? null
+                  : DueLabel(l.due!, overdue: l.overdue),
+              trailing: Text('${_openCount(items, l.id)}'),
+              onTap: () =>
+                  ref.read(selectedTodoListProvider.notifier).select(l.id),
             ),
-            leading: ColorDot(Color(l.color), size: 14),
-            title: Text(l.name),
-            subtitle: l.due == null
-                ? null
-                : DueLabel(l.due!, overdue: l.overdue),
-            trailing: Text('${_openCount(items, l.id)}'),
-            onTap: () =>
-                ref.read(selectedTodoListProvider.notifier).select(l.id),
           ),
-        ListTile(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          leading: const Icon(Icons.add),
-          title: Text(context.l10n.todoNewList),
-          onTap: () => _addList(context, ref, lists.length),
-        ),
       ],
     );
   }
@@ -442,27 +447,34 @@ class _ListChips extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return SizedBox(
       height: 56,
-      child: ListView(
+      child: ReorderableListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        buildDefaultDragHandles: false,
+        onReorderItem: (from, to) =>
+            ref.read(todoListOrderProvider.notifier).move(lists, from, to),
+        footer: ActionChip(
+          avatar: const Icon(Icons.add, size: 18),
+          label: Text(context.l10n.todoListChip),
+          onPressed: () => _addList(context, ref, lists.length),
+        ),
         children: [
-          for (final l in lists)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: ChoiceChip(
-                avatar: ColorDot(Color(l.color)),
-                label: Text('${l.name} · ${_openCount(items, l.id)}'),
-                selected: l.id == selectedId,
-                showCheckmark: false,
-                onSelected: (_) =>
-                    ref.read(selectedTodoListProvider.notifier).select(l.id),
+          for (final (index, l) in lists.indexed)
+            ReorderableDelayedDragStartListener(
+              key: ValueKey(l.id),
+              index: index,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  avatar: ColorDot(Color(l.color)),
+                  label: Text('${l.name} · ${_openCount(items, l.id)}'),
+                  selected: l.id == selectedId,
+                  showCheckmark: false,
+                  onSelected: (_) =>
+                      ref.read(selectedTodoListProvider.notifier).select(l.id),
+                ),
               ),
             ),
-          ActionChip(
-            avatar: const Icon(Icons.add, size: 18),
-            label: Text(context.l10n.todoListChip),
-            onPressed: () => _addList(context, ref, lists.length),
-          ),
         ],
       ),
     );
@@ -509,7 +521,7 @@ class _TodoItemsPaneState extends ConsumerState<TodoItemsPane> {
         const <TodoItem>[];
     final visible = items.where((i) => !_hidden.contains(i.id));
     final open = visible.where((i) => !i.done).toList()
-      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      ..sort(TodoItem.byPosition);
     final done = visible.where((i) => i.done).toList()
       ..sort(
         (a, b) => (b.doneAt ?? b.createdAt).compareTo(a.doneAt ?? a.createdAt),
@@ -534,84 +546,119 @@ class _TodoItemsPaneState extends ConsumerState<TodoItemsPane> {
       },
     );
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      children: [
-        InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => showTodoListEditor(context, list: widget.list),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(
-              children: [
-                ColorDot(Color(widget.list.color), size: 14),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          sliver: SliverList.list(
+            children: [
+              InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => showTodoListEditor(context, list: widget.list),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
                     children: [
-                      Text(widget.list.name, style: theme.textTheme.titleLarge),
-                      if (widget.list.due != null)
-                        DueLabel(
-                          widget.list.due!,
-                          overdue: widget.list.overdue && open.isNotEmpty,
-                          style: theme.textTheme.bodySmall,
+                      ColorDot(Color(widget.list.color), size: 14),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.list.name,
+                              style: theme.textTheme.titleLarge,
+                            ),
+                            if (widget.list.due != null)
+                              DueLabel(
+                                widget.list.due!,
+                                overdue: widget.list.overdue && open.isNotEmpty,
+                                style: theme.textTheme.bodySmall,
+                              ),
+                          ],
                         ),
+                      ),
+                      IconButton(
+                        tooltip: l.todoEditList,
+                        icon: const Icon(Icons.edit_outlined),
+                        onPressed: () =>
+                            showTodoListEditor(context, list: widget.list),
+                      ),
                     ],
                   ),
                 ),
-                IconButton(
-                  tooltip: l.todoEditList,
-                  icon: const Icon(Icons.edit_outlined),
-                  onPressed: () =>
-                      showTodoListEditor(context, list: widget.list),
+              ),
+              if (widget.list.description.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 4, 0, 4),
+                  child: MarkdownText(widget.list.description),
                 ),
-              ],
-            ),
-          ),
-        ),
-        if (widget.list.description.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 4, 0, 4),
-            child: MarkdownText(widget.list.description),
-          ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _controller,
-          focusNode: _focus,
-          textInputAction: TextInputAction.done,
-          onSubmitted: _add,
-          decoration: InputDecoration(
-            hintText: l.todoAddTo(widget.list.name),
-            prefixIcon: const Icon(Icons.add),
-            filled: true,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        if (open.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            child: Center(
-              child: Text(
-                l.todoAllDone,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: theme.colorScheme.outline,
+              const SizedBox(height: 8),
+              TextField(
+                controller: _controller,
+                focusNode: _focus,
+                textInputAction: TextInputAction.done,
+                onSubmitted: _add,
+                decoration: InputDecoration(
+                  hintText: l.todoAddTo(widget.list.name),
+                  prefixIcon: const Icon(Icons.add),
+                  filled: true,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
               ),
+              const SizedBox(height: 8),
+              if (open.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: Center(
+                    child: Text(
+                      l.todoAllDone,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: theme.colorScheme.outline,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        // Open tasks: long-press and drag to reorder (for everyone).
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          sliver: SliverReorderableList(
+            itemCount: open.length,
+            onReorderItem: (from, to) =>
+                moveTodoItem(ref.read(todoRepositoryProvider), open, from, to),
+            proxyDecorator: (child, _, _) => Material(
+              elevation: 4,
+              borderRadius: BorderRadius.circular(12),
+              child: child,
             ),
+            itemBuilder: (context, index) =>
+                ReorderableDelayedDragStartListener(
+                  key: ValueKey(open[index].id),
+                  index: index,
+                  child: tile(open[index]),
+                ),
           ),
-        for (final i in open) tile(i),
-        if (done.isNotEmpty)
-          ExpansionTile(
-            tilePadding: EdgeInsets.zero,
-            shape: const Border(),
-            title: Text(l.todoDoneSection(done.length)),
-            children: [for (final i in done) tile(i)],
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          sliver: SliverList.list(
+            children: [
+              if (done.isNotEmpty)
+                ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  shape: const Border(),
+                  title: Text(l.todoDoneSection(done.length)),
+                  children: [for (final i in done) tile(i)],
+                ),
+            ],
           ),
+        ),
       ],
     );
   }

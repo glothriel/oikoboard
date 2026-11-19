@@ -40,10 +40,12 @@ type Item struct {
 	AssigneeID  *uuid.UUID `json:"assignee_id"`
 	Due         *core.Date `json:"due"`
 	// DueTime: optional time of Due (household local time).
-	DueTime   *core.TimeOfDay `json:"due_time"`
-	CreatedAt time.Time       `json:"created_at"`
-	UpdatedAt time.Time       `json:"updated_at"`
-	Version   int             `json:"version" gorm:"default:1"`
+	DueTime *core.TimeOfDay `json:"due_time"`
+	// Position: manual order within the list, ascending (see migration 15).
+	Position  float64   `json:"position"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Version   int       `json:"version" gorm:"default:1"`
 }
 
 func (Item) TableName() string { return "todo_items" }
@@ -185,6 +187,7 @@ func (m Module) createItem(c *gin.Context) {
 		AssigneeID  *uuid.UUID      `json:"assignee_id"`
 		Due         *core.Date      `json:"due"`
 		DueTime     *core.TimeOfDay `json:"due_time"`
+		Position    *float64        `json:"position"` // default: now, i.e. last
 	}
 	if !core.Bind(c, &req) {
 		return
@@ -200,7 +203,10 @@ func (m Module) createItem(c *gin.Context) {
 	row := Item{
 		ID: req.ID, HouseholdID: actor.HouseholdID, ListID: req.ListID,
 		Title: req.Title, Description: req.Description, AssigneeID: req.AssigneeID, Due: req.Due,
-		DueTime: req.DueTime,
+		DueTime: req.DueTime, Position: float64(time.Now().UnixMicro()) / 1e6,
+	}
+	if req.Position != nil {
+		row.Position = *req.Position
 	}
 	err := core.Write(c.Request.Context(), m.DB, actor, core.MutationID(c), func(tx *gorm.DB) error {
 		created, err := core.CreateIdempotentNew(tx, &row, actor.HouseholdID, row.ID)
@@ -231,16 +237,22 @@ func (m Module) updateItem(c *gin.Context) {
 		assignee    uuid.UUID
 		due         core.Date
 		dueTime     core.TimeOfDay
+		position    float64
 	)
 	cols, err := p.Apply(map[string]any{
 		"title": &title, "description": &description, "done": &done,
 		"assignee_id": &assignee, "due": &due, "due_time": &dueTime,
+		"position": &position,
 	})
 	if err != nil {
 		core.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
 	clearToEmpty(cols, "description")
+	if p, ok := cols["position"]; ok && p == nil {
+		core.Fail(c, http.StatusBadRequest, "bad_request", "position can't be null")
+		return
+	}
 	if d, ok := cols["due"]; ok && d == nil {
 		cols["due_time"] = nil // no date, no time
 	}
@@ -424,7 +436,7 @@ func (listView) Snapshot(tx *gorm.DB, hh uuid.UUID, params any) (core.Entities, 
 	if err := tx.Where("household_id = ? AND id = ?", hh, p.ListID).Find(&lists).Error; err != nil {
 		return nil, err
 	}
-	err := tx.Where("household_id = ? AND list_id = ?", hh, p.ListID).Order("created_at").Find(&items).Error
+	err := tx.Where("household_id = ? AND list_id = ?", hh, p.ListID).Order("position, created_at").Find(&items).Error
 	return core.Entities{entityLists: lists, entityItems: items}, err
 }
 
@@ -449,7 +461,7 @@ func (openView) ParseParams(r json.RawMessage) (any, error) { return core.NoPara
 
 func (openView) Snapshot(tx *gorm.DB, hh uuid.UUID, _ any) (core.Entities, error) {
 	items := []Item{}
-	err := tx.Where("household_id = ? AND NOT done", hh).Order("created_at").Find(&items).Error
+	err := tx.Where("household_id = ? AND NOT done", hh).Order("position, created_at").Find(&items).Error
 	return core.Entities{entityItems: items}, err
 }
 

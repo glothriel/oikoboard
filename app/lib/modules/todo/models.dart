@@ -73,7 +73,7 @@ class TodoList {
 }
 
 class TodoItem {
-  const TodoItem({
+  TodoItem({
     required this.id,
     required this.listId,
     required this.title,
@@ -84,7 +84,8 @@ class TodoItem {
     this.due,
     this.dueTime,
     this.doneAt,
-  });
+    double? position,
+  }) : position = position ?? createdAt.microsecondsSinceEpoch / 1e6;
 
   final String id;
   final String listId;
@@ -102,6 +103,10 @@ class TodoItem {
   /// Optional time of [due]; null without a [due].
   final TimeOfDay? dueTime;
   final DateTime? doneAt;
+
+  /// Manual order within the list, ascending; seconds since the epoch at
+  /// creation, so new tasks go last.
+  final double position;
 
   /// [due] at [dueTime] (or midnight): for sorting.
   DateTime? get dueAt => due == null || dueTime == null
@@ -131,6 +136,7 @@ class TodoItem {
     due: fromApiDate(j['due']),
     dueTime: fromApiClock(j['due_time']),
     doneAt: fromApiTime(j['done_at']),
+    position: (j['position'] as num?)?.toDouble(),
   );
 
   Map<String, dynamic> toJson() => {
@@ -144,6 +150,7 @@ class TodoItem {
     'due': toApiDate(due),
     'due_time': toApiClock(dueTime),
     'done_at': toApiTime(doneAt),
+    'position': position,
   };
 
   /// Nullable fields can be cleared by passing `null` explicitly; clearing
@@ -156,6 +163,7 @@ class TodoItem {
     Object? due = _unset,
     Object? dueTime = _unset,
     Object? doneAt = _unset,
+    double? position,
   }) => TodoItem(
     id: id,
     listId: listId,
@@ -173,7 +181,14 @@ class TodoItem {
         ? this.dueTime
         : dueTime as TimeOfDay?,
     doneAt: identical(doneAt, _unset) ? this.doneAt : doneAt as DateTime?,
+    position: position ?? this.position,
   );
+
+  /// Manual order: by [position], then by creation.
+  static int byPosition(TodoItem a, TodoItem b) {
+    final c = a.position.compareTo(b.position);
+    return c != 0 ? c : a.createdAt.compareTo(b.createdAt);
+  }
 
   TodoItem toggled() =>
       copyWith(done: !done, doneAt: done ? null : DateTime.now());
