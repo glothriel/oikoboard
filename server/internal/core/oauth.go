@@ -127,6 +127,29 @@ func redirectAllowed(raw string) bool {
 	return false
 }
 
+// redirectRegistered: an exact match, except that for http loopback URIs the
+// port is ignored (RFC 8252 §7.3) — native clients like Claude Code register
+// http://localhost/callback and listen on a random port.
+func redirectRegistered(registered []string, redirect string) bool {
+	if slices.Contains(registered, redirect) {
+		return true
+	}
+	u, err := url.Parse(redirect)
+	if err != nil || u.Scheme != "http" || !redirectAllowed(redirect) {
+		return false
+	}
+	for _, r := range registered {
+		ru, err := url.Parse(r)
+		if err != nil || ru.Scheme != "http" {
+			continue
+		}
+		if ru.Hostname() == u.Hostname() && ru.Path == u.Path && ru.RawQuery == u.RawQuery && ru.User == nil && u.User == nil {
+			return true
+		}
+	}
+	return false
+}
+
 // POST /oauth/register (RFC 7591).
 func (a *Auth) oauthRegister(c *gin.Context) {
 	var req struct {
@@ -308,7 +331,7 @@ func (a *Auth) oauthAuthorize(c *gin.Context) {
 	if redirect == "" && len(cl.RedirectURIs) == 1 {
 		redirect = cl.RedirectURIs[0]
 	}
-	if !slices.Contains([]string(cl.RedirectURIs), redirect) {
+	if !redirectRegistered(cl.RedirectURIs, redirect) {
 		oauthPage(c, http.StatusBadRequest, "Błędny adres powrotu", "Adres powrotu nie zgadza się z rejestracją aplikacji.")
 		return
 	}
