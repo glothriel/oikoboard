@@ -1,10 +1,12 @@
-// Package app składa serwer z rdzenia i modułów.
+// Package app assembles the server from the core and the modules.
 package app
 
 import (
 	"context"
 	"log/slog"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -50,7 +52,7 @@ func New(db *gorm.DB, cfg core.AuthConfig) *App {
 	hub := realtime.NewHub(db, auth, core.CollectViews(mods))
 
 	r := gin.New()
-	r.Use(gin.Recovery(), requestLog(), cors())
+	r.Use(gin.Recovery(), requestLog(), cors(cfg.AppURL))
 	api := r.Group("/api/v1")
 	api.GET("/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"ok": true}) })
 	auth.Routes(api)
@@ -90,10 +92,26 @@ func (a *App) Run(ctx context.Context, db *gorm.DB, dsn string) {
 	}
 }
 
-func cors() gin.HandlerFunc {
+// cors: with a public (non-loopback) app URL, the API (/api/…) only answers
+// the app's origin. OAuth and MCP endpoints stay open to any origin: browser
+// based MCP clients call them, and they use bearer tokens, not cookies.
+func cors(appURL string) gin.HandlerFunc {
+	appOrigin := ""
+	if u, err := url.Parse(appURL); err == nil && u.Host != "" {
+		switch u.Hostname() {
+		case "localhost", "127.0.0.1", "::1":
+		default:
+			appOrigin = u.Scheme + "://" + u.Host
+		}
+	}
 	return func(c *gin.Context) {
 		h := c.Writer.Header()
-		h.Set("Access-Control-Allow-Origin", "*")
+		if appOrigin != "" && strings.HasPrefix(c.Request.URL.Path, "/api/") {
+			h.Set("Access-Control-Allow-Origin", appOrigin)
+			h.Add("Vary", "Origin")
+		} else {
+			h.Set("Access-Control-Allow-Origin", "*")
+		}
 		h.Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Mutation-Id")
 		h.Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
 		if c.Request.Method == http.MethodOptions {

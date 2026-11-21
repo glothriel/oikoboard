@@ -292,21 +292,26 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 Expanded(
                   child: noCalendars
                       ? const _ConnectPrompt()
-                      : TimeGrid(
-                          days: _days(view),
-                          events: events,
-                          // The week keeps readable columns and scrolls
-                          // sideways; fewer days always fit the width.
-                          minColumnWidth: view == CalendarView.week
-                              ? 120
-                              : null,
-                          onDayTap: (d) {
-                            _select(d);
-                            _setView(CalendarView.day);
-                          },
-                          onSlotTap: canAdd
-                              ? (t) => showEventEditor(context, start: t)
-                              : null,
+                      : _SwipeDays(
+                          // the week scrolls sideways itself
+                          enabled: view != CalendarView.week,
+                          onSwipe: (delta) => _shift(view, delta),
+                          child: TimeGrid(
+                            days: _days(view),
+                            events: events,
+                            // The week keeps readable columns and scrolls
+                            // sideways; fewer days always fit the width.
+                            minColumnWidth: view == CalendarView.week
+                                ? 120
+                                : null,
+                            onDayTap: (d) {
+                              _select(d);
+                              _setView(CalendarView.day);
+                            },
+                            onSlotTap: canAdd
+                                ? (t) => showEventEditor(context, start: t)
+                                : null,
+                          ),
                         ),
                 ),
               ],
@@ -361,6 +366,30 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 }
 
 /// Shown while the family has no calendar linked.
+/// A horizontal swipe moves a day-columns view by a page: left = next.
+class _SwipeDays extends StatelessWidget {
+  const _SwipeDays({
+    required this.enabled,
+    required this.onSwipe,
+    required this.child,
+  });
+  final bool enabled;
+  final ValueChanged<int> onSwipe;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!enabled) return child;
+    return GestureDetector(
+      onHorizontalDragEnd: (d) {
+        final v = d.primaryVelocity ?? 0;
+        if (v.abs() > 300) onSwipe(v < 0 ? 1 : -1);
+      },
+      child: child,
+    );
+  }
+}
+
 class _ConnectPrompt extends StatelessWidget {
   const _ConnectPrompt();
 

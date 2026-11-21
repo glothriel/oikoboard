@@ -187,7 +187,7 @@ func (m Module) createItem(c *gin.Context) {
 		AssigneeID  *uuid.UUID      `json:"assignee_id"`
 		Due         *core.Date      `json:"due"`
 		DueTime     *core.TimeOfDay `json:"due_time"`
-		Position    *float64        `json:"position"` // default: now, i.e. last
+		Position    *float64        `json:"position"` // default: -now, i.e. first
 	}
 	if !core.Bind(c, &req) {
 		return
@@ -203,7 +203,7 @@ func (m Module) createItem(c *gin.Context) {
 	row := Item{
 		ID: req.ID, HouseholdID: actor.HouseholdID, ListID: req.ListID,
 		Title: req.Title, Description: req.Description, AssigneeID: req.AssigneeID, Due: req.Due,
-		DueTime: req.DueTime, Position: float64(time.Now().UnixMicro()) / 1e6,
+		DueTime: req.DueTime, Position: -float64(time.Now().UnixMicro()) / 1e6,
 	}
 	if req.Position != nil {
 		row.Position = *req.Position

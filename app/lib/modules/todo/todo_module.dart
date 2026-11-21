@@ -8,6 +8,7 @@ import '../../core/api/api_client.dart' show toApiDate;
 import '../../core/family.dart';
 import '../../core/format.dart';
 import '../../core/l10n.dart';
+import '../../core/link_text.dart';
 import '../../core/mock/mock_auth_api.dart' show mockFamily;
 import '../../core/mock/mock_store.dart';
 import '../../core/module.dart';
@@ -379,7 +380,7 @@ class WallTaskTile extends ConsumerWidget {
         value: i.done,
         onChanged: (_) => toggleTodoDone(context, ref, i),
       ),
-      title: Text(
+      title: LinkText(
         i.title,
         style: TextStyle(
           color: i.overdue

@@ -655,7 +655,8 @@ List<TodoList> orderLists(List<TodoList> lists, List<String> order) {
 }
 
 /// The order of the lists, remembered per member on this device: each person
-/// can put their own list first. Lists not in it go to the end.
+/// can put their own list first. Lists created here go first; lists not in it
+/// (e.g. created on another device) go to the end.
 class TodoListOrder extends AsyncNotifier<List<String>> {
   String get _key => 'oiko.todo_list_order.${ref.read(currentMemberProvider)}';
 
@@ -672,6 +673,13 @@ class TodoListOrder extends AsyncNotifier<List<String>> {
     ids.insert(to, ids.removeAt(from));
     // Keep ids of lists not shown (e.g. pending delete) after the visible ones.
     final order = [...ids, ...?state.value?.where((id) => !ids.contains(id))];
+    state = AsyncData(order);
+    await DevicePrefs.set(_key, order.join(','));
+  }
+
+  /// Puts a newly created list first.
+  Future<void> prepend(String id) async {
+    final order = [id, ...?state.value?.where((i) => i != id)];
     state = AsyncData(order);
     await DevicePrefs.set(_key, order.join(','));
   }

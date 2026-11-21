@@ -13,7 +13,7 @@
 //	OIKO_PUBLIC_URL             public API URL (default http://localhost:8090); also the OAuth issuer / MCP resource
 //	OIKO_GOOGLE_CLIENT_ID/SECRET Google OAuth client (without them Google sign-in is off)
 //	OIKO_RETURN_URLS            where sign-in may return to, comma-separated
-//	OIKO_APP_URL                web app URL (invite links)
+//	OIKO_APP_URL                web app URL (invite links; when public, the only CORS origin for /api)
 //	OIKO_DEV_LOGIN=1            sign-in with just an e-mail — LOCAL ONLY
 //	OIKO_MOCK_OAUTH=1           fake Google: a "who are you?" page — LOCAL ONLY
 //	OIKO_SECRET_KEY             32 bytes (base64/hex) encrypting stored credentials; required for Google Calendar

@@ -151,7 +151,8 @@ class MarkdownField extends StatefulWidget {
 }
 
 class _MarkdownFieldState extends State<MarkdownField> {
-  bool _preview = false;
+  /// Existing text opens rendered; tap it (or the toggle) to edit.
+  late bool _preview = widget.controller.text.trim().isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -182,22 +183,26 @@ class _MarkdownFieldState extends State<MarkdownField> {
         ),
         const SizedBox(height: 4),
         if (_preview)
-          Container(
-            width: double.infinity,
-            constraints: const BoxConstraints(minHeight: 72),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              border: Border.all(color: theme.colorScheme.outlineVariant),
-              borderRadius: BorderRadius.circular(4),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => setState(() => _preview = false),
+            child: Container(
+              width: double.infinity,
+              constraints: const BoxConstraints(minHeight: 72),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                border: Border.all(color: theme.colorScheme.outlineVariant),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: widget.controller.text.trim().isEmpty
+                  ? Text(
+                      l.markdownNothing,
+                      style: TextStyle(color: theme.colorScheme.outline),
+                    )
+                  : MarkdownText(
+                      encodeMentions(widget.controller.text, familyOf(context)),
+                    ),
             ),
-            child: widget.controller.text.trim().isEmpty
-                ? Text(
-                    l.markdownNothing,
-                    style: TextStyle(color: theme.colorScheme.outline),
-                  )
-                : MarkdownText(
-                    encodeMentions(widget.controller.text, familyOf(context)),
-                  ),
           )
         else ...[
           TextField(

@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../core/family.dart';
 import '../../core/format.dart';
 import '../../core/l10n.dart';
+import '../../core/link_text.dart';
 import '../../core/widgets.dart';
 import '../todo/models.dart';
 import '../todo/repository.dart';
@@ -107,7 +108,7 @@ class _TodoDaySheetState extends ConsumerState<_TodoDaySheet> {
                           ref.read(todoRepositoryProvider).updateItem(i, next);
                         },
                       ),
-                      title: Text(
+                      title: LinkText(
                         i.title,
                         style: i.done
                             ? TextStyle(

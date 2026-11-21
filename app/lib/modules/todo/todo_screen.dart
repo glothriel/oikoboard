@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../core/family.dart';
 import '../../core/format.dart';
 import '../../core/l10n.dart';
+import '../../core/link_text.dart';
 import '../../core/markdown.dart';
 import '../../core/mentions.dart';
 import '../../core/undo_delete.dart';
@@ -19,6 +20,16 @@ const listPalette = [
   0xFFEC407A,
   0xFF8D6E63,
   0xFF42A5F5,
+  0xFFEF5350,
+  0xFFAB47BC,
+  0xFF7E57C2,
+  0xFF26C6DA,
+  0xFF66BB6A,
+  0xFF9CCC65,
+  0xFFFFCA28,
+  0xFFFF7043,
+  0xFF78909C,
+  0xFF5D4037,
 ];
 
 class TodoScreen extends ConsumerWidget {
@@ -225,6 +236,7 @@ class _TodoListEditorState extends ConsumerState<_TodoListEditor> {
         description: description,
         due: _due,
       )).id;
+      await ref.read(todoListOrderProvider.notifier).prepend(id);
     } else {
       id = list.id;
       await repo.updateList(
@@ -697,7 +709,7 @@ class TodoItemTile extends ConsumerWidget {
           value: item.done,
           onChanged: (_) => toggleTodoDone(context, ref, item),
         ),
-        title: Text(
+        title: LinkText(
           item.title,
           style: item.done
               ? TextStyle(

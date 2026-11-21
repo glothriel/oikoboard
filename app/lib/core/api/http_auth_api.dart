@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -133,8 +134,15 @@ class HttpAuthApi implements AuthApi {
     String name,
     String memberName,
   ) async {
-    await _client(s)
-        .post('/households', {'name': name, 'member_name': memberName});
+    String? timezone;
+    try {
+      timezone = (await FlutterTimezone.getLocalTimezone()).identifier;
+    } catch (_) {} // the server's default then
+    await _client(s).post('/households', {
+      'name': name,
+      'member_name': memberName,
+      'timezone': ?timezone,
+    });
     return _me(s.token);
   }
 

@@ -85,7 +85,7 @@ class TodoItem {
     this.dueTime,
     this.doneAt,
     double? position,
-  }) : position = position ?? createdAt.microsecondsSinceEpoch / 1e6;
+  }) : position = position ?? -createdAt.microsecondsSinceEpoch / 1e6;
 
   final String id;
   final String listId;
@@ -104,8 +104,8 @@ class TodoItem {
   final TimeOfDay? dueTime;
   final DateTime? doneAt;
 
-  /// Manual order within the list, ascending; seconds since the epoch at
-  /// creation, so new tasks go last.
+  /// Manual order within the list, ascending; minus the seconds since the
+  /// epoch at creation, so new tasks go first.
   final double position;
 
   /// [due] at [dueTime] (or midnight): for sorting.

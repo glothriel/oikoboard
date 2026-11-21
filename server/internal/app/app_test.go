@@ -374,7 +374,7 @@ func (w *wsClient) drain() {
 
 // Snapshot + strumień są spójne nawet przy zapisach w trakcie subskrypcji:
 // stan klienta po wszystkim = stan w bazie, bez dziur i duplikatów.
-// New tasks go last; a PATCHed position moves a task within its list.
+// New tasks go first; a PATCHed position moves a task within its list.
 func TestItemPosition(t *testing.T) {
 	e := setup(t)
 	a := e.newFamily("A")
@@ -384,17 +384,17 @@ func TestItemPosition(t *testing.T) {
 	var first, second map[string]any
 	a.do("POST", "/todo/items", map[string]any{"list_id": id, "title": "first"}, &first)
 	a.do("POST", "/todo/items", map[string]any{"list_id": id, "title": "second"}, &second)
-	if first["position"].(float64) >= second["position"].(float64) {
-		t.Fatalf("new task not last: %v >= %v", first["position"], second["position"])
+	if second["position"].(float64) >= first["position"].(float64) {
+		t.Fatalf("new task not first: %v >= %v", second["position"], first["position"])
 	}
-	a.do("PATCH", "/todo/items/"+second["id"].(string),
-		map[string]any{"position": first["position"].(float64) - 1}, nil)
+	a.do("PATCH", "/todo/items/"+first["id"].(string),
+		map[string]any{"position": second["position"].(float64) - 1}, nil)
 	_, data := a.view("todo.list", map[string]any{"list_id": id})
 	var titles []string
 	for _, i := range data["todo_items"] {
 		titles = append(titles, i["title"].(string))
 	}
-	if strings.Join(titles, ",") != "second,first" {
+	if strings.Join(titles, ",") != "first,second" {
 		t.Fatalf("order after move: %v", titles)
 	}
 	if code := a.do("PATCH", "/todo/items/"+first["id"].(string), map[string]any{"position": nil}, nil); code != 400 {

@@ -4,10 +4,19 @@ import 'package:material_ui/material_ui.dart';
 import 'session.dart';
 
 class Member {
-  const Member(this.id, this.name, this.color, {this.hasAccount = true});
+  const Member(
+    this.id,
+    this.name,
+    this.color, {
+    this.hasAccount = true,
+    this.picture,
+  });
   final String id;
   final String name;
   final Color color;
+
+  /// Profile picture URL of the member's account (Google), if any.
+  final String? picture;
 
   /// Czy ktoś loguje się jako ten członek (dzieci często nie).
   final bool hasAccount;
@@ -17,6 +26,7 @@ class Member {
     j['name'] as String,
     Color(j['color'] as int),
     hasAccount: (j['has_account'] as bool?) ?? true,
+    picture: j['picture'] as String?,
   );
 }
 
@@ -51,9 +61,13 @@ class MemberAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final picture = member.picture;
     return CircleAvatar(
       radius: radius,
       backgroundColor: member.color,
+      foregroundImage: picture == null ? null : NetworkImage(picture),
+      // the initial stays underneath if the picture fails to load
+      onForegroundImageError: picture == null ? null : (_, _) {},
       child: Text(
         member.name.characters.first,
         style: TextStyle(

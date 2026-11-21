@@ -39,6 +39,7 @@ func (a *Auth) createHousehold(c *gin.Context) {
 	var req struct {
 		Name       string `json:"name" binding:"required,max=100"`
 		MemberName string `json:"member_name" binding:"max=50"`
+		Timezone   string `json:"timezone" binding:"max=64"` // IANA, from the device; empty = default
 	}
 	if !Bind(c, &req) {
 		return
@@ -47,6 +48,9 @@ func (a *Auth) createHousehold(c *gin.Context) {
 	var m Member
 	err := a.DB.WithContext(c.Request.Context()).Transaction(func(tx *gorm.DB) error {
 		hh := Household{Name: strings.TrimSpace(req.Name)}
+		if _, err := time.LoadLocation(req.Timezone); err == nil && req.Timezone != "" && req.Timezone != "Local" {
+			hh.Timezone = req.Timezone
+		}
 		if err := tx.Create(&hh).Error; err != nil {
 			return err
 		}

@@ -274,7 +274,8 @@ func (a *Auth) LoginUser(ctx context.Context, id Identity) (uuid.UUID, error) {
 
 type memberOut struct {
 	Member
-	HasAccount bool `json:"has_account"`
+	HasAccount bool    `json:"has_account"`
+	Picture    *string `json:"picture"` // the account's profile picture (Google)
 }
 
 type membership struct {
@@ -449,8 +450,9 @@ func (a *Auth) me(c *gin.Context) {
 			FailErr(c, err)
 			return
 		}
-		if err := db.Model(&Member{}).Select("*, user_id IS NOT NULL AS has_account").
-			Where("household_id = ?", hh.ID).Order("created_at").Scan(&members).Error; err != nil {
+		if err := db.Raw(`SELECT m.*, m.user_id IS NOT NULL AS has_account, u.picture
+			FROM members m LEFT JOIN users u ON u.id = m.user_id
+			WHERE m.household_id = ? ORDER BY m.created_at`, hh.ID).Scan(&members).Error; err != nil {
 			FailErr(c, err)
 			return
 		}
