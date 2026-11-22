@@ -161,5 +161,12 @@ void main() {
     expect(find.textContaining('@Tata', findRichText: true), findsOneWidget);
     // Opening the thread read both entries about it.
     expect(find.byTooltip('Inbox'), findsOneWidget);
+
+    // Under the thread: the task's editor, over the task's list.
+    await tester.tap(find.byTooltip('Close').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Comments: Paszport dla Oli'), findsNothing);
+    expect(find.widgetWithText(TextField, 'Paszport dla Oli'), findsOneWidget);
+    expect(find.text('Kupić krem z filtrem'), findsOneWidget);
   });
 }

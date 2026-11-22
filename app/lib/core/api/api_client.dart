@@ -36,7 +36,9 @@ class ApiClient {
   /// Failed writes to show in the UI (a snackbar in the shell).
   static final errors = StreamController<Exception>.broadcast();
 
-  Future<dynamic> get(String path) => _send('GET', path);
+  /// [report]: false for reads whose failure the caller shows itself.
+  Future<dynamic> get(String path, {bool report = true}) =>
+      _send('GET', path, report: report);
   Future<dynamic> post(String path, Object body) =>
       _send('POST', path, body: body);
   Future<dynamic> patch(String path, Object body) =>

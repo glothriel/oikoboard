@@ -223,6 +223,9 @@
   "markdownEdit": "Edit",
   "markdownPreview": "Preview",
   "markdownNothing": "Nothing to preview",
+  "linkOpen": "Open link",
+  "linkCopy": "Copy link",
+  "linkCopied": "Link copied",
   "todoDeleteList": "Delete list",
   "todoName": "Name",
   "todoAddTo": "Add to “{list}”…",
@@ -535,5 +538,11 @@
         "type": "String"
       }
     }
-  }
+  },
+  "searchTooltip": "Search",
+  "searchHint": "Search tasks, lists and events",
+  "searchNothingFound": "Nothing found",
+  "searchFailed": "Search needs a connection to the server",
+  "todoSearchList": "List",
+  "todoSearchDone": "Done"
 }

@@ -75,8 +75,11 @@ class CalendarScreen extends ConsumerStatefulWidget {
 }
 
 class _CalendarScreenState extends ConsumerState<CalendarScreen> {
-  late DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
-  DateTime _selected = dateOnly(DateTime.now());
+  // A day asked for before the screen was first built (e.g. from search).
+  late DateTime _selected = dateOnly(
+    ref.read(calendarFocusProvider)?.day ?? DateTime.now(),
+  );
+  late DateTime _month = DateTime(_selected.year, _selected.month);
   List<CalendarEvent> _lastEvents = const [];
 
   void _select(DateTime day) => setState(() {
@@ -265,6 +268,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     }
     final view = viewPref.value!;
     final l = context.l10n;
+    ref.listen(calendarFocusProvider, (_, focus) {
+      if (focus != null) _select(dateOnly(focus.day));
+    });
     // Subscribes the calendar.range view to what's on screen. While a new
     // range loads, the previous events stay.
     final events =

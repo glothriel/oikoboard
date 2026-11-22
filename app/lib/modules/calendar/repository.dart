@@ -72,6 +72,11 @@ abstract interface class CalendarRepository {
   Future<void> setTodoTarget(String calendarId);
   Future<void> disconnect(String connectionId);
   Future<void> syncNow(String calendarId);
+
+  /// Events whose title, description or location contains [query]: a series
+  /// once, as its next occurrence; upcoming first. Needs the server
+  /// (`GET /calendar/search`).
+  Future<List<CalendarEvent>> search(String query);
 }
 
 List<CalendarEvent> _sorted(Iterable<CalendarEvent> e) =>
@@ -283,6 +288,49 @@ class ApiCalendarRepository implements CalendarRepository {
   @override
   Future<void> syncNow(String calendarId) =>
       api.post('/calendars/$calendarId/sync', {});
+
+  @override
+  Future<List<CalendarEvent>> search(String query) async {
+    final res = await api.get(
+      '/calendar/search?q=${Uri.encodeQueryComponent(query)}',
+      report: false,
+    ) as Map<String, dynamic>;
+    return (res['events'] as List)
+        .cast<Map<String, dynamic>>()
+        .map(CalendarEvent.fromJson)
+        .toList();
+  }
+}
+
+/// What `GET /calendar/search` returns, over [events] held in memory.
+List<CalendarEvent> searchEvents(Iterable<CalendarEvent> events, String query) {
+  final q = query.trim().toLowerCase();
+  if (q.isEmpty) return const [];
+  final now = DateTime.now();
+  bool upcoming(CalendarEvent e) => !e.end.isBefore(now);
+  // Upcoming soonest first, then past latest first.
+  int order(CalendarEvent a, CalendarEvent b) {
+    if (upcoming(a) != upcoming(b)) return upcoming(a) ? -1 : 1;
+    return upcoming(a)
+        ? a.start.compareTo(b.start)
+        : b.start.compareTo(a.start);
+  }
+
+  final best = <String, CalendarEvent>{};
+  for (final e in events) {
+    if (e.kind.isNotEmpty) continue;
+    if (![
+      e.title,
+      e.description,
+      e.location,
+    ].any((s) => s.toLowerCase().contains(q))) {
+      continue;
+    }
+    final key = e.eventId ?? e.id;
+    final prev = best[key];
+    if (prev == null || order(e, prev) < 0) best[key] = e;
+  }
+  return best.values.toList()..sort(order);
 }
 
 /// Namespace of the server's mirror ids (calendar/mirror.go `idSpace`).
@@ -493,6 +541,10 @@ class MockCalendarRepository implements CalendarRepository {
   Future<void> disconnect(String connectionId) => _unsupported();
   @override
   Future<void> syncNow(String calendarId) async {}
+
+  @override
+  Future<List<CalendarEvent>> search(String query) async =>
+      searchEvents(store.list(eventsEntity).map(CalendarEvent.fromJson), query);
 }
 
 final calendarRepositoryProvider = Provider<CalendarRepository>(
@@ -508,6 +560,25 @@ final calendarRepositoryProvider = Provider<CalendarRepository>(
     ),
   },
 );
+
+/// A request to show a day on the calendar screen (e.g. from search). A new
+/// object each time, so asking for the same day again is a change too.
+class CalendarFocus {
+  CalendarFocus(this.day);
+  final DateTime day;
+}
+
+class CalendarFocusNotifier extends Notifier<CalendarFocus?> {
+  @override
+  CalendarFocus? build() => null;
+
+  void show(DateTime day) => state = CalendarFocus(day);
+}
+
+final calendarFocusProvider =
+    NotifierProvider<CalendarFocusNotifier, CalendarFocus?>(
+      CalendarFocusNotifier.new,
+    );
 
 /// Key for [deleteWithUndo]: an occurrence (or single event) or a whole series.
 String calendarEventKey(CalendarEvent e, EditScope scope) =>

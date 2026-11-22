@@ -12,6 +12,7 @@ import '../../core/link_text.dart';
 import '../../core/mock/mock_auth_api.dart' show mockFamily;
 import '../../core/mock/mock_store.dart';
 import '../../core/module.dart';
+import '../../core/search.dart';
 import '../../core/widgets.dart';
 import 'inbox.dart';
 import 'models.dart';
@@ -44,7 +45,7 @@ class TodoModule extends FamilyModule {
 
   @override
   List<Widget> buildAppBarActions(BuildContext context) => [
-    TodoInboxButton(path: path),
+    const TodoInboxButton(),
   ];
 
   @override
@@ -63,6 +64,46 @@ class TodoModule extends FamilyModule {
           list: l,
           items: items.where((i) => i.listId == l.id).toList()
             ..sort(TodoItem.byPosition),
+        ),
+    ];
+  }
+
+  @override
+  Future<List<SearchHit>> search(
+    BuildContext context,
+    WidgetRef ref,
+    String query,
+  ) async {
+    final l = context.l10n;
+    final outline = Theme.of(context).colorScheme.outline;
+    final known = ref.read(todoListsProvider).value ?? const <TodoList>[];
+    final (:lists, :items) = await ref
+        .read(todoRepositoryProvider)
+        .search(query);
+    final listById = {
+      for (final x in [...known, ...lists]) x.id: x,
+    };
+    return [
+      for (final x in lists)
+        SearchHit(
+          title: x.name,
+          subtitle: l.todoSearchList,
+          leading: Icon(Icons.list, color: Color(x.color)),
+          open: (context, ref) => showTodoList(context, ref, x.id),
+        ),
+      for (final i in items)
+        SearchHit(
+          title: i.title,
+          subtitle: [
+            ?listById[i.listId]?.name,
+            if (i.done) l.todoSearchDone,
+            if (!i.done && i.due != null) relativeDay(l, i.due!),
+          ].join(' · '),
+          leading: Icon(
+            i.done ? Icons.check_box_outlined : Icons.check_box_outline_blank,
+            color: i.done ? outline : Color(listById[i.listId]?.color ?? 0),
+          ),
+          open: (context, ref) => showTodoItem(context, ref, i),
         ),
     ];
   }
@@ -229,6 +270,29 @@ class TodoModule extends FamilyModule {
       assigneeId: random.nextInt(3) == 0 ? actorId : null,
     );
   }
+}
+
+/// Switches to the lists screen with list [listId] selected.
+void showTodoList(BuildContext context, WidgetRef ref, String listId) {
+  ref.read(selectedTodoListProvider.notifier).select(listId);
+  GoRouter.of(context).go(const TodoModule().path);
+}
+
+/// Switches to [item]'s list on the lists screen and opens its editor;
+/// with [comments], its comments over the editor. [context] must outlive
+/// the route change (e.g. the app bar's).
+Future<void> showTodoItem(
+  BuildContext context,
+  WidgetRef ref,
+  TodoItem item, {
+  bool comments = false,
+}) async {
+  showTodoList(context, ref, item.listId);
+  // Open the sheets once the route has changed, or it would drop them.
+  await WidgetsBinding.instance.endOfFrame;
+  if (!context.mounted) return;
+  showTodoItemEditor(context, item);
+  if (comments) showTodoComments(context, item);
 }
 
 /// The lists and open tasks the wall shows, after its filter.
@@ -446,10 +510,7 @@ class _KanbanColumnState extends ConsumerState<_KanbanColumn> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             InkWell(
-              onTap: () {
-                ref.read(selectedTodoListProvider.notifier).select(list.id);
-                context.go(const TodoModule().path);
-              },
+              onTap: () => showTodoList(context, ref, list.id),
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Row(

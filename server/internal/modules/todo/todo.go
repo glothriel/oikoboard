@@ -99,6 +99,7 @@ func (m Module) Routes(r *gin.RouterGroup) {
 	r.POST("/todo/comments", m.createComment)
 	r.DELETE("/todo/comments/:id", m.deleteComment)
 	r.PATCH("/todo/inbox/:id", m.updateInbox)
+	r.GET("/todo/search", m.search)
 }
 
 // --- handlers ---

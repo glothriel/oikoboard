@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'l10n.dart';
 import 'mock/mock_store.dart';
+import 'search.dart';
 
 /// Contract of an app module (a “view”). A new feature = a new implementation
 /// of this class + registering it in `modules/registry.dart`. Navigation, the
@@ -41,6 +42,15 @@ abstract class FamilyModule {
   List<Widget> buildWallColumns(BuildContext context, WidgetRef ref) => [
     ?buildWallTile(context),
   ];
+
+  /// Results for the app-wide search, matching [query] (trimmed, not
+  /// empty). Read what's needed from [context] before the first await.
+  /// Throws when the search can't be done (e.g. no connection).
+  Future<List<SearchHit>> search(
+    BuildContext context,
+    WidgetRef ref,
+    String query,
+  ) async => const [];
 
   // --- mock only ---
 

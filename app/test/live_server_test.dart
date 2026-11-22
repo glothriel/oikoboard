@@ -30,6 +30,7 @@ ApiTodoRepository repoFor(String token) {
     send: (m) => api.mutate(m.method, m.path, m.body, mutationId: m.id),
   );
   return ApiTodoRepository(
+    api,
     SyncClient(
       base.replace(scheme: 'ws', path: '/api/v1/ws'),
       token,

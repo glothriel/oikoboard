@@ -58,7 +58,13 @@ abstract interface class TodoRepository {
 
   /// Marks the unread ones of [entries] read.
   Future<void> markRead(Iterable<InboxEntry> entries);
+
+  /// Lists and tasks whose name/title or description contains [query];
+  /// open tasks first. Needs the server (`GET /todo/search`).
+  Future<TodoSearchResult> search(String query);
 }
+
+typedef TodoSearchResult = ({List<TodoList> lists, List<TodoItem> items});
 
 List<InboxEntry> _sortInbox(Iterable<InboxEntry> e) =>
     e.toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -74,7 +80,8 @@ List<TodoList> _sortLists(List<TodoList> l) =>
 /// Reads come from the WebSocket views, writes go through the [Outbox] and
 /// show up in the views at once (docs/backend-realtime.md, "Offline writes").
 class ApiTodoRepository implements TodoRepository {
-  ApiTodoRepository(this.sync, this.outbox, {required this.actorId});
+  ApiTodoRepository(this.api, this.sync, this.outbox, {required this.actorId});
+  final ApiClient api;
   final SyncClient sync;
   final Outbox outbox;
   final String actorId;
@@ -118,6 +125,20 @@ class ApiTodoRepository implements TodoRepository {
         (e, r) => e == itemsEntity && r['done'] != true,
       )
       .map((v) => v.rows(itemsEntity).map(TodoItem.fromJson).toList());
+
+  @override
+  Future<TodoSearchResult> search(String query) async {
+    final res = await api.get(
+      '/todo/search?q=${Uri.encodeQueryComponent(query)}',
+      report: false,
+    ) as Map<String, dynamic>;
+    List<Map<String, dynamic>> rows(String key) =>
+        (res[key] as List).cast<Map<String, dynamic>>();
+    return (
+      lists: rows('lists').map(TodoList.fromJson).toList(),
+      items: rows('items').map(TodoItem.fromJson).toList(),
+    );
+  }
 
   @override
   Future<TodoList> addList(
@@ -321,6 +342,27 @@ class MockTodoRepository implements TodoRepository {
 
   @override
   Stream<List<TodoItem>> watchOpenItems() => _items((i) => !i.done);
+
+  @override
+  Future<TodoSearchResult> search(String query) async {
+    final q = query.trim().toLowerCase();
+    if (q.isEmpty) return (lists: <TodoList>[], items: <TodoItem>[]);
+    bool has(String s) => s.toLowerCase().contains(q);
+    return (
+      lists: store
+          .list(listsEntity)
+          .map(TodoList.fromJson)
+          .where((l) => has(l.name) || has(l.description))
+          .toList(),
+      items:
+          store
+              .list(itemsEntity)
+              .map(TodoItem.fromJson)
+              .where((i) => has(i.title) || has(i.description))
+              .toList()
+            ..sort((a, b) => (a.done ? 1 : 0).compareTo(b.done ? 1 : 0)),
+    );
+  }
 
   @override
   Future<TodoList> addList(
@@ -614,6 +656,7 @@ final todoRepositoryProvider = Provider<TodoRepository>(
       actorId: ref.watch(currentMemberProvider),
     ),
     ApiBackend() => ApiTodoRepository(
+      ref.watch(apiClientProvider),
       ref.watch(syncClientProvider),
       ref.watch(outboxProvider)!,
       actorId: ref.watch(currentMemberProvider),

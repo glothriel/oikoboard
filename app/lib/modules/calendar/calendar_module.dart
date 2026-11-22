@@ -1,12 +1,14 @@
 import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/format.dart';
 import '../../core/l10n.dart';
 import '../../core/mock/mock_store.dart';
 import '../../core/module.dart';
+import '../../core/search.dart';
 import '../../core/widgets.dart';
 import 'calendar_screen.dart';
 import 'models.dart';
@@ -34,6 +36,45 @@ class CalendarModule extends FamilyModule {
     path: path,
     child: const _CalendarWallTile(),
   );
+
+  @override
+  Future<List<SearchHit>> search(
+    BuildContext context,
+    WidgetRef ref,
+    String query,
+  ) async {
+    final l = context.l10n;
+    final fallback = Theme.of(context).colorScheme.primary;
+    final calendars = ref.read(calendarsProvider).value ?? const [];
+    final events = await ref.read(calendarRepositoryProvider).search(query);
+    return [
+      for (final e in events)
+        SearchHit(
+          title: e.title,
+          subtitle: [
+            relativeDay(l, e.start),
+            eventTimeLabel(l, e),
+            if (e.location.isNotEmpty) e.location,
+          ].join(' · '),
+          leading: Icon(
+            e.recurring ? Icons.event_repeat : Icons.event,
+            color:
+                calendars
+                    .where((c) => c.id == e.calendarId)
+                    .firstOrNull
+                    ?.color ??
+                fallback,
+          ),
+          open: (context, ref) async {
+            ref.read(calendarFocusProvider.notifier).show(e.start);
+            GoRouter.of(context).go(path);
+            // Open the editor once the route has changed, or it would drop it.
+            await WidgetsBinding.instance.endOfFrame;
+            if (context.mounted) showEventEditor(context, event: e);
+          },
+        ),
+    ];
+  }
 
   @override
   void seedMock(MockStore store) {

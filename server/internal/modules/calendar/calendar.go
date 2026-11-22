@@ -80,6 +80,7 @@ func (m Module) Routes(r *gin.RouterGroup) {
 	r.POST("/calendar/events", m.createEvent)
 	r.PATCH("/calendar/events/:id", m.updateEvent)
 	r.DELETE("/calendar/events/:id", m.deleteEvent)
+	r.GET("/calendar/search", m.search)
 
 	r.GET("/calendar/connections", m.listConnections)
 	r.POST("/calendar/connections", m.startConnect)

@@ -114,6 +114,9 @@
   "markdownEdit": "Edycja",
   "markdownPreview": "Podgląd",
   "markdownNothing": "Nic do podglądu",
+  "linkOpen": "Otwórz link",
+  "linkCopy": "Kopiuj link",
+  "linkCopied": "Skopiowano link",
   "todoDeleteList": "Usuń listę",
   "todoName": "Nazwa",
   "todoAddTo": "Dodaj do „{list}”…",
@@ -226,5 +229,11 @@
   "todoInboxMarkAllRead": "Oznacz wszystkie jako przeczytane",
   "todoInboxMention": "{name} oznacza Cię w „{title}”",
   "todoInboxReply": "{name} odpowiada w „{title}”",
-  "todoInboxAssigned": "{name} przypisuje Ci „{title}”"
+  "todoInboxAssigned": "{name} przypisuje Ci „{title}”",
+  "searchTooltip": "Szukaj",
+  "searchHint": "Szukaj zadań, list i wydarzeń",
+  "searchNothingFound": "Nic nie znaleziono",
+  "searchFailed": "Wyszukiwanie wymaga połączenia z serwerem",
+  "todoSearchList": "Lista",
+  "todoSearchDone": "Zrobione"
 }

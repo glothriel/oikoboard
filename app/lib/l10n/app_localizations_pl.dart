@@ -392,6 +392,15 @@ class AppLocalizationsPl extends AppLocalizations {
   String get markdownNothing => 'Nic do podglądu';
 
   @override
+  String get linkOpen => 'Otwórz link';
+
+  @override
+  String get linkCopy => 'Kopiuj link';
+
+  @override
+  String get linkCopied => 'Skopiowano link';
+
+  @override
   String get todoDeleteList => 'Usuń listę';
 
   @override
@@ -824,4 +833,22 @@ class AppLocalizationsPl extends AppLocalizations {
   String todoInboxAssigned(String name, String title) {
     return '$name przypisuje Ci „$title”';
   }
+
+  @override
+  String get searchTooltip => 'Szukaj';
+
+  @override
+  String get searchHint => 'Szukaj zadań, list i wydarzeń';
+
+  @override
+  String get searchNothingFound => 'Nic nie znaleziono';
+
+  @override
+  String get searchFailed => 'Wyszukiwanie wymaga połączenia z serwerem';
+
+  @override
+  String get todoSearchList => 'Lista';
+
+  @override
+  String get todoSearchDone => 'Zrobione';
 }

@@ -782,6 +782,24 @@ abstract class AppLocalizations {
   /// **'Nothing to preview'**
   String get markdownNothing;
 
+  /// No description provided for @linkOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open link'**
+  String get linkOpen;
+
+  /// No description provided for @linkCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy link'**
+  String get linkCopy;
+
+  /// No description provided for @linkCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Link copied'**
+  String get linkCopied;
+
   /// No description provided for @todoDeleteList.
   ///
   /// In en, this message translates to:
@@ -1459,6 +1477,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{name} assigned you “{title}”'**
   String todoInboxAssigned(String name, String title);
+
+  /// No description provided for @searchTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get searchTooltip;
+
+  /// No description provided for @searchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search tasks, lists and events'**
+  String get searchHint;
+
+  /// No description provided for @searchNothingFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing found'**
+  String get searchNothingFound;
+
+  /// No description provided for @searchFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Search needs a connection to the server'**
+  String get searchFailed;
+
+  /// No description provided for @todoSearchList.
+  ///
+  /// In en, this message translates to:
+  /// **'List'**
+  String get todoSearchList;
+
+  /// No description provided for @todoSearchDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get todoSearchDone;
 }
 
 class _AppLocalizationsDelegate

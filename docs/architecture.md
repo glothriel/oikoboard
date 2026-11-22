@@ -27,6 +27,9 @@ Flutter app (web + Android)                    Go server                        
   change, the server writes `todo_inbox` rows in the same transaction as the write: a mention, a reply in a thread the
   member takes part in (assignee, commenter, earlier recipient) or an assignment — never to the actor, and description
   mentions only when newly added. The app shows them in an inbox in the app bar.
+- **Search** is per module: each answers `GET /<module>/search?q=` (server-side, so done tasks and events outside
+  the loaded range are found too) and implements `FamilyModule.search` in the app; the search sheet asks every module
+  and each hit knows how to open itself (switch screen, select, open the editor).
 - **App data access** goes through repository interfaces with `Api*` and `Mock*` implementations; the mock (no server)
   must keep working.
 

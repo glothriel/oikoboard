@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/family.dart';
@@ -9,14 +8,11 @@ import '../../core/mentions.dart';
 import '../../core/widgets.dart';
 import 'models.dart';
 import 'repository.dart';
-import 'todo_screen.dart';
+import 'todo_module.dart';
 
 /// The inbox button in the app bar, with the number of unread entries.
 class TodoInboxButton extends ConsumerWidget {
-  const TodoInboxButton({super.key, required this.path});
-
-  /// The todo module's route, to open a list.
-  final String path;
+  const TodoInboxButton({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -36,9 +32,9 @@ class TodoInboxButton extends ConsumerWidget {
     );
   }
 
-  /// Opens what [entry] is about: a task's thread or the task over the
-  /// current screen, or the list in the lists screen. [context] is the
-  /// button's, which outlives the sheet.
+  /// Opens what [entry] is about: the task's list with the task's editor
+  /// (and, for a comment, its thread over it), or just the list. [context]
+  /// is the button's, which outlives the sheet.
   Future<void> _open(
     BuildContext context,
     WidgetRef ref,
@@ -55,20 +51,18 @@ class TodoInboxButton extends ConsumerWidget {
     );
     final itemId = entry.itemId;
     if (itemId == null) {
-      ref.read(selectedTodoListProvider.notifier).select(entry.listId);
-      GoRouter.of(context).go(path);
+      showTodoList(context, ref, entry.listId);
       return;
     }
-    // No route change here: it would drop a sheet pushed meanwhile.
     final item = (await repo.watchListItems(entry.listId).first)
         .where((i) => i.id == itemId)
         .firstOrNull;
-    if (item == null || !context.mounted) return;
-    if (entry.commentId != null) {
-      showTodoComments(context, item);
-    } else {
-      showTodoItemEditor(context, item);
+    if (!context.mounted) return;
+    if (item == null) {
+      showTodoList(context, ref, entry.listId);
+      return;
     }
+    await showTodoItem(context, ref, item, comments: entry.commentId != null);
   }
 }
 

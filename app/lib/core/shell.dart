@@ -13,6 +13,7 @@ import 'family.dart';
 import 'invite_dialog.dart';
 import 'l10n.dart';
 import 'mock/simulator.dart';
+import 'search.dart';
 import 'session.dart';
 import 'sync/outbox.dart';
 import 'unsynced_sheet.dart';
@@ -104,6 +105,7 @@ class _AppShellState extends ConsumerState<AppShell> {
         index == 0 ? context.l10n.appName : destinations[index].title,
       ),
       actions: [
+        const SearchButton(),
         for (final m in modules) ...m.buildAppBarActions(context),
         const _UnsyncedButton(),
         const _OfflineBadge(),
