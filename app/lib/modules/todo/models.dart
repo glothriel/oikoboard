@@ -8,6 +8,7 @@ import '../../core/api/api_client.dart'
         toApiClock,
         toApiDate,
         toApiTime;
+import '../../core/files.dart';
 import '../../core/format.dart';
 
 const _unset = Object();
@@ -156,6 +157,7 @@ class TodoItem {
   /// Nullable fields can be cleared by passing `null` explicitly; clearing
   /// [due] clears [dueTime] too.
   TodoItem copyWith({
+    String? listId,
     String? title,
     String? description,
     bool? done,
@@ -166,7 +168,7 @@ class TodoItem {
     double? position,
   }) => TodoItem(
     id: id,
-    listId: listId,
+    listId: listId ?? this.listId,
     title: title ?? this.title,
     description: description ?? this.description,
     done: done ?? this.done,
@@ -226,6 +228,45 @@ class TodoComment {
     'body': body,
     'created_at': toApiTime(createdAt),
     'author_id': authorId,
+  };
+}
+
+/// A file attached to a task ([commentId] null) or to one of its comments.
+class TodoAttachment {
+  const TodoAttachment({
+    required this.file,
+    required this.itemId,
+    required this.createdAt,
+    this.commentId,
+  });
+
+  final StoredFile file;
+  final String itemId;
+  final String? commentId;
+  final DateTime createdAt;
+
+  String get id => file.id;
+
+  factory TodoAttachment.fromJson(Map<String, dynamic> j) => TodoAttachment(
+    file: StoredFile.fromJson(j),
+    itemId: j['item_id'] as String,
+    commentId: j['comment_id'] as String?,
+    createdAt: fromApiTime(j['created_at'])!,
+  );
+
+  /// [file] attached to task [itemId] (or its comment [commentId]) now.
+  static Map<String, dynamic> row(
+    StoredFile file,
+    String itemId, {
+    String? commentId,
+  }) => {
+    'id': file.id,
+    'item_id': itemId,
+    'comment_id': commentId,
+    'name': file.name,
+    'mime': file.mime,
+    'size': file.size,
+    'created_at': toApiTime(DateTime.now()),
   };
 }
 

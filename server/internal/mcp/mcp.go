@@ -303,7 +303,8 @@ func (t tools) register(s *sdk.Server) {
 	sdk.AddTool(s, &sdk.Tool{Name: "create_todo_list", Description: "Create a todo list."}, t.createTodoList)
 	sdk.AddTool(s, &sdk.Tool{Name: "add_todo", Description: "Add a task to a todo list."}, t.addTodo)
 	sdk.AddTool(s, &sdk.Tool{Name: "update_todo", Description: "Change a task: title, description, assignee, " +
-		"due date, or mark it done / not done. Only the given fields change."}, t.updateTodo)
+		"due date, its list (moves it with its comments), or mark it done / not done. Only the given fields " +
+		"change."}, t.updateTodo)
 	sdk.AddTool(s, &sdk.Tool{Name: "delete_todo", Description: "Delete a task."}, t.deleteTodo)
 	sdk.AddTool(s, &sdk.Tool{Name: "list_comments", Description: "A task's comments (its discussion), " +
 		"oldest first."}, t.listComments)
@@ -564,6 +565,7 @@ type updateTodoIn struct {
 	Assignee    *string `json:"assignee,omitempty" jsonschema:"person (name or id); empty string removes the assignee"`
 	Due         *string `json:"due,omitempty" jsonschema:"YYYY-MM-DD, or YYYY-MM-DDTHH:MM for a time; empty string removes the due date"`
 	Done        *bool   `json:"done,omitempty"`
+	List        *string `json:"list,omitempty" jsonschema:"move the task to this list (name or id)"`
 }
 
 func (t tools) updateTodo(ctx context.Context, _ *sdk.CallToolRequest, in updateTodoIn) (*sdk.CallToolResult, todoOut, error) {
@@ -584,6 +586,13 @@ func (t tools) updateTodo(ctx context.Context, _ *sdk.CallToolRequest, in update
 	}
 	if in.Done != nil {
 		body["done"] = *in.Done
+	}
+	if in.List != nil {
+		l, err := f.list(*in.List)
+		if err != nil {
+			return nil, todoOut{}, err
+		}
+		body["list_id"] = l.ID
 	}
 	if in.Assignee != nil {
 		body["assignee_id"] = nil

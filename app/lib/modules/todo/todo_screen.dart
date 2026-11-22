@@ -2,7 +2,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/attachments.dart';
 import '../../core/family.dart';
+import '../../core/files.dart';
 import '../../core/format.dart';
 import '../../core/l10n.dart';
 import '../../core/link_text.dart';
@@ -807,11 +809,23 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
   late String? _assignee = widget.item.assigneeId;
   late DateTime? _due = widget.item.due;
   late TimeOfDay? _dueTime = widget.item.dueTime;
+  late String _listId = widget.item.listId;
+
+  /// Files picked in this editor; attached on save.
+  late final _uploads = AttachmentUploads(
+    ref.read(fileStoreProvider),
+    ScaffoldMessenger.of(context),
+    context.l10n,
+  );
+
+  /// Attachments removed in this editor; deleted on save.
+  final _removed = <String>{};
 
   @override
   void dispose() {
     _title.dispose();
     _description.dispose();
+    _uploads.dispose();
     super.dispose();
   }
 
@@ -828,6 +842,7 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
   TodoItem _edited() {
     final title = _title.text.trim();
     return widget.item.copyWith(
+      listId: _listId,
       title: title.isEmpty ? null : title,
       description: encodeMentions(
         _description.text.trim(),
@@ -840,9 +855,10 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
   }
 
   void _save() {
+    if (_uploads.busy) return;
     final repo = ref.read(todoRepositoryProvider);
+    final item = _edited();
     if (widget.isNew) {
-      final item = _edited();
       if (item.title.isEmpty) return;
       repo.addItem(
         item.listId,
@@ -851,9 +867,31 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
         due: item.due,
         dueTime: item.dueTime,
         description: item.description,
+        attachments: _uploads.files,
       );
     } else {
-      repo.updateItem(widget.item, _edited());
+      repo.updateItem(widget.item, item);
+      repo.attach(item.id, _uploads.files);
+      final attachments =
+          ref.read(todoAttachmentsProvider(item.id)).value ?? const [];
+      for (final a in attachments.where((a) => _removed.contains(a.id))) {
+        repo.deleteAttachment(a);
+      }
+      if (item.listId != widget.item.listId) {
+        final list = ref
+            .read(todoListsProvider)
+            .value
+            ?.where((l) => l.id == item.listId)
+            .firstOrNull;
+        if (list != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              behavior: SnackBarBehavior.floating,
+              content: Text(context.l10n.todoMovedTo(list.name)),
+            ),
+          );
+        }
+      }
     }
     Navigator.pop(context);
   }
@@ -884,6 +922,15 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
     final comments = isNew
         ? 0
         : ref.watch(todoCommentsProvider(widget.item.id)).value?.length ?? 0;
+    final attachments = isNew
+        ? const <TodoAttachment>[]
+        : [
+            for (final a
+                in ref.watch(todoAttachmentsProvider(widget.item.id)).value ??
+                    const <TodoAttachment>[])
+              if (a.commentId == null) a,
+          ];
+    final lists = ref.watch(todoListsProvider).value ?? const <TodoList>[];
     return EditorSheet(
       title: isNew ? l.todoNewTask : l.todoTask,
       actions: [
@@ -904,7 +951,13 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
           ),
         ],
       ],
-      primary: FilledButton(onPressed: _save, child: Text(l.commonSave)),
+      primary: ListenableBuilder(
+        listenable: _uploads,
+        builder: (context, _) => FilledButton(
+          onPressed: _uploads.busy ? null : _save,
+          child: Text(l.commonSave),
+        ),
+      ),
       children: [
         Row(
           children: [
@@ -929,6 +982,31 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
             ),
           ],
         ),
+        if (lists.length > 1) ...[
+          const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            initialValue: _listId,
+            isExpanded: true,
+            decoration: InputDecoration(labelText: l.todoListChip),
+            items: [
+              for (final list in lists)
+                DropdownMenuItem(
+                  value: list.id,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ColorDot(Color(list.color)),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(list.name, overflow: TextOverflow.ellipsis),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+            onChanged: (id) => setState(() => _listId = id ?? _listId),
+          ),
+        ],
         const SizedBox(height: 20),
         Text(l.todoWhoDoesIt, style: theme.textTheme.labelLarge),
         const SizedBox(height: 8),
@@ -965,6 +1043,31 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
         ),
         const SizedBox(height: 16),
         MarkdownField(controller: _description, label: l.todoDescription),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Text(l.attachments, style: theme.textTheme.labelLarge),
+            const Spacer(),
+            AttachButton(uploads: _uploads),
+          ],
+        ),
+        ListenableBuilder(
+          listenable: _uploads,
+          builder: (context, _) => AttachmentStrip(
+            files: [
+              for (final a in attachments)
+                if (!_removed.contains(a.id)) a.file,
+              ..._uploads.files,
+            ],
+            uploading: [
+              for (final u in _uploads.items)
+                if (u.file == null) u.name,
+            ],
+            onRemove: (f) => _uploads.files.contains(f)
+                ? _uploads.remove(f)
+                : setState(() => _removed.add(f.id)),
+          ),
+        ),
       ],
     );
   }
@@ -994,6 +1097,12 @@ class TodoCommentList extends ConsumerWidget {
     }
     final family = ref.watch(familyProvider);
     final me = ref.watch(currentMemberProvider);
+    final files = <String, List<StoredFile>>{};
+    for (final a
+        in ref.watch(todoAttachmentsProvider(itemId)).value ??
+            const <TodoAttachment>[]) {
+      if (a.commentId case final c?) (files[c] ??= []).add(a.file);
+    }
 
     String when(DateTime t) {
       final local = t.toLocal();
@@ -1034,7 +1143,13 @@ class TodoCommentList extends ConsumerWidget {
                 ],
               ),
             ),
-            subtitle: MarkdownText(c.body),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (c.body.isNotEmpty) MarkdownText(c.body),
+                AttachmentStrip(files: files[c.id] ?? const []),
+              ],
+            ),
             trailing: c.authorId == me
                 ? IconButton(
                     tooltip: l.todoCommentDelete,
@@ -1069,22 +1184,36 @@ class TodoCommentComposer extends ConsumerStatefulWidget {
 
 class _TodoCommentComposerState extends ConsumerState<TodoCommentComposer> {
   final _controller = TextEditingController();
+  late final _uploads = AttachmentUploads(
+    ref.read(fileStoreProvider),
+    ScaffoldMessenger.of(context),
+    context.l10n,
+  );
+  late final _changes = Listenable.merge([_controller, _uploads]);
 
   @override
   void dispose() {
     _controller.dispose();
+    _uploads.dispose();
     super.dispose();
   }
 
+  bool get _canSend =>
+      !_uploads.busy &&
+      (_controller.text.trim().isNotEmpty || _uploads.files.isNotEmpty);
+
   void _send() {
+    if (!_canSend) return;
     final body = _controller.text.trim();
-    if (body.isEmpty) return;
+    final files = _uploads.files;
     _controller.clear();
+    _uploads.clear();
     ref
         .read(todoRepositoryProvider)
         .addComment(
           widget.itemId,
           encodeMentions(body, ref.read(familyProvider)),
+          attachments: files,
         );
   }
 
@@ -1097,7 +1226,7 @@ class _TodoCommentComposerState extends ConsumerState<TodoCommentComposer> {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+          padding: const EdgeInsets.fromLTRB(4, 8, 8, 8),
           child: CallbackShortcuts(
             bindings: {
               const SingleActivator(LogicalKeyboardKey.enter, control: true):
@@ -1110,9 +1239,21 @@ class _TodoCommentComposerState extends ConsumerState<TodoCommentComposer> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 MentionSuggestions(controller: _controller),
+                ListenableBuilder(
+                  listenable: _uploads,
+                  builder: (context, _) => AttachmentStrip(
+                    files: _uploads.files,
+                    uploading: [
+                      for (final u in _uploads.items)
+                        if (u.file == null) u.name,
+                    ],
+                    onRemove: _uploads.remove,
+                  ),
+                ),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
+                    AttachButton(uploads: _uploads),
                     Expanded(
                       child: TextField(
                         controller: _controller,
@@ -1128,13 +1269,11 @@ class _TodoCommentComposerState extends ConsumerState<TodoCommentComposer> {
                       ),
                     ),
                     ListenableBuilder(
-                      listenable: _controller,
+                      listenable: _changes,
                       builder: (context, _) => IconButton(
                         tooltip: l.todoCommentSend,
                         icon: const Icon(Icons.send),
-                        onPressed: _controller.text.trim().isEmpty
-                            ? null
-                            : _send,
+                        onPressed: _canSend ? _send : null,
                       ),
                     ),
                   ],

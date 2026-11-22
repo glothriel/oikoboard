@@ -7,6 +7,7 @@ import '../../core/backend.dart';
 import '../../core/data.dart';
 import '../../core/device_prefs.dart';
 import '../../core/family.dart';
+import '../../core/files.dart';
 import '../../core/mentions.dart';
 import '../../core/mock/mock_store.dart';
 import '../../core/sync/outbox.dart';
@@ -17,9 +18,11 @@ const listsEntity = 'todo_lists';
 const itemsEntity = 'todo_items';
 const commentsEntity = 'todo_comments';
 const inboxEntity = 'todo_inbox';
+const attachmentsEntity = 'todo_attachments';
 
 /// The interface the UI uses. The `watch*` methods match the server's views
-/// (todo.lists, todo.list, todo.open, todo.comments, todo.inbox).
+/// (todo.lists, todo.list, todo.open, todo.comments, todo.inbox,
+/// todo.attachments).
 abstract interface class TodoRepository {
   Stream<List<TodoList>> watchLists();
   Stream<List<TodoItem>> watchListItems(String listId);
@@ -43,18 +46,35 @@ abstract interface class TodoRepository {
     DateTime? due,
     TimeOfDay? dueTime,
     String description = '',
+    List<StoredFile> attachments = const [],
   });
 
-  /// Sends only the fields that differ between [item] and [updated].
+  /// Sends only the fields that differ between [item] and [updated]; a
+  /// different `listId` moves the task (with its comments and files).
   Future<void> updateItem(TodoItem item, TodoItem updated);
   Future<void> deleteItem(TodoItem item);
 
   /// A task's comment thread, oldest first.
   Stream<List<TodoComment>> watchComments(String itemId);
-  Future<void> addComment(String itemId, String body);
+
+  /// [body] may be empty when there are [attachments].
+  Future<void> addComment(
+    String itemId,
+    String body, {
+    List<StoredFile> attachments = const [],
+  });
 
   /// Only the author can delete a comment.
   Future<void> deleteComment(TodoComment comment);
+
+  /// The files of a task and of its comments, oldest first.
+  Stream<List<TodoAttachment>> watchAttachments(String itemId);
+
+  /// Attaches uploaded [files] to an existing task.
+  Future<void> attach(String itemId, List<StoredFile> files);
+
+  /// Removes the attachment and deletes its file.
+  Future<void> deleteAttachment(TodoAttachment attachment);
 
   /// The signed-in member's inbox, newest first.
   Stream<List<InboxEntry>> watchInbox();
@@ -75,6 +95,9 @@ List<InboxEntry> _sortInbox(Iterable<InboxEntry> e) =>
 List<TodoComment> _sortComments(Iterable<TodoComment> c) =>
     c.toList()..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
+List<TodoAttachment> _sortAttachments(Iterable<TodoAttachment> a) =>
+    a.toList()..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
 List<TodoList> _sortLists(List<TodoList> l) =>
     l..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
@@ -91,6 +114,7 @@ class ApiTodoRepository implements TodoRepository {
 
   static const _listFields = ['name', 'description', 'color', 'due'];
   static const _itemFields = [
+    'list_id',
     'title',
     'description',
     'done',
@@ -210,6 +234,7 @@ class ApiTodoRepository implements TodoRepository {
     DateTime? due,
     TimeOfDay? dueTime,
     String description = '',
+    List<StoredFile> attachments = const [],
   }) async {
     final item = TodoItem(
       id: uuid.v4(),
@@ -236,6 +261,8 @@ class ApiTodoRepository implements TodoRepository {
           'due_time': toApiClock(item.dueTime),
           'description': description,
           'position': item.position,
+          if (attachments.isNotEmpty)
+            'attachment_ids': [for (final f in attachments) f.id],
         },
         label: title,
       ),
@@ -264,7 +291,10 @@ class ApiTodoRepository implements TodoRepository {
       '/todo/items/${item.id}',
       itemsEntity,
       item.id,
-      cascade: const [(commentsEntity, 'item_id')],
+      cascade: const [
+        (commentsEntity, 'item_id'),
+        (attachmentsEntity, 'item_id'),
+      ],
       label: item.title,
     ),
   );
@@ -279,7 +309,11 @@ class ApiTodoRepository implements TodoRepository {
       );
 
   @override
-  Future<void> addComment(String itemId, String body) async {
+  Future<void> addComment(
+    String itemId,
+    String body, {
+    List<StoredFile> attachments = const [],
+  }) async {
     final comment = TodoComment(
       id: uuid.v4(),
       itemId: itemId,
@@ -292,8 +326,16 @@ class ApiTodoRepository implements TodoRepository {
         '/todo/comments',
         commentsEntity,
         comment.toJson(),
-        body: {'id': comment.id, 'item_id': itemId, 'body': comment.body},
-        label: comment.body,
+        body: {
+          'id': comment.id,
+          'item_id': itemId,
+          'body': comment.body,
+          if (attachments.isNotEmpty)
+            'attachment_ids': [for (final f in attachments) f.id],
+        },
+        label: comment.body.isEmpty
+            ? attachments.map((f) => f.name).join(', ')
+            : comment.body,
       ),
     );
   }
@@ -304,9 +346,47 @@ class ApiTodoRepository implements TodoRepository {
       '/todo/comments/${comment.id}',
       commentsEntity,
       comment.id,
+      cascade: const [(attachmentsEntity, 'comment_id')],
       label: comment.body,
     ),
   );
+
+  @override
+  Stream<List<TodoAttachment>> watchAttachments(String itemId) => sync
+      .watch('todo.attachments', {
+        'item_id': itemId,
+      }, (e, r) => e == attachmentsEntity && r['item_id'] == itemId)
+      .map(
+        (v) => _sortAttachments(
+          v.rows(attachmentsEntity).map(TodoAttachment.fromJson),
+        ),
+      );
+
+  @override
+  Future<void> attach(String itemId, List<StoredFile> files) async {
+    for (final f in files) {
+      outbox.enqueue(
+        Mutation.create(
+          '/todo/attachments',
+          attachmentsEntity,
+          TodoAttachment.row(f, itemId),
+          body: {'id': f.id, 'item_id': itemId},
+          label: f.name,
+        ),
+      );
+    }
+  }
+
+  @override
+  Future<void> deleteAttachment(TodoAttachment attachment) async =>
+      outbox.enqueue(
+        Mutation.delete(
+          '/todo/attachments/${attachment.id}',
+          attachmentsEntity,
+          attachment.id,
+          label: attachment.file.name,
+        ),
+      );
 
   @override
   Stream<List<InboxEntry>> watchInbox() => sync
@@ -436,6 +516,7 @@ class MockTodoRepository implements TodoRepository {
     DateTime? due,
     TimeOfDay? dueTime,
     String description = '',
+    List<StoredFile> attachments = const [],
   }) async {
     final item = TodoItem(
       id: uuid.v4(),
@@ -449,6 +530,7 @@ class MockTodoRepository implements TodoRepository {
       description: description,
     );
     await store.put(itemsEntity, item.toJson(), actorId: actorId);
+    await attach(item.id, attachments);
     final n = _Notices()..mentions(description);
     if (assigneeId != null) n.add(assigneeId, InboxKind.assigned);
     await _notify(n, listId: listId, itemId: item.id, title: title);
@@ -461,6 +543,7 @@ class MockTodoRepository implements TodoRepository {
       itemsEntity,
       item.id,
       changedFields(item.toJson(), updated.toJson(), const [
+        'list_id',
         'title',
         'description',
         'done',
@@ -472,13 +555,23 @@ class MockTodoRepository implements TodoRepository {
       ]),
       actorId: actorId,
     );
+    if (updated.listId != item.listId) {
+      // moved: its inbox entries open the new list (as on the server)
+      for (final e in store.list(inboxEntity)) {
+        if (e['item_id'] == item.id) {
+          await store.patch(inboxEntity, e['id'] as String, {
+            'list_id': updated.listId,
+          }, actorId: actorId);
+        }
+      }
+    }
     final n = _Notices()..mentions(updated.description, item.description);
     if (updated.assigneeId case final a? when a != item.assigneeId) {
       n.add(a, InboxKind.assigned);
     }
     await _notify(
       n,
-      listId: item.listId,
+      listId: updated.listId,
       itemId: item.id,
       title: updated.title,
     );
@@ -495,6 +588,7 @@ class MockTodoRepository implements TodoRepository {
     for (final c in comments) {
       await store.delete(commentsEntity, c, actorId: actorId);
     }
+    await _deleteAttachments((a) => a['item_id'] == id);
     await _deleteInbox((e) => e['item_id'] == id);
     await store.delete(itemsEntity, id, actorId: actorId);
   }
@@ -509,7 +603,11 @@ class MockTodoRepository implements TodoRepository {
       );
 
   @override
-  Future<void> addComment(String itemId, String body) async {
+  Future<void> addComment(
+    String itemId,
+    String body, {
+    List<StoredFile> attachments = const [],
+  }) async {
     final comment = TodoComment(
       id: uuid.v4(),
       itemId: itemId,
@@ -518,6 +616,13 @@ class MockTodoRepository implements TodoRepository {
       authorId: actorId,
     );
     await store.put(commentsEntity, comment.toJson(), actorId: actorId);
+    for (final f in attachments) {
+      await store.put(
+        attachmentsEntity,
+        TodoAttachment.row(f, itemId, commentId: comment.id),
+        actorId: actorId,
+      );
+    }
     final item = store
         .list(itemsEntity)
         .map(TodoItem.fromJson)
@@ -547,8 +652,48 @@ class MockTodoRepository implements TodoRepository {
 
   @override
   Future<void> deleteComment(TodoComment comment) async {
+    await _deleteAttachments((a) => a['comment_id'] == comment.id);
     await _deleteInbox((e) => e['comment_id'] == comment.id);
     await store.delete(commentsEntity, comment.id, actorId: actorId);
+  }
+
+  @override
+  Stream<List<TodoAttachment>> watchAttachments(String itemId) => store
+      .watch(attachmentsEntity)
+      .map(
+        (docs) => _sortAttachments(
+          docs
+              .where((d) => d['item_id'] == itemId)
+              .map(TodoAttachment.fromJson),
+        ),
+      );
+
+  @override
+  Future<void> attach(String itemId, List<StoredFile> files) async {
+    for (final f in files) {
+      await store.put(
+        attachmentsEntity,
+        TodoAttachment.row(f, itemId),
+        actorId: actorId,
+      );
+    }
+  }
+
+  @override
+  Future<void> deleteAttachment(TodoAttachment attachment) =>
+      store.delete(attachmentsEntity, attachment.id, actorId: actorId);
+
+  /// The server's ON DELETE CASCADE of attachments (the mock's files stay).
+  Future<void> _deleteAttachments(
+    bool Function(Map<String, dynamic>) where,
+  ) async {
+    for (final a in store.list(attachmentsEntity).where(where).toList()) {
+      await store.delete(
+        attachmentsEntity,
+        a['id'] as String,
+        actorId: actorId,
+      );
+    }
   }
 
   /// The server's ON DELETE CASCADE of inbox entries.
@@ -676,6 +821,7 @@ final todoRepositoryProvider = Provider<TodoRepository>(
 String todoListKey(String id) => '$listsEntity:$id';
 String todoItemKey(String id) => '$itemsEntity:$id';
 String todoCommentKey(String id) => '$commentsEntity:$id';
+String todoAttachmentKey(String id) => '$attachmentsEntity:$id';
 
 List<TodoItem> _withoutPending(List<TodoItem> items, Set<String> pending) =>
     pending.isEmpty
@@ -793,6 +939,25 @@ final todoListItemsProvider = Provider.autoDispose
             (i) => _withoutPending(i, ref.watch(pendingDeletesProvider)),
           ),
     );
+
+final _todoAttachments = StreamProvider.autoDispose
+    .family<List<TodoAttachment>, String>(
+      (ref, itemId) =>
+          ref.watch(todoRepositoryProvider).watchAttachments(itemId),
+    );
+
+/// The files of a task and of its comments, without pending deletes.
+final todoAttachmentsProvider = Provider.autoDispose
+    .family<AsyncValue<List<TodoAttachment>>, String>((ref, itemId) {
+      final pending = ref.watch(pendingDeletesProvider);
+      return ref
+          .watch(_todoAttachments(itemId))
+          .whenData(
+            (a) => a
+                .where((a) => !pending.contains(todoAttachmentKey(a.id)))
+                .toList(),
+          );
+    });
 
 final todoInboxProvider = StreamProvider<List<InboxEntry>>(
   (ref) => ref.watch(todoRepositoryProvider).watchInbox(),

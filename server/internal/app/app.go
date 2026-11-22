@@ -31,6 +31,8 @@ type App struct {
 	Router *gin.Engine
 	Auth   *core.Auth
 	Hub    *realtime.Hub
+	// Uploaded files; Quota may be changed.
+	Files *core.Files
 	// Calendar sync; Interval may be changed before Run.
 	Calendar *calendar.Syncer
 }
@@ -50,6 +52,7 @@ func New(db *gorm.DB, cfg core.AuthConfig) *App {
 		Interval: 2 * time.Minute, TodoDelay: 2 * time.Second}
 	mods := Modules(db, auth, syncer)
 	hub := realtime.NewHub(db, auth, core.CollectViews(mods))
+	files := core.NewFiles(db, mods)
 
 	r := gin.New()
 	r.Use(gin.Recovery(), requestLog(), cors(cfg.AppURL))
@@ -65,11 +68,12 @@ func New(db *gorm.DB, cfg core.AuthConfig) *App {
 	auth.GrantRoutes(protected)
 	auth.OAuthRoutes(r)
 	protected.GET("/views/:name", hub.HandleViewSnapshot)
+	files.Routes(protected, api)
 	for _, m := range mods {
 		m.Routes(protected)
 	}
 	r.Any(core.MCPPath, gin.WrapH(mcp.Handler(db, auth, r)))
-	return &App{Router: r, Hub: hub, Calendar: syncer, Auth: auth}
+	return &App{Router: r, Hub: hub, Calendar: syncer, Auth: auth, Files: files}
 }
 
 // Run: realtime listener, calendar sync and cleanup of old rows. Blocks until ctx is done.
@@ -84,6 +88,7 @@ func (a *App) Run(ctx context.Context, db *gorm.DB, dsn string) {
 		db.WithContext(ctx).Exec("DELETE FROM invites WHERE expires_at < now() - interval '30 days'")
 		db.WithContext(ctx).Exec("DELETE FROM sessions WHERE last_seen_at < now() - interval '90 days'")
 		a.Auth.CleanupOAuth(ctx)
+		a.Files.Cleanup(ctx)
 		select {
 		case <-ctx.Done():
 			return

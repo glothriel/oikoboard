@@ -854,4 +854,57 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get todoNewTask => 'Nowe zadanie';
+
+  @override
+  String get attachAction => 'Załącz';
+
+  @override
+  String get attachTakePhoto => 'Zrób zdjęcie';
+
+  @override
+  String get attachPhotos => 'Zdjęcia';
+
+  @override
+  String get attachFiles => 'Pliki';
+
+  @override
+  String attachStorage(String used, String quota) {
+    return 'Miejsce rodziny: zajęte $used z $quota';
+  }
+
+  @override
+  String attachTooLarge(String name, String max) {
+    return '„$name” jest większy niż $max';
+  }
+
+  @override
+  String attachStorageFull(String name) {
+    return 'Miejsce rodziny jest pełne — nie wysłano „$name”';
+  }
+
+  @override
+  String attachUploadFailed(String name) {
+    return 'Nie udało się wysłać „$name”';
+  }
+
+  @override
+  String get attachRemove => 'Usuń';
+
+  @override
+  String get attachDownload => 'Pobierz';
+
+  @override
+  String get attachOpenFailed => 'Nie udało się otworzyć pliku';
+
+  @override
+  String get attachUnavailableInDemo =>
+      'W wersji demo nie da się otwierać plików';
+
+  @override
+  String get attachments => 'Załączniki';
+
+  @override
+  String todoMovedTo(String list) {
+    return 'Przeniesiono do listy „$list”';
+  }
 }

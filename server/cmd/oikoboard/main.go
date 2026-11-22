@@ -18,6 +18,7 @@
 //	OIKO_MOCK_OAUTH=1           fake Google: a "who are you?" page — LOCAL ONLY
 //	OIKO_SECRET_KEY             32 bytes (base64/hex) encrypting stored credentials; required for Google Calendar
 //	OIKO_CALENDAR_SYNC          calendar polling interval (default 2m)
+//	OIKO_STORAGE_QUOTA_MB       uploaded files a family may store (default 1024)
 //	OIKO_WEB_DIR                built web app to serve on / (the production image sets it)
 //	OIKO_SEED=1                 add a sample family when the database is empty — LOCAL ONLY
 //	OIKO_SEED_EMAILS            e.g. "Tata=someone@gmail.com,Mama=..." for the seed
@@ -31,6 +32,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -153,6 +155,9 @@ func main() {
 	a := app.New(db, authConfig())
 	if d, err := time.ParseDuration(env("OIKO_CALENDAR_SYNC", "2m")); err == nil && d > 0 {
 		a.Calendar.Interval = d
+	}
+	if mb, err := strconv.ParseInt(env("OIKO_STORAGE_QUOTA_MB", ""), 10, 64); err == nil && mb > 0 {
+		a.Files.Quota = mb << 20
 	}
 	if dir := env("OIKO_WEB_DIR", ""); dir != "" {
 		a.ServeWeb(dir)

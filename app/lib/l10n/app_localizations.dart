@@ -1519,6 +1519,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'New task'**
   String get todoNewTask;
+
+  /// No description provided for @attachAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach'**
+  String get attachAction;
+
+  /// No description provided for @attachTakePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Take a photo'**
+  String get attachTakePhoto;
+
+  /// No description provided for @attachPhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos'**
+  String get attachPhotos;
+
+  /// No description provided for @attachFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Files'**
+  String get attachFiles;
+
+  /// No description provided for @attachStorage.
+  ///
+  /// In en, this message translates to:
+  /// **'Family storage: {used} of {quota} used'**
+  String attachStorage(String used, String quota);
+
+  /// No description provided for @attachTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'“{name}” is larger than {max}'**
+  String attachTooLarge(String name, String max);
+
+  /// No description provided for @attachStorageFull.
+  ///
+  /// In en, this message translates to:
+  /// **'The family storage is full — “{name}” wasn’t uploaded'**
+  String attachStorageFull(String name);
+
+  /// No description provided for @attachUploadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t upload “{name}”'**
+  String attachUploadFailed(String name);
+
+  /// No description provided for @attachRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get attachRemove;
+
+  /// No description provided for @attachDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Download'**
+  String get attachDownload;
+
+  /// No description provided for @attachOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t open the file'**
+  String get attachOpenFailed;
+
+  /// No description provided for @attachUnavailableInDemo.
+  ///
+  /// In en, this message translates to:
+  /// **'Files can’t be opened in the demo'**
+  String get attachUnavailableInDemo;
+
+  /// No description provided for @attachments.
+  ///
+  /// In en, this message translates to:
+  /// **'Attachments'**
+  String get attachments;
+
+  /// No description provided for @todoMovedTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved to “{list}”'**
+  String todoMovedTo(String list);
 }
 
 class _AppLocalizationsDelegate

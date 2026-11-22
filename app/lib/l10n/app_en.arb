@@ -545,5 +545,60 @@
   "searchFailed": "Search needs a connection to the server",
   "todoSearchList": "List",
   "todoSearchDone": "Done",
-  "todoNewTask": "New task"
+  "todoNewTask": "New task",
+  "attachAction": "Attach",
+  "attachTakePhoto": "Take a photo",
+  "attachPhotos": "Photos",
+  "attachFiles": "Files",
+  "attachStorage": "Family storage: {used} of {quota} used",
+  "@attachStorage": {
+    "placeholders": {
+      "used": {
+        "type": "String"
+      },
+      "quota": {
+        "type": "String"
+      }
+    }
+  },
+  "attachTooLarge": "“{name}” is larger than {max}",
+  "@attachTooLarge": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "attachStorageFull": "The family storage is full — “{name}” wasn’t uploaded",
+  "@attachStorageFull": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "attachUploadFailed": "Couldn’t upload “{name}”",
+  "@attachUploadFailed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "attachRemove": "Remove",
+  "attachDownload": "Download",
+  "attachOpenFailed": "Couldn’t open the file",
+  "attachUnavailableInDemo": "Files can’t be opened in the demo",
+  "attachments": "Attachments",
+  "todoMovedTo": "Moved to “{list}”",
+  "@todoMovedTo": {
+    "placeholders": {
+      "list": {
+        "type": "String"
+      }
+    }
+  }
 }

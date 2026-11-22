@@ -236,5 +236,19 @@
   "searchFailed": "Wyszukiwanie wymaga połączenia z serwerem",
   "todoSearchList": "Lista",
   "todoSearchDone": "Zrobione",
-  "todoNewTask": "Nowe zadanie"
+  "todoNewTask": "Nowe zadanie",
+  "attachAction": "Załącz",
+  "attachTakePhoto": "Zrób zdjęcie",
+  "attachPhotos": "Zdjęcia",
+  "attachFiles": "Pliki",
+  "attachStorage": "Miejsce rodziny: zajęte {used} z {quota}",
+  "attachTooLarge": "„{name}” jest większy niż {max}",
+  "attachStorageFull": "Miejsce rodziny jest pełne — nie wysłano „{name}”",
+  "attachUploadFailed": "Nie udało się wysłać „{name}”",
+  "attachRemove": "Usuń",
+  "attachDownload": "Pobierz",
+  "attachOpenFailed": "Nie udało się otworzyć pliku",
+  "attachUnavailableInDemo": "W wersji demo nie da się otwierać plików",
+  "attachments": "Załączniki",
+  "todoMovedTo": "Przeniesiono do listy „{list}”"
 }

@@ -843,4 +843,56 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get todoNewTask => 'New task';
+
+  @override
+  String get attachAction => 'Attach';
+
+  @override
+  String get attachTakePhoto => 'Take a photo';
+
+  @override
+  String get attachPhotos => 'Photos';
+
+  @override
+  String get attachFiles => 'Files';
+
+  @override
+  String attachStorage(String used, String quota) {
+    return 'Family storage: $used of $quota used';
+  }
+
+  @override
+  String attachTooLarge(String name, String max) {
+    return '“$name” is larger than $max';
+  }
+
+  @override
+  String attachStorageFull(String name) {
+    return 'The family storage is full — “$name” wasn’t uploaded';
+  }
+
+  @override
+  String attachUploadFailed(String name) {
+    return 'Couldn’t upload “$name”';
+  }
+
+  @override
+  String get attachRemove => 'Remove';
+
+  @override
+  String get attachDownload => 'Download';
+
+  @override
+  String get attachOpenFailed => 'Couldn’t open the file';
+
+  @override
+  String get attachUnavailableInDemo => 'Files can’t be opened in the demo';
+
+  @override
+  String get attachments => 'Attachments';
+
+  @override
+  String todoMovedTo(String list) {
+    return 'Moved to “$list”';
+  }
 }

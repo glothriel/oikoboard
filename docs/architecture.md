@@ -27,6 +27,13 @@ Flutter app (web + Android)                    Go server                        
   change, the server writes `todo_inbox` rows in the same transaction as the write: a mention, a reply in a thread the
   member takes part in (assignee, commenter, earlier recipient) or an assignment — never to the actor, and description
   mentions only when newly added. The app shows them in an inbox in the app bar.
+- **Files** (uploads) live in the core `files` table — Postgres for now — outside the change feed, with a per-family
+  quota (`OIKO_STORAGE_QUOTA_MB`, default 1 GB) and 25 MB per file. Upload is `POST /files` (multipart) before the
+  form is saved; a module then references the file from its own tracked table (tasks: `todo_attachments`, id = file
+  id, shown in a strip under the description or comment; view `todo.attachments`). Files no module references are
+  deleted a day after upload. The app gets content with its bearer token (`GET /files/:id`); browsers open a
+  short-lived signed link (`POST /files/:id/link`). Only common image types and PDF are served inline; everything
+  else is a download, so an uploaded page never runs on the app's origin. The app scales photos to 2560 px first.
 - **Search** is per module: each answers `GET /<module>/search?q=` (server-side, so done tasks and events outside
   the loaded range are found too) and implements `FamilyModule.search` in the app; the search sheet asks every module
   and each hit knows how to open itself (switch screen, select, open the editor).

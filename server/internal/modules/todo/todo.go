@@ -86,7 +86,7 @@ func (m Module) itemsChanged(hh uuid.UUID) {
 func (Module) Name() string { return "todo" }
 
 func (m Module) Views() []core.View {
-	return []core.View{listsView{}, listView{}, openView{}, commentsView{}, inboxView{}}
+	return []core.View{listsView{}, listView{}, openView{}, commentsView{}, inboxView{}, attachmentsView{}}
 }
 
 func (m Module) Routes(r *gin.RouterGroup) {
@@ -99,6 +99,8 @@ func (m Module) Routes(r *gin.RouterGroup) {
 	r.POST("/todo/comments", m.createComment)
 	r.DELETE("/todo/comments/:id", m.deleteComment)
 	r.PATCH("/todo/inbox/:id", m.updateInbox)
+	r.POST("/todo/attachments", m.createAttachment)
+	r.DELETE("/todo/attachments/:id", m.deleteAttachment)
 	r.GET("/todo/search", m.search)
 }
 
@@ -189,6 +191,8 @@ func (m Module) createItem(c *gin.Context) {
 		Due         *core.Date      `json:"due"`
 		DueTime     *core.TimeOfDay `json:"due_time"`
 		Position    *float64        `json:"position"` // default: -now, i.e. first
+		// uploaded files (core.Files) to attach
+		AttachmentIDs []uuid.UUID `json:"attachment_ids"`
 	}
 	if !core.Bind(c, &req) {
 		return
@@ -212,6 +216,9 @@ func (m Module) createItem(c *gin.Context) {
 	err := core.Write(c.Request.Context(), m.DB, actor, core.MutationID(c), func(tx *gorm.DB) error {
 		created, err := core.CreateIdempotentNew(tx, &row, actor.HouseholdID, row.ID)
 		if err != nil || !created {
+			return err
+		}
+		if _, err := attach(tx, actor, row.ID, nil, req.AttachmentIDs); err != nil {
 			return err
 		}
 		return notifyItem(tx, actor, Item{}, row)
@@ -239,20 +246,23 @@ func (m Module) updateItem(c *gin.Context) {
 		due         core.Date
 		dueTime     core.TimeOfDay
 		position    float64
+		listID      uuid.UUID
 	)
 	cols, err := p.Apply(map[string]any{
 		"title": &title, "description": &description, "done": &done,
 		"assignee_id": &assignee, "due": &due, "due_time": &dueTime,
-		"position": &position,
+		"position": &position, "list_id": &listID,
 	})
 	if err != nil {
 		core.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
 	clearToEmpty(cols, "description")
-	if p, ok := cols["position"]; ok && p == nil {
-		core.Fail(c, http.StatusBadRequest, "bad_request", "position can't be null")
-		return
+	for _, col := range []string{"position", "list_id"} {
+		if v, ok := cols[col]; ok && v == nil {
+			core.Fail(c, http.StatusBadRequest, "bad_request", col+" can't be null")
+			return
+		}
 	}
 	if d, ok := cols["due"]; ok && d == nil {
 		cols["due_time"] = nil // no date, no time
@@ -274,6 +284,12 @@ func (m Module) updateItem(c *gin.Context) {
 		if err := update(tx, &row, actor.HouseholdID, id, cols); err != nil {
 			return err
 		}
+		if row.ListID != before.ListID { // moved: its inbox entries open the new list
+			if err := tx.Model(&InboxEntry{}).Where("household_id = ? AND item_id = ?", actor.HouseholdID, id).
+				Update("list_id", row.ListID).Error; err != nil {
+				return err
+			}
+		}
 		return notifyItem(tx, actor, before, row)
 	})
 	if err == nil {
@@ -290,12 +306,14 @@ func (m Module) createComment(c *gin.Context) {
 	var req struct {
 		ID     uuid.UUID `json:"id"`
 		ItemID uuid.UUID `json:"item_id" binding:"required"`
-		Body   string    `json:"body" binding:"required"`
+		Body   string    `json:"body"`
+		// uploaded files (core.Files) to attach; with them the body may be empty
+		AttachmentIDs []uuid.UUID `json:"attachment_ids"`
 	}
 	if !core.Bind(c, &req) {
 		return
 	}
-	if req.Body = strings.TrimSpace(req.Body); req.Body == "" {
+	if req.Body = strings.TrimSpace(req.Body); req.Body == "" && len(req.AttachmentIDs) == 0 {
 		core.Fail(c, http.StatusBadRequest, "bad_request", "body is empty")
 		return
 	}
@@ -310,6 +328,9 @@ func (m Module) createComment(c *gin.Context) {
 	err := core.Write(c.Request.Context(), m.DB, actor, core.MutationID(c), func(tx *gorm.DB) error {
 		created, err := core.CreateIdempotentNew(tx, &row, actor.HouseholdID, row.ID)
 		if err != nil || !created {
+			return err
+		}
+		if _, err := attach(tx, actor, row.ItemID, &row.ID, req.AttachmentIDs); err != nil {
 			return err
 		}
 		return notifyComment(tx, actor, row)
