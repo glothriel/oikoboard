@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'app.dart';
+import 'core/avatar_cache.dart';
 import 'core/backend.dart';
 import 'core/l10n.dart';
 import 'core/mock/mock_store.dart';
@@ -78,6 +79,7 @@ Future<void> main() async {
   await initAppFormatting(
     resolveAppLocale(WidgetsBinding.instance.platformDispatcher.locales),
   );
+  await AvatarCache.load();
 
   final fixed = _fixedBackend();
   final container = ProviderContainer(

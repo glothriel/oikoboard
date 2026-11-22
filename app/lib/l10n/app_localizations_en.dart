@@ -840,4 +840,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get todoSearchDone => 'Done';
+
+  @override
+  String get todoNewTask => 'New task';
 }

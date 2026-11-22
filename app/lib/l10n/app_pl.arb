@@ -235,5 +235,6 @@
   "searchNothingFound": "Nic nie znaleziono",
   "searchFailed": "Wyszukiwanie wymaga połączenia z serwerem",
   "todoSearchList": "Lista",
-  "todoSearchDone": "Zrobione"
+  "todoSearchDone": "Zrobione",
+  "todoNewTask": "Nowe zadanie"
 }

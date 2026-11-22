@@ -544,5 +544,6 @@
   "searchNothingFound": "Nothing found",
   "searchFailed": "Search needs a connection to the server",
   "todoSearchList": "List",
-  "todoSearchDone": "Done"
+  "todoSearchDone": "Done",
+  "todoNewTask": "New task"
 }

@@ -1513,6 +1513,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Done'**
   String get todoSearchDone;
+
+  /// No description provided for @todoNewTask.
+  ///
+  /// In en, this message translates to:
+  /// **'New task'**
+  String get todoNewTask;
 }
 
 class _AppLocalizationsDelegate

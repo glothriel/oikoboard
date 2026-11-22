@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart' show TimeOfDay;
 
 import '../../core/api/api_client.dart';
 import '../../core/api/sync_client.dart';
@@ -40,6 +41,8 @@ abstract interface class TodoRepository {
     String title, {
     String? assigneeId,
     DateTime? due,
+    TimeOfDay? dueTime,
+    String description = '',
   });
 
   /// Sends only the fields that differ between [item] and [updated].
@@ -205,6 +208,8 @@ class ApiTodoRepository implements TodoRepository {
     String title, {
     String? assigneeId,
     DateTime? due,
+    TimeOfDay? dueTime,
+    String description = '',
   }) async {
     final item = TodoItem(
       id: uuid.v4(),
@@ -214,6 +219,8 @@ class ApiTodoRepository implements TodoRepository {
       createdAt: DateTime.now(),
       assigneeId: assigneeId,
       due: due,
+      dueTime: due == null ? null : dueTime,
+      description: description,
     );
     outbox.enqueue(
       Mutation.create(
@@ -226,6 +233,8 @@ class ApiTodoRepository implements TodoRepository {
           'title': title,
           'assignee_id': assigneeId,
           'due': toApiDate(due),
+          'due_time': toApiClock(item.dueTime),
+          'description': description,
           'position': item.position,
         },
         label: title,
@@ -425,6 +434,8 @@ class MockTodoRepository implements TodoRepository {
     String title, {
     String? assigneeId,
     DateTime? due,
+    TimeOfDay? dueTime,
+    String description = '',
   }) async {
     final item = TodoItem(
       id: uuid.v4(),
@@ -434,16 +445,13 @@ class MockTodoRepository implements TodoRepository {
       createdAt: DateTime.now(),
       assigneeId: assigneeId,
       due: due,
+      dueTime: due == null ? null : dueTime,
+      description: description,
     );
     await store.put(itemsEntity, item.toJson(), actorId: actorId);
-    if (assigneeId != null) {
-      await _notify(
-        _Notices()..add(assigneeId, InboxKind.assigned),
-        listId: listId,
-        itemId: item.id,
-        title: title,
-      );
-    }
+    final n = _Notices()..mentions(description);
+    if (assigneeId != null) n.add(assigneeId, InboxKind.assigned);
+    await _notify(n, listId: listId, itemId: item.id, title: title);
     return item;
   }
 

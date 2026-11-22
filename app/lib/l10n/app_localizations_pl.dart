@@ -851,4 +851,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get todoSearchDone => 'Zrobione';
+
+  @override
+  String get todoNewTask => 'Nowe zadanie';
 }

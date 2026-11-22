@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'avatar_cache.dart';
 import 'session.dart';
 
 class Member {
@@ -62,20 +63,24 @@ class MemberAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final picture = member.picture;
+    // A stored picture shows (almost) at once: no initial flashing under it.
+    final stored = picture == null ? null : AvatarCache.cached(picture);
     return CircleAvatar(
       radius: radius,
       backgroundColor: member.color,
-      foregroundImage: picture == null ? null : NetworkImage(picture),
+      foregroundImage: picture == null ? null : AvatarCache.image(picture),
       // the initial stays underneath if the picture fails to load
       onForegroundImageError: picture == null ? null : (_, _) {},
-      child: Text(
-        member.name.characters.first,
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: radius * 0.9,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
+      child: stored != null
+          ? null
+          : Text(
+              member.name.characters.first,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: radius * 0.9,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
     );
   }
 }

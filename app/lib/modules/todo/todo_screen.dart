@@ -558,120 +558,133 @@ class _TodoItemsPaneState extends ConsumerState<TodoItemsPane> {
       },
     );
 
-    return CustomScrollView(
-      slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          sliver: SliverList.list(
-            children: [
-              InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () => showTodoListEditor(context, list: widget.list),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    children: [
-                      ColorDot(Color(widget.list.color), size: 14),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.list.name,
-                              style: theme.textTheme.titleLarge,
-                            ),
-                            if (widget.list.due != null)
-                              DueLabel(
-                                widget.list.due!,
-                                overdue: widget.list.overdue && open.isNotEmpty,
-                                style: theme.textTheme.bodySmall,
+    return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        tooltip: l.todoNewTask,
+        onPressed: () => showNewTodoItemEditor(context, widget.list.id),
+        child: const Icon(Icons.add),
+      ),
+      body: CustomScrollView(
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            sliver: SliverList.list(
+              children: [
+                InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => showTodoListEditor(context, list: widget.list),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        ColorDot(Color(widget.list.color), size: 14),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.list.name,
+                                style: theme.textTheme.titleLarge,
                               ),
-                          ],
+                              if (widget.list.due != null)
+                                DueLabel(
+                                  widget.list.due!,
+                                  overdue:
+                                      widget.list.overdue && open.isNotEmpty,
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                            ],
+                          ),
                         ),
-                      ),
-                      IconButton(
-                        tooltip: l.todoEditList,
-                        icon: const Icon(Icons.edit_outlined),
-                        onPressed: () =>
-                            showTodoListEditor(context, list: widget.list),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (widget.list.description.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 4, 0, 4),
-                  child: MarkdownText(widget.list.description),
-                ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _controller,
-                focusNode: _focus,
-                textInputAction: TextInputAction.done,
-                onSubmitted: _add,
-                decoration: InputDecoration(
-                  hintText: l.todoAddTo(widget.list.name),
-                  prefixIcon: const Icon(Icons.add),
-                  filled: true,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              if (open.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 24),
-                  child: Center(
-                    child: Text(
-                      l.todoAllDone,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: theme.colorScheme.outline,
-                      ),
+                        IconButton(
+                          tooltip: l.todoEditList,
+                          icon: const Icon(Icons.edit_outlined),
+                          onPressed: () =>
+                              showTodoListEditor(context, list: widget.list),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-            ],
-          ),
-        ),
-        // Open tasks: long-press and drag to reorder (for everyone).
-        SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          sliver: SliverReorderableList(
-            itemCount: open.length,
-            onReorderItem: (from, to) =>
-                moveTodoItem(ref.read(todoRepositoryProvider), open, from, to),
-            proxyDecorator: (child, _, _) => Material(
-              elevation: 4,
-              borderRadius: BorderRadius.circular(12),
-              child: child,
+                if (widget.list.description.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 4, 0, 4),
+                    child: MarkdownText(widget.list.description),
+                  ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _controller,
+                  focusNode: _focus,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: _add,
+                  decoration: InputDecoration(
+                    hintText: l.todoAddTo(widget.list.name),
+                    prefixIcon: const Icon(Icons.add),
+                    filled: true,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (open.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
+                      child: Text(
+                        l.todoAllDone,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-            itemBuilder: (context, index) =>
-                ReorderableDelayedDragStartListener(
-                  key: ValueKey(open[index].id),
-                  index: index,
-                  child: tile(open[index]),
-                ),
           ),
-        ),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-          sliver: SliverList.list(
-            children: [
-              if (done.isNotEmpty)
-                ExpansionTile(
-                  tilePadding: EdgeInsets.zero,
-                  shape: const Border(),
-                  title: Text(l.todoDoneSection(done.length)),
-                  children: [for (final i in done) tile(i)],
-                ),
-            ],
+          // Open tasks: long-press and drag to reorder (for everyone).
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            sliver: SliverReorderableList(
+              itemCount: open.length,
+              onReorderItem: (from, to) => moveTodoItem(
+                ref.read(todoRepositoryProvider),
+                open,
+                from,
+                to,
+              ),
+              proxyDecorator: (child, _, _) => Material(
+                elevation: 4,
+                borderRadius: BorderRadius.circular(12),
+                child: child,
+              ),
+              itemBuilder: (context, index) =>
+                  ReorderableDelayedDragStartListener(
+                    key: ValueKey(open[index].id),
+                    index: index,
+                    child: tile(open[index]),
+                  ),
+            ),
           ),
-        ),
-      ],
+          SliverPadding(
+            // Room under the last task for the floating button.
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
+            sliver: SliverList.list(
+              children: [
+                if (done.isNotEmpty)
+                  ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    shape: const Border(),
+                    title: Text(l.todoDoneSection(done.length)),
+                    children: [for (final i in done) tile(i)],
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -748,6 +761,22 @@ class TodoItemTile extends ConsumerWidget {
 Future<void> showTodoItemEditor(BuildContext context, TodoItem item) =>
     showEditorSheet<void>(context, builder: (_) => _TodoItemEditor(item: item));
 
+/// The full task form for a new task in list [listId].
+Future<void> showNewTodoItemEditor(BuildContext context, String listId) =>
+    showEditorSheet<void>(
+      context,
+      builder: (_) => _TodoItemEditor(
+        item: TodoItem(
+          id: '',
+          listId: listId,
+          title: '',
+          done: false,
+          createdAt: DateTime.now(),
+        ),
+        isNew: true,
+      ),
+    );
+
 /// A task's comments as a separate view: the thread and a field at the bottom.
 Future<void> showTodoComments(BuildContext context, TodoItem item) =>
     showSideSheet<void>(
@@ -760,8 +789,11 @@ Future<void> showTodoComments(BuildContext context, TodoItem item) =>
     );
 
 class _TodoItemEditor extends ConsumerStatefulWidget {
-  const _TodoItemEditor({required this.item});
+  const _TodoItemEditor({required this.item, this.isNew = false});
   final TodoItem item;
+
+  /// Creating a task: [item] is only a blank draft.
+  final bool isNew;
 
   @override
   ConsumerState<_TodoItemEditor> createState() => _TodoItemEditorState();
@@ -808,7 +840,21 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
   }
 
   void _save() {
-    ref.read(todoRepositoryProvider).updateItem(widget.item, _edited());
+    final repo = ref.read(todoRepositoryProvider);
+    if (widget.isNew) {
+      final item = _edited();
+      if (item.title.isEmpty) return;
+      repo.addItem(
+        item.listId,
+        item.title,
+        assigneeId: item.assigneeId,
+        due: item.due,
+        dueTime: item.dueTime,
+        description: item.description,
+      );
+    } else {
+      repo.updateItem(widget.item, _edited());
+    }
     Navigator.pop(context);
   }
 
@@ -834,42 +880,49 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l = context.l10n;
-    final comments =
-        ref.watch(todoCommentsProvider(widget.item.id)).value?.length ?? 0;
+    final isNew = widget.isNew;
+    final comments = isNew
+        ? 0
+        : ref.watch(todoCommentsProvider(widget.item.id)).value?.length ?? 0;
     return EditorSheet(
-      title: l.todoTask,
+      title: isNew ? l.todoNewTask : l.todoTask,
       actions: [
-        IconButton(
-          tooltip: l.commonDelete,
-          icon: const Icon(Icons.delete_outline),
-          onPressed: _delete,
-        ),
-        IconButton(
-          tooltip: l.todoComments,
-          onPressed: () => showTodoComments(context, widget.item),
-          icon: Badge.count(
-            count: comments,
-            isLabelVisible: comments > 0,
-            child: const Icon(Icons.forum_outlined),
+        if (!isNew) ...[
+          IconButton(
+            tooltip: l.commonDelete,
+            icon: const Icon(Icons.delete_outline),
+            onPressed: _delete,
           ),
-        ),
+          IconButton(
+            tooltip: l.todoComments,
+            onPressed: () => showTodoComments(context, widget.item),
+            icon: Badge.count(
+              count: comments,
+              isLabelVisible: comments > 0,
+              child: const Icon(Icons.forum_outlined),
+            ),
+          ),
+        ],
       ],
       primary: FilledButton(onPressed: _save, child: Text(l.commonSave)),
       children: [
         Row(
           children: [
             // Ticking here is the same as on the list: done, sheet closed.
-            Tooltip(
-              message: widget.item.done ? l.todoReopen : l.todoMarkDone,
-              child: Checkbox(
-                value: widget.item.done,
-                onChanged: (_) => _toggleDone(),
+            if (!isNew) ...[
+              Tooltip(
+                message: widget.item.done ? l.todoReopen : l.todoMarkDone,
+                child: Checkbox(
+                  value: widget.item.done,
+                  onChanged: (_) => _toggleDone(),
+                ),
               ),
-            ),
-            const SizedBox(width: 4),
+              const SizedBox(width: 4),
+            ],
             Expanded(
               child: TextField(
                 controller: _title,
+                autofocus: isNew,
                 decoration: InputDecoration(labelText: l.todoTask),
                 onSubmitted: (_) => _save(),
               ),
