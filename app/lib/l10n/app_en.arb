@@ -598,5 +598,162 @@
         "type": "String"
       }
     }
-  }
+  },
+  "recurringTitle": "Recurring tasks",
+  "recurringEmpty": "No recurring tasks yet. They add a new task to this list on a schedule — for example every Monday and Friday.",
+  "recurringNew": "New recurring task",
+  "recurringEdit": "Edit recurring task",
+  "recurringNext": "Next: {date}",
+  "@recurringNext": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "recurringNoNext": "No upcoming occurrences",
+  "recurringPaused": "Paused",
+  "recurringActive": "Active",
+  "recurringRepeat": "Repeat",
+  "recurDailyChip": "Daily",
+  "recurWeeklyChip": "Weekly",
+  "recurMonthlyChip": "Monthly",
+  "recurYearlyChip": "Yearly",
+  "recurEvery": "Every",
+  "recurUnitDay": "{n, plural, =1{day} other{days}}",
+  "@recurUnitDay": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "recurUnitWeek": "{n, plural, =1{week} other{weeks}}",
+  "@recurUnitWeek": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "recurUnitMonth": "{n, plural, =1{month} other{months}}",
+  "@recurUnitMonth": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "recurUnitYear": "{n, plural, =1{year} other{years}}",
+  "@recurUnitYear": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "recurOnDay": "On day {day}",
+  "@recurOnDay": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "recurLastDay": "Last day of the month",
+  "recurDaily": "{n, plural, =1{Every day} other{Every {n} days}}",
+  "@recurDaily": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "recurWeekly": "{n, plural, =1{Every week on {days}} other{Every {n} weeks on {days}}}",
+  "@recurWeekly": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "recurMonthlyDay": "{n, plural, =1{Every month on day {day}} other{Every {n} months on day {day}}}",
+  "@recurMonthlyDay": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "recurMonthlyLast": "{n, plural, =1{Every month on the last day} other{Every {n} months on the last day}}",
+  "@recurMonthlyLast": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "recurYearly": "{n, plural, =1{Every year on {date}} other{Every {n} years on {date}}}",
+  "@recurYearly": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "recurCustomRule": "Custom schedule ({rrule})",
+  "@recurCustomRule": {
+    "placeholders": {
+      "rrule": {
+        "type": "String"
+      }
+    }
+  },
+  "recurStarts": "Starts",
+  "recurEnds": "Ends",
+  "recurNoEnd": "Never",
+  "recurCreatesAt": "Creates at",
+  "recurDue": "Due",
+  "recurDueNone": "No due date",
+  "recurDueSameDay": "Same day",
+  "recurDueAfter": "After some days",
+  "recurDueDays": "{n, plural, =1{1 day after creation} other{{n} days after creation}}",
+  "@recurDueDays": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "recurDueDaysField": "Days after creation",
+  "recurNextOccurrences": "Next occurrences",
+  "recurFirstDue": "The first task will be due {date}",
+  "@recurFirstDue": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "recurPreviewFailed": "Can't compute the preview right now",
+  "recurNoOccurrences": "This schedule has no occurrences",
+  "recurWeekdays": "Weekdays",
+  "recurDeleteTitle": "Delete “{name}”?",
+  "@recurDeleteTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "recurDeleteMessage": "Tasks it already created stay."
 }
