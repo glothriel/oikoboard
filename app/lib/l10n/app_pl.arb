@@ -227,6 +227,7 @@
   "todoInboxMarkAllRead": "Oznacz wszystkie jako przeczytane",
   "todoInboxMention": "{name} oznacza Cię w „{title}”",
   "todoInboxReply": "{name} odpowiada w „{title}”",
+  "todoInboxRecurring": "Zadanie cykliczne dla Ciebie: „{title}”",
   "todoInboxAssigned": "{name} przypisuje Ci „{title}”",
   "searchTooltip": "Szukaj",
   "searchHint": "Szukaj zadań, list i wydarzeń",

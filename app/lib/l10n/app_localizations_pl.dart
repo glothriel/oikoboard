@@ -824,6 +824,11 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String todoInboxRecurring(String title) {
+    return 'Zadanie cykliczne dla Ciebie: „$title”';
+  }
+
+  @override
   String todoInboxAssigned(String name, String title) {
     return '$name przypisuje Ci „$title”';
   }

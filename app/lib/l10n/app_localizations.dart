@@ -1460,6 +1460,12 @@ abstract class AppLocalizations {
   /// **'{name} replied in “{title}”'**
   String todoInboxReply(String name, String title);
 
+  /// No description provided for @todoInboxRecurring.
+  ///
+  /// In en, this message translates to:
+  /// **'Recurring task for you: “{title}”'**
+  String todoInboxRecurring(String title);
+
   /// No description provided for @todoInboxAssigned.
   ///
   /// In en, this message translates to:

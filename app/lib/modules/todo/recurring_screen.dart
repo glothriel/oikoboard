@@ -79,7 +79,6 @@ class _RecurringDrawer extends ConsumerWidget {
                     ),
                   ],
                 ),
-                isThreeLine: true,
                 onTap: () => showRecurringForm(context, list: list, task: t),
                 trailing: Switch(
                   value: t.active,

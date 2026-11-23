@@ -813,6 +813,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String todoInboxRecurring(String title) {
+    return 'Recurring task for you: “$title”';
+  }
+
+  @override
   String todoInboxAssigned(String name, String title) {
     return '$name assigned you “$title”';
   }

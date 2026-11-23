@@ -181,12 +181,24 @@ func Generate(ctx context.Context, db *gorm.DB, onChanged func(uuid.UUID), hh, i
 			return nil // already generated
 		}
 		created = true
-		return notifyItem(tx, actor, Item{}, item)
+		return notifyGenerated(tx, actor, item)
 	})
 	if err == nil && created && onChanged != nil {
 		onChanged(tpl.HouseholdID)
 	}
 	return created, err
+}
+
+// notifyGenerated tells the assignee of a generated task. There is no human
+// actor, so the entry is flagged instead of naming one; mentions in the copied description are
+// not announced again on every occurrence.
+func notifyGenerated(tx *gorm.DB, actor core.Actor, item Item) error {
+	if item.AssigneeID == nil {
+		return nil
+	}
+	var n notices
+	n.add(*item.AssigneeID, kindAssigned)
+	return n.save(tx, actor, InboxEntry{ListID: item.ListID, ItemID: &item.ID, Title: item.Title, Recurring: true})
 }
 
 // CatchUp creates, for every active template of the database, the latest

@@ -526,6 +526,14 @@
       }
     }
   },
+  "todoInboxRecurring": "Recurring task for you: “{title}”",
+  "@todoInboxRecurring": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "todoInboxAssigned": "{name} assigned you “{title}”",
   "@todoInboxAssigned": {
     "placeholders": {

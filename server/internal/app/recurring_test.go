@@ -288,3 +288,27 @@ func TestRecurringPreviewValidationAndPatchNulls(t *testing.T) {
 		t.Fatalf("explicit nulls must clear: %+v", rec)
 	}
 }
+
+func TestRecurringAssigneeGetsItsOwnKindOfInboxEntry(t *testing.T) {
+	e := setup(t)
+	a := e.newFamily("Kowalscy")
+	var members []uuid.UUID
+	e.db.Raw("SELECT id FROM members").Scan(&members)
+	var rec recRow
+	a.do("POST", "/todo/recurring", map[string]any{"list_id": a.firstList(), "title": "Zakupy", "assignee_id": members[0],
+		"rrule": "FREQ=DAILY", "start_date": "2026-01-01"}, &rec)
+	date, _ := core.ParseDate("2026-11-23")
+	if created, err := todo.Generate(context.Background(), e.db, nil, hhOf(t, e, rec.ID), mustUUID(t, rec.ID), date); err != nil || !created {
+		t.Fatalf("generate: %v %v", created, err)
+	}
+	var rows []struct {
+		Kind      string
+		ActorID   *uuid.UUID
+		Title     string
+		Recurring bool
+	}
+	e.db.Raw("SELECT kind, actor_id, title, recurring FROM todo_inbox WHERE member_id = ?", members[0]).Scan(&rows)
+	if len(rows) != 1 || rows[0].Kind != "assigned" || !rows[0].Recurring || rows[0].ActorID != nil || rows[0].Title != "Zakupy" {
+		t.Fatalf("inbox: %+v", rows)
+	}
+}
