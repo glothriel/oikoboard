@@ -13,4 +13,19 @@ Surfaces other parties depend on. A change to any of them needs a migration or c
 | Stored files and device data | file storage, cached avatars/attachments in the app | Existing stored data stays readable after an upgrade. |
 | Translations | `app/lib/l10n/*.arb` | Keys already used are not renamed or removed without updating both languages. |
 
-A breaking change must say who is affected, how they migrate, and how it is rolled back.
+## Policy
+
+- **A newer server must support the current and the previous major app version.** An app update is never a precondition for upgrading the server, and the Android app cannot be force-updated instantly.
+- **Deprecation**: a behaviour is deprecated for at least one major app release before it is removed. The PR that deprecates it says so, and the PR that removes it names the app version it ships in.
+- A breaking change must say who is affected, how they migrate, and how it is rolled back.
+- Explicit API versioning, the code layout for it and an enforced compatibility check are tracked in #45; until they land, every change to a surface above is additive.
+
+## Compatibility matrix
+
+| App major version | Server | Status |
+|---|---|---|
+| current | current | supported |
+| previous | current | supported (policy above) |
+| older than previous | current | not guaranteed |
+
+The matrix gets concrete version numbers once the app and server are versioned independently (#45).
