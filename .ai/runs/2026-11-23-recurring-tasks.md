@@ -16,11 +16,11 @@ Repeat-after-completion, per-occurrence series editing, notifications.
 Phase 1 steps 1-7 and Phase 2 steps 1-5 exactly as in the spec's Implementation Plan.
 
 ## Progress
-- [ ] 1.1 DBOS spike + Scheduler interface
-- [ ] 1.2 Migration 00017
-- [ ] 1.3 Model + validation
-- [ ] 1.4 generate + timezone helper
-- [ ] 1.5 REST + view + preview
+- [x] 1.1 DBOS spike + Scheduler interface
+- [x] 1.2 Migration 00017
+- [x] 1.3 Model + validation
+- [x] 1.4 generate + timezone helper
+- [x] 1.5 REST + view + preview
 - [ ] 1.6 DBOSScheduler wiring, reconcile, catch-up
 - [ ] 1.7 Docs
 - [ ] 2.1 App models + repositories (Mock + Api)

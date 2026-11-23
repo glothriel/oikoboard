@@ -41,6 +41,9 @@ type Item struct {
 	Due         *core.Date `json:"due"`
 	// DueTime: optional time of Due (household local time).
 	DueTime *core.TimeOfDay `json:"due_time"`
+	// RecurringID/OccurrenceDate: set on tasks created from a recurring template.
+	RecurringID    *uuid.UUID `json:"recurring_id"`
+	OccurrenceDate *core.Date `json:"occurrence_date"`
 	// Position: manual order within the list, ascending (see migration 15).
 	Position  float64   `json:"position"`
 	CreatedAt time.Time `json:"created_at"`
@@ -75,6 +78,8 @@ type Module struct {
 	// OnItemsChanged is called after a write that changed the household's
 	// tasks (e.g. to update the due-tasks calendar). Optional.
 	OnItemsChanged func(household uuid.UUID)
+	// Scheduler triggers recurring templates; optional (nil = none).
+	Scheduler Scheduler
 }
 
 func (m Module) itemsChanged(hh uuid.UUID) {
@@ -86,7 +91,7 @@ func (m Module) itemsChanged(hh uuid.UUID) {
 func (Module) Name() string { return "todo" }
 
 func (m Module) Views() []core.View {
-	return []core.View{listsView{}, listView{}, openView{}, commentsView{}, inboxView{}, attachmentsView{}}
+	return []core.View{listsView{}, listView{}, openView{}, commentsView{}, inboxView{}, attachmentsView{}, recurringView{}}
 }
 
 func (m Module) Routes(r *gin.RouterGroup) {
@@ -102,6 +107,10 @@ func (m Module) Routes(r *gin.RouterGroup) {
 	r.POST("/todo/attachments", m.createAttachment)
 	r.DELETE("/todo/attachments/:id", m.deleteAttachment)
 	r.GET("/todo/search", m.search)
+	r.POST("/todo/recurring", m.createRecurring)
+	r.PATCH("/todo/recurring/:id", m.updateRecurring)
+	r.DELETE("/todo/recurring/:id", m.deleteRecurring)
+	r.POST("/todo/recurring/preview", m.previewRecurring)
 }
 
 // --- handlers ---
