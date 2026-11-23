@@ -17,8 +17,7 @@ jobs:
       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
     runs-on: ubuntu-latest
     permissions:
-      pull-requests: read
-      issues: write # reaction on the comment
+      pull-requests: write # reaction on the comment (PR comments fall under pull-requests, not issues)
     outputs:
       sha: ${{ steps.pr.outputs.sha }}
     steps:
@@ -35,7 +34,8 @@ jobs:
             exit 1
           fi
           echo "sha=$(jq -r .head.sha pr.json)" >> "$GITHUB_OUTPUT"
-          gh api -X POST "repos/$GITHUB_REPOSITORY/issues/comments/$COMMENT/reactions" -f content=rocket > /dev/null
+          gh api -X POST "repos/$GITHUB_REPOSITORY/issues/comments/$COMMENT/reactions" -f content=rocket > /dev/null ||
+            echo "::warning::could not react to the comment"
 
   image:
     needs: pr
