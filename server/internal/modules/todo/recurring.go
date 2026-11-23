@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"sync"
 	"time"
@@ -127,13 +129,13 @@ func resetRunDate(r *Recurring, loc *time.Location, now time.Time) {
 	r.LastRunDate = &d
 }
 
-// Generate creates the task of template id for occurrence date occ, if the
+// Generate creates the task of template id (of household hh) for occurrence date occ, if the
 // template is active and its schedule matches occ. It is idempotent: a second
 // call for the same occurrence changes nothing. It always advances
 // last_run_date to occ. It reports whether a task was created.
-func Generate(ctx context.Context, db *gorm.DB, onChanged func(uuid.UUID), id uuid.UUID, occ core.Date) (bool, error) {
+func Generate(ctx context.Context, db *gorm.DB, onChanged func(uuid.UUID), hh, id uuid.UUID, occ core.Date) (bool, error) {
 	var tpl Recurring
-	if err := db.WithContext(ctx).Where("id = ?", id).First(&tpl).Error; err != nil {
+	if err := db.WithContext(ctx).Where("household_id = ? AND id = ?", hh, id).First(&tpl).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return false, nil // deleted meanwhile
 		}
@@ -144,11 +146,11 @@ func Generate(ctx context.Context, db *gorm.DB, onChanged func(uuid.UUID), id uu
 	actor := core.Actor{HouseholdID: tpl.HouseholdID}
 	err := core.Write(ctx, db, actor, "", func(tx *gorm.DB) error {
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where("id = ?", id).First(&tpl).Error; err != nil {
+			Where("household_id = ? AND id = ?", hh, id).First(&tpl).Error; err != nil {
 			return err
 		}
 		if tpl.LastRunDate == nil || occ.After(tpl.LastRunDate.Time) {
-			if err := tx.Model(&Recurring{}).Where("id = ?", id).
+			if err := tx.Model(&Recurring{}).Where("household_id = ? AND id = ?", hh, id).
 				UpdateColumn("last_run_date", occ).Error; err != nil {
 				return err
 			}
@@ -188,32 +190,42 @@ func Generate(ctx context.Context, db *gorm.DB, onChanged func(uuid.UUID), id uu
 }
 
 // CatchUp creates, for every active template of the database, the latest
-// occurrence it missed since last_run_date, and nothing older. now is
-// injectable for tests.
+// occurrence it missed since last_run_date, and nothing older, then advances
+// last_run_date to the last day that is due. A failing template does not stop
+// the others; the errors are joined. now is injectable for tests.
 func CatchUp(ctx context.Context, db *gorm.DB, onChanged func(uuid.UUID), now time.Time) error {
 	var all []Recurring
 	if err := db.WithContext(ctx).Where("active").Find(&all).Error; err != nil {
 		return err
 	}
+	var errs []error
 	for _, tpl := range all {
-		loc := HouseholdLocation(db, tpl.HouseholdID)
-		sch, err := tpl.Schedule(loc)
-		if err != nil {
-			continue
+		if err := catchUpOne(ctx, db, onChanged, tpl, now); err != nil {
+			errs = append(errs, fmt.Errorf("template %s: %w", tpl.ID, err))
 		}
-		local := now.In(loc)
-		today := core.DateOf(local)
-		upTo := today
-		if tpl.CreateTime.On(today, loc).After(local) {
-			upTo = today.AddDays(-1) // today's creation time has not come yet
-		}
-		occ, ok := sch.LatestUpTo(tpl.LastRunDate, upTo)
-		if !ok {
-			continue
-		}
-		if _, err := Generate(ctx, db, onChanged, tpl.ID, occ); err != nil {
-			return err
-		}
+	}
+	return errors.Join(errs...)
+}
+
+func catchUpOne(ctx context.Context, db *gorm.DB, onChanged func(uuid.UUID), tpl Recurring, now time.Time) error {
+	loc := HouseholdLocation(db, tpl.HouseholdID)
+	sch, err := tpl.Schedule(loc)
+	if err != nil {
+		return nil // a broken rule never creates tasks
+	}
+	local := now.In(loc)
+	today := core.DateOf(local)
+	upTo := today
+	if tpl.CreateTime.On(today, loc).After(local) {
+		upTo = today.AddDays(-1) // today's creation time has not come yet
+	}
+	if occ, ok := sch.LatestUpTo(tpl.LastRunDate, upTo); ok {
+		_, err := Generate(ctx, db, onChanged, tpl.HouseholdID, tpl.ID, occ)
+		return err
+	}
+	if tpl.LastRunDate == nil || upTo.After(tpl.LastRunDate.Time) {
+		return db.WithContext(ctx).Model(&Recurring{}).Where("household_id = ? AND id = ?", tpl.HouseholdID, tpl.ID).
+			UpdateColumn("last_run_date", upTo).Error // nothing due: keep the window short
 	}
 	return nil
 }
@@ -288,7 +300,7 @@ func (m Module) createRecurring(c *gin.Context) {
 		return
 	}
 	if err == nil {
-		err = m.scheduler().Sync(c.Request.Context(), row, loc)
+		m.syncSchedule(c.Request.Context(), row, loc)
 	}
 	respond(c, http.StatusCreated, &row, err)
 }
@@ -357,7 +369,7 @@ func (m Module) updateRecurring(c *gin.Context) {
 				return err
 			}
 		}
-		if rescheduled(before, merged) {
+		if rescheduled(before, merged) || (!before.Active && merged.Active) { // resuming skips what the pause covered
 			resetRunDate(&merged, loc, time.Now())
 			cols["last_run_date"] = merged.LastRunDate
 		}
@@ -368,9 +380,18 @@ func (m Module) updateRecurring(c *gin.Context) {
 		return
 	}
 	if err == nil {
-		err = m.scheduler().Sync(c.Request.Context(), row, loc)
+		m.syncSchedule(c.Request.Context(), row, loc)
 	}
 	respond(c, http.StatusOK, &row, err)
+}
+
+// syncSchedule updates the trigger after the row is committed. The table is the
+// source of truth, so a failure is logged and healed by the next Reconcile
+// instead of failing a request whose data was saved.
+func (m Module) syncSchedule(ctx context.Context, r Recurring, loc *time.Location) {
+	if err := m.scheduler().Sync(ctx, r, loc); err != nil {
+		slog.Warn("recurring: syncing the schedule failed; the next reconcile fixes it", "template", r.ID, "err", err)
+	}
 }
 
 func (m Module) deleteRecurring(c *gin.Context) {
@@ -386,12 +407,12 @@ func (m Module) deleteRecurring(c *gin.Context) {
 		}
 		return res.Error
 	})
-	if err == nil {
-		err = m.scheduler().Remove(c.Request.Context(), id)
-	}
 	if err != nil {
 		core.FailErr(c, err)
 		return
+	}
+	if err := m.scheduler().Remove(c.Request.Context(), id); err != nil {
+		slog.Warn("recurring: removing the schedule failed; the next reconcile fixes it", "template", id, "err", err)
 	}
 	c.Status(http.StatusNoContent)
 }
@@ -407,8 +428,16 @@ func (m Module) previewRecurring(c *gin.Context) {
 	if !core.Bind(c, &req) {
 		return
 	}
-	if req.Count <= 0 || req.Count > 20 {
+	if req.StartDate.IsZero() {
+		core.Fail(c, http.StatusBadRequest, "bad_request", "start_date is required")
+		return
+	}
+	if req.Count == 0 {
 		req.Count = 5
+	}
+	if req.Count < 0 || req.Count > 20 {
+		core.Fail(c, http.StatusBadRequest, "bad_request", "count must be between 1 and 20")
+		return
 	}
 	actor := core.ActorOf(c)
 	loc := HouseholdLocation(m.DB, actor.HouseholdID)

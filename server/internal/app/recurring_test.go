@@ -116,7 +116,7 @@ func TestRecurringGenerate(t *testing.T) {
 	date := func(s string) core.Date { v, _ := core.ParseDate(s); return v }
 
 	// Monday 2026-11-23: one task, due Wednesday 18:00
-	if created, err := todo.Generate(ctx, e.db, nil, mustUUID(t, rec.ID), date("2026-11-23")); err != nil || !created {
+	if created, err := todo.Generate(ctx, e.db, nil, hhOf(t, e, rec.ID), mustUUID(t, rec.ID), date("2026-11-23")); err != nil || !created {
 		t.Fatalf("generate: %v %v", created, err)
 	}
 	items := a.recurringItems(rec.ID)
@@ -125,11 +125,11 @@ func TestRecurringGenerate(t *testing.T) {
 		t.Fatalf("generated: %+v", items)
 	}
 	// the same occurrence again: still one
-	if created, _ := todo.Generate(ctx, e.db, nil, mustUUID(t, rec.ID), date("2026-11-23")); created {
+	if created, _ := todo.Generate(ctx, e.db, nil, hhOf(t, e, rec.ID), mustUUID(t, rec.ID), date("2026-11-23")); created {
 		t.Error("duplicate trigger created a task")
 	}
 	// Tuesday doesn't match
-	if created, _ := todo.Generate(ctx, e.db, nil, mustUUID(t, rec.ID), date("2026-11-24")); created {
+	if created, _ := todo.Generate(ctx, e.db, nil, hhOf(t, e, rec.ID), mustUUID(t, rec.ID), date("2026-11-24")); created {
 		t.Error("created on a non-matching day")
 	}
 	if len(a.recurringItems(rec.ID)) != 1 {
@@ -138,12 +138,12 @@ func TestRecurringGenerate(t *testing.T) {
 
 	// paused: nothing
 	a.do("PATCH", "/todo/recurring/"+rec.ID, map[string]any{"active": false}, nil)
-	if created, _ := todo.Generate(ctx, e.db, nil, mustUUID(t, rec.ID), date("2026-11-27")); created {
+	if created, _ := todo.Generate(ctx, e.db, nil, hhOf(t, e, rec.ID), mustUUID(t, rec.ID), date("2026-11-27")); created {
 		t.Error("created while paused")
 	}
 	// deleted template: generate is a no-op, tasks stay as ordinary ones
 	a.do("DELETE", "/todo/recurring/"+rec.ID, nil, nil)
-	if created, err := todo.Generate(ctx, e.db, nil, mustUUID(t, rec.ID), date("2026-11-30")); created || err != nil {
+	if created, err := todo.Generate(ctx, e.db, nil, hhOf(t, e, rec.ID), mustUUID(t, rec.ID), date("2026-11-30")); created || err != nil {
 		t.Errorf("deleted template: %v %v", created, err)
 	}
 	_, d := a.view("todo.open", nil)
@@ -206,4 +206,85 @@ func mustUUID(t *testing.T, s string) uuid.UUID {
 		t.Fatal(err)
 	}
 	return id
+}
+
+func hhOf(t *testing.T, e *env, templateID string) uuid.UUID {
+	t.Helper()
+	var ids []uuid.UUID
+	e.db.Raw("SELECT household_id FROM todo_recurring WHERE id = ?", templateID).Scan(&ids)
+	if len(ids) == 0 {
+		// a deleted template: any household id will do, the lookup finds nothing
+		return uuid.New()
+	}
+	return ids[0]
+}
+
+func TestRecurringResumeDoesNotCatchUpThePause(t *testing.T) {
+	e := setup(t)
+	a := e.newFamily("Kowalscy")
+	var rec recRow
+	a.do("POST", "/todo/recurring", map[string]any{"list_id": a.firstList(), "title": "Zakupy",
+		"rrule": "FREQ=DAILY", "start_date": "2020-01-01"}, &rec)
+	a.do("PATCH", "/todo/recurring/"+rec.ID, map[string]any{"active": false}, &rec)
+	// the server "was down" for years while the template was paused
+	if err := e.db.Exec("UPDATE todo_recurring SET last_run_date = '2020-01-01' WHERE id = ?", rec.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if st := a.do("PATCH", "/todo/recurring/"+rec.ID, map[string]any{"active": true}, &rec); st != http.StatusOK || rec.LastRunDate == nil || *rec.LastRunDate <= "2020-01-01" {
+		t.Fatalf("resume must reset last_run_date: %d %+v", st, rec)
+	}
+	if err := todo.CatchUp(context.Background(), e.db, nil, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if n := len(a.recurringItems(rec.ID)); n > 1 {
+		t.Fatalf("resuming must not create the occurrences of the pause, got %d tasks", n)
+	}
+}
+
+func TestRecurringCatchUpAdvancesWhenNothingIsDue(t *testing.T) {
+	e := setup(t)
+	a := e.newFamily("Kowalscy")
+	var rec recRow
+	a.do("POST", "/todo/recurring", map[string]any{"list_id": a.firstList(), "title": "Raz w roku",
+		"rrule": "FREQ=YEARLY;BYMONTH=1;BYMONTHDAY=1", "start_date": "2020-01-01"}, &rec)
+	e.db.Exec("UPDATE todo_recurring SET last_run_date = '2020-02-01' WHERE id = ?", rec.ID)
+	if err := todo.CatchUp(context.Background(), e.db, nil, time.Date(2020, 6, 1, 12, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	e.db.Raw("SELECT to_char(last_run_date, 'YYYY-MM-DD') FROM todo_recurring WHERE id = ?", rec.ID).Scan(&got)
+	if len(got) != 1 || got[0] != "2020-06-01" && got[0] != "2020-05-31" {
+		t.Fatalf("last_run_date should advance when nothing is due: %v", got)
+	}
+	if len(a.recurringItems(rec.ID)) != 0 {
+		t.Fatal("no occurrence was due")
+	}
+}
+
+func TestRecurringPreviewValidationAndPatchNulls(t *testing.T) {
+	e := setup(t)
+	a := e.newFamily("Kowalscy")
+	for name, body := range map[string]map[string]any{
+		"no start": {"rrule": "FREQ=DAILY"},
+		"count 0>": {"rrule": "FREQ=DAILY", "start_date": "2026-01-01", "count": 99},
+		"bad rule": {"rrule": "FREQ=SECONDLY", "start_date": "2026-01-01"},
+	} {
+		if st := a.do("POST", "/todo/recurring/preview", body, nil); st != http.StatusBadRequest {
+			t.Errorf("%s: %d", name, st)
+		}
+	}
+	var rec struct {
+		EndDate       *string `json:"end_date"`
+		DueOffsetDays *int    `json:"due_offset_days"`
+		ID            string
+	}
+	a.do("POST", "/todo/recurring", map[string]any{"list_id": a.firstList(), "title": "x", "rrule": "FREQ=DAILY",
+		"start_date": "2026-01-01", "end_date": "2027-01-01", "due_offset_days": 3}, &rec)
+	if rec.EndDate == nil || rec.DueOffsetDays == nil {
+		t.Fatalf("create: %+v", rec)
+	}
+	a.do("PATCH", "/todo/recurring/"+rec.ID, map[string]any{"end_date": nil, "due_offset_days": nil}, &rec)
+	if rec.EndDate != nil || rec.DueOffsetDays != nil {
+		t.Fatalf("explicit nulls must clear: %+v", rec)
+	}
 }

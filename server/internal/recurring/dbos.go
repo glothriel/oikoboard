@@ -26,7 +26,8 @@ const schedulePrefix = "recurring-"
 const pollInterval = 5 * time.Second
 
 type scheduleContext struct {
-	TemplateID uuid.UUID `json:"template_id"`
+	HouseholdID uuid.UUID `json:"household_id"`
+	TemplateID  uuid.UUID `json:"template_id"`
 }
 
 // DBOS implements todo.Scheduler on top of DBOS schedules.
@@ -69,16 +70,9 @@ func (d *DBOS) run(ctx dbos.Context, in dbos.ScheduledWorkflowInput) (any, error
 	if err != nil {
 		return nil, err
 	}
-	var hh []uuid.UUID
-	if err := d.db.Raw("SELECT household_id FROM todo_recurring WHERE id = ?", sc.TemplateID).Scan(&hh).Error; err != nil {
-		return nil, err
-	}
-	if len(hh) == 0 {
-		return nil, nil // the template is gone
-	}
-	occ := todo.LocalDate(in.ScheduledTime, todo.HouseholdLocation(d.db, hh[0]))
 	_, err = dbos.RunAsStep(ctx, func(c context.Context) (bool, error) {
-		return todo.Generate(c, d.db, d.onChanged, sc.TemplateID, occ)
+		occ := todo.LocalDate(in.ScheduledTime, todo.HouseholdLocation(d.db, sc.HouseholdID))
+		return todo.Generate(c, d.db, d.onChanged, sc.HouseholdID, sc.TemplateID, occ)
 	}, dbos.WithStepName("generate"))
 	return nil, err
 }
@@ -92,7 +86,7 @@ func (d *DBOS) spec(r todo.Recurring, loc *time.Location) dbos.ScheduleSpec {
 		Schedule:     fmt.Sprintf("0 %d %d * * *", r.CreateTime.Minute, r.CreateTime.Hour),
 		CronTimezone: loc.String(),
 		Workflow:     d.workflow,
-		Context:      scheduleContext{TemplateID: r.ID},
+		Context:      scheduleContext{HouseholdID: r.HouseholdID, TemplateID: r.ID},
 	}
 }
 
