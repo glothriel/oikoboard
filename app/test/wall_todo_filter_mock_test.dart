@@ -26,7 +26,7 @@ void main() {
   });
 
   testWidgets('wall todo filter (mock)', (tester) async {
-    SharedPreferences.setMockInitialValues({'oiko.wall_layout.mama': 'kanban'});
+    SharedPreferences.setMockInitialValues({});
     await initializeDateFormatting('en');
     Intl.defaultLocale = 'en';
     tester.view.physicalSize = const Size(1400, 1000);
@@ -67,39 +67,24 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    // The wall's todo tile lists each list that passes the filter.
     bool shown(String text) => find.text(text).evaluate().isNotEmpty;
-    expect(shown('Mleko') && shown('Odkurzyć pokój'), isTrue);
+    expect(shown('Zakupy') && shown('Dom') && shown('Wakacje'), isTrue);
 
     await pick('Lists with my tasks');
-    expect(shown('Mleko'), isFalse); // Zakupy is hidden
-    expect(shown('Odkurzyć pokój'), isTrue); // others' tasks on Dom stay
-    expect(shown('Zapłacić za prąd'), isTrue);
+    expect(shown('Zakupy'), isFalse);
+    expect(shown('Dom') && shown('Wakacje'), isTrue);
 
     await pick('Only my tasks');
-    expect(shown('Odkurzyć pokój'), isFalse);
-    expect(shown('Zapłacić za prąd') && shown('Zarezerwować nocleg'), isTrue);
-
-    // A task added in this mode is mine, so it stays visible.
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Add to “Dom”…'),
-      'Naprawić kran',
-    );
-    await tester.testTextInput.receiveAction(TextInputAction.done);
-    await tester.pumpAndSettle();
-    expect(
-      store
-          .list(itemsEntity)
-          .singleWhere((i) => i['title'] == 'Naprawić kran')['assignee_id'],
-      'mama',
-    );
-    expect(shown('Naprawić kran'), isTrue);
+    expect(shown('Zakupy'), isFalse);
+    expect(shown('Dom') && shown('Wakacje'), isTrue);
 
     // Back to all lists, then switch "Dom" off by hand.
     await pick('All lists');
-    expect(shown('Mleko'), isTrue);
+    expect(shown('Zakupy') && shown('Dom'), isTrue);
     await pick('Dom');
-    expect(shown('Odkurzyć pokój'), isFalse);
-    expect(shown('Mleko'), isTrue);
+    expect(shown('Dom'), isFalse);
+    expect(shown('Zakupy'), isTrue);
 
     final prefs = await SharedPreferences.getInstance();
     final saved = jsonDecode(prefs.getString('oiko.wall_todo_filter.mama')!);

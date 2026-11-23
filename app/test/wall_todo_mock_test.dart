@@ -15,7 +15,7 @@ import 'package:oikoboard/modules/todo/repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// The wall: tapping a task opens it (only the checkbox ticks it), the task
-/// has a comment thread, and the board layout is remembered on the device.
+/// has a comment thread.
 void main() {
   setUp(() {
     TestWidgetsFlutterBinding.ensureInitialized()
@@ -25,7 +25,7 @@ void main() {
     ];
   });
 
-  testWidgets('wall tasks, comments and board layout (mock)', (tester) async {
+  testWidgets('wall tasks and comments (mock)', (tester) async {
     SharedPreferences.setMockInitialValues({});
     await initializeDateFormatting('en');
     Intl.defaultLocale = 'en';
@@ -166,32 +166,7 @@ void main() {
     }, actorId: 'mama');
     await tester.pumpAndSettle();
 
-    // The board: a column per list; its checkbox ticks the task.
-    await tester.tap(find.byTooltip('Board'));
-    await tester.pumpAndSettle();
-    expect(find.text('Add to “Zakupy”…'), findsOneWidget);
-    expect(find.text('Add to “Wakacje”…'), findsOneWidget);
-    expect(find.text('Add to “Wakacje”…'), findsOneWidget);
-    final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('oiko.wall_layout.mama'), 'kanban');
-    // The + of the add row sits under the checkboxes, its text under the titles.
-    final checkbox = tester.getCenter(
-      find.descendant(
-        of: find.widgetWithText(ListTile, 'Mleko'),
-        matching: find.byType(Checkbox),
-      ),
-    );
-    final plus = tester.getCenter(
-      find.descendant(
-        of: find.widgetWithText(ListTile, 'Add to “Zakupy”…'),
-        matching: find.byIcon(Icons.add),
-      ),
-    );
-    expect(plus.dx, moreOrLessEquals(checkbox.dx, epsilon: 0.5));
-    expect(
-      tester.getTopLeft(find.text('Add to “Zakupy”…')).dx,
-      moreOrLessEquals(tester.getTopLeft(find.text('Mleko')).dx, epsilon: 0.5),
-    );
+    // The checkbox ticks the task.
     await tester.tap(
       find.descendant(
         of: find.widgetWithText(ListTile, 'Mleko'),

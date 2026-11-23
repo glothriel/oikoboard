@@ -112,10 +112,9 @@ void main() {
     expect(find.byType(FileImageView), findsNothing);
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
-    expect(
-      store.list(attachmentsEntity).map((a) => a['name']),
-      ['warranty.pdf'],
-    );
+    expect(store.list(attachmentsEntity).map((a) => a['name']), [
+      'warranty.pdf',
+    ]);
 
     // Deleting the comment takes its file along.
     final comment = store

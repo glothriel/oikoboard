@@ -505,12 +505,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get todoDayListDue => 'Termin listy';
 
   @override
-  String get wallLayoutToday => 'Dziś';
-
-  @override
-  String get wallLayoutKanban => 'Tablica';
-
-  @override
   String get calendarModuleTitle => 'Kalendarz';
 
   @override

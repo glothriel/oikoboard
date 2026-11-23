@@ -1,7 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Settings remembered on this device only (not synced): e.g. the calendar
-/// view or the wall layout. Failures (no storage) fall back to defaults.
+/// view. Failures (no storage) fall back to defaults.
 abstract final class DevicePrefs {
   static Future<String?> get(String key) async {
     try {
