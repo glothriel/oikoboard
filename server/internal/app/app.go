@@ -20,9 +20,9 @@ import (
 )
 
 // Modules — a new module = a new entry here (+ a migration with oiko_track).
-func Modules(db *gorm.DB, auth *core.Auth, cal *calendar.Syncer) []core.Module {
+func Modules(db *gorm.DB, auth *core.Auth, cal *calendar.Syncer, sched todo.Scheduler) []core.Module {
 	return []core.Module{
-		todo.Module{DB: db, OnItemsChanged: cal.TodosChanged},
+		todo.Module{DB: db, OnItemsChanged: cal.TodosChanged, Scheduler: sched},
 		calendar.Module{DB: db, Auth: auth, Providers: cal.Providers, Syncer: cal},
 	}
 }
@@ -35,6 +35,8 @@ type App struct {
 	Files *core.Files
 	// Calendar sync; Interval may be changed before Run.
 	Calendar *calendar.Syncer
+	// Recurring task triggers; attach the DBOS scheduler with Set at startup.
+	Recurring *todo.LateScheduler
 }
 
 // CalendarProviders builds calendar providers for the auth configuration.
@@ -50,7 +52,8 @@ func New(db *gorm.DB, cfg core.AuthConfig) *App {
 	auth := core.NewAuth(db, cfg)
 	syncer := &calendar.Syncer{DB: db, Providers: CalendarProviders(db, auth, ""),
 		Interval: 2 * time.Minute, TodoDelay: 2 * time.Second}
-	mods := Modules(db, auth, syncer)
+	recurring := &todo.LateScheduler{}
+	mods := Modules(db, auth, syncer, recurring)
 	hub := realtime.NewHub(db, auth, core.CollectViews(mods))
 	files := core.NewFiles(db, mods)
 
@@ -73,7 +76,7 @@ func New(db *gorm.DB, cfg core.AuthConfig) *App {
 		m.Routes(protected)
 	}
 	r.Any(core.MCPPath, gin.WrapH(mcp.Handler(db, auth, r)))
-	return &App{Router: r, Hub: hub, Calendar: syncer, Auth: auth, Files: files}
+	return &App{Router: r, Hub: hub, Calendar: syncer, Auth: auth, Files: files, Recurring: recurring}
 }
 
 // Run: realtime listener, calendar sync and cleanup of old rows. Blocks until ctx is done.

@@ -42,6 +42,8 @@ import (
 
 	"oikoboard/server/internal/app"
 	"oikoboard/server/internal/core"
+	"oikoboard/server/internal/modules/todo"
+	"oikoboard/server/internal/recurring"
 	"oikoboard/server/internal/seed"
 
 	_ "time/tzdata" // IANA zones for expanding recurring events, also in minimal containers
@@ -164,6 +166,20 @@ func main() {
 		slog.Info("serving the web app", "dir", dir)
 	}
 	go a.Run(ctx, db, dsn)
+
+	// Recurring tasks: DBOS schedules + a catch-up for what was missed while down.
+	sched, err := recurring.New(ctx, db, dsn, a.Calendar.TodosChanged)
+	if err != nil {
+		fatal("recurring tasks", err)
+	}
+	defer sched.Shutdown(10 * time.Second)
+	a.Recurring.Set(sched)
+	if err := sched.Reconcile(ctx); err != nil {
+		fatal("recurring tasks: reconcile", err)
+	}
+	if err := todo.CatchUp(ctx, db, a.Calendar.TodosChanged, time.Now()); err != nil {
+		fatal("recurring tasks: catch-up", err)
+	}
 
 	srv := &http.Server{Addr: addr, Handler: a.Router}
 	go func() {

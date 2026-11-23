@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -55,6 +56,38 @@ type Scheduler interface {
 	Sync(ctx context.Context, r Recurring, loc *time.Location) error
 	// Remove drops the trigger of a deleted template.
 	Remove(ctx context.Context, id uuid.UUID) error
+}
+
+// LateScheduler is a Scheduler whose implementation is attached after the
+// module is built (DBOS needs the database and a running process); until then
+// it does nothing.
+type LateScheduler struct {
+	mu sync.RWMutex
+	s  Scheduler
+}
+
+// Set attaches the real scheduler.
+func (l *LateScheduler) Set(s Scheduler) {
+	l.mu.Lock()
+	l.s = s
+	l.mu.Unlock()
+}
+
+func (l *LateScheduler) get() Scheduler {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	if l.s == nil {
+		return noScheduler{}
+	}
+	return l.s
+}
+
+func (l *LateScheduler) Sync(ctx context.Context, r Recurring, loc *time.Location) error {
+	return l.get().Sync(ctx, r, loc)
+}
+
+func (l *LateScheduler) Remove(ctx context.Context, id uuid.UUID) error {
+	return l.get().Remove(ctx, id)
 }
 
 type noScheduler struct{}

@@ -21,8 +21,8 @@ Phase 1 steps 1-7 and Phase 2 steps 1-5 exactly as in the spec's Implementation 
 - [x] 1.3 Model + validation
 - [x] 1.4 generate + timezone helper
 - [x] 1.5 REST + view + preview
-- [ ] 1.6 DBOSScheduler wiring, reconcile, catch-up
-- [ ] 1.7 Docs
+- [x] 1.6 DBOSScheduler wiring, reconcile, catch-up
+- [x] 1.7 Docs
 - [ ] 2.1 App models + repositories (Mock + Api)
 - [ ] 2.2 RRULE builder/summary
 - [ ] 2.3 Drawer UI + l10n
