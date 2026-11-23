@@ -718,10 +718,7 @@
       }
     }
   },
-  "recurStarts": "Starts",
-  "recurEnds": "Ends",
-  "recurNoEnd": "Never",
-  "recurCreatesAt": "Creates at",
+  "recurNoEnd": "Remove end date",
   "recurDue": "Due",
   "recurDueNone": "No due date",
   "recurDueSameDay": "Same day",
@@ -755,5 +752,30 @@
       }
     }
   },
-  "recurDeleteMessage": "Tasks it already created stay."
+  "recurDeleteMessage": "Tasks it already created stay.",
+  "recurStartsOn": "Starts: {date}",
+  "recurEndsOn": "Ends: {date}",
+  "recurEndsNever": "Ends: never",
+  "recurCreatesAtTime": "Creates at {time}",
+  "@recurStartsOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "@recurEndsOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "@recurCreatesAtTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
 }

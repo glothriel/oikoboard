@@ -1067,16 +1067,7 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
-  String get recurStarts => 'Początek';
-
-  @override
-  String get recurEnds => 'Koniec';
-
-  @override
-  String get recurNoEnd => 'Nigdy';
-
-  @override
-  String get recurCreatesAt => 'Dodaje o';
+  String get recurNoEnd => 'Usuń datę końca';
 
   @override
   String get recurDue => 'Termin';
@@ -1129,4 +1120,22 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get recurDeleteMessage => 'Zadania, które już utworzyło, zostaną.';
+
+  @override
+  String recurStartsOn(String date) {
+    return 'Początek: $date';
+  }
+
+  @override
+  String recurEndsOn(String date) {
+    return 'Koniec: $date';
+  }
+
+  @override
+  String get recurEndsNever => 'Koniec: nigdy';
+
+  @override
+  String recurCreatesAtTime(String time) {
+    return 'Dodaje o $time';
+  }
 }

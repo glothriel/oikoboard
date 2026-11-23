@@ -275,10 +275,7 @@
   "recurMonthlyLast": "{n, plural, =1{Co miesiąc, ostatniego dnia} few{Co {n} miesiące, ostatniego dnia} other{Co {n} miesięcy, ostatniego dnia}}",
   "recurYearly": "{n, plural, =1{Co rok, {date}} few{Co {n} lata, {date}} other{Co {n} lat, {date}}}",
   "recurCustomRule": "Własny harmonogram ({rrule})",
-  "recurStarts": "Początek",
-  "recurEnds": "Koniec",
-  "recurNoEnd": "Nigdy",
-  "recurCreatesAt": "Dodaje o",
+  "recurNoEnd": "Usuń datę końca",
   "recurDue": "Termin",
   "recurDueNone": "Bez terminu",
   "recurDueSameDay": "Tego samego dnia",
@@ -291,5 +288,9 @@
   "recurNoOccurrences": "Ten harmonogram nie ma żadnych terminów",
   "recurWeekdays": "Dni tygodnia",
   "recurDeleteTitle": "Usunąć „{name}”?",
-  "recurDeleteMessage": "Zadania, które już utworzyło, zostaną."
+  "recurDeleteMessage": "Zadania, które już utworzyło, zostaną.",
+  "recurStartsOn": "Początek: {date}",
+  "recurEndsOn": "Koniec: {date}",
+  "recurEndsNever": "Koniec: nigdy",
+  "recurCreatesAtTime": "Dodaje o {time}"
 }

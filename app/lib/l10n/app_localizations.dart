@@ -1748,29 +1748,11 @@ abstract class AppLocalizations {
   /// **'Custom schedule ({rrule})'**
   String recurCustomRule(String rrule);
 
-  /// No description provided for @recurStarts.
-  ///
-  /// In en, this message translates to:
-  /// **'Starts'**
-  String get recurStarts;
-
-  /// No description provided for @recurEnds.
-  ///
-  /// In en, this message translates to:
-  /// **'Ends'**
-  String get recurEnds;
-
   /// No description provided for @recurNoEnd.
   ///
   /// In en, this message translates to:
-  /// **'Never'**
+  /// **'Remove end date'**
   String get recurNoEnd;
-
-  /// No description provided for @recurCreatesAt.
-  ///
-  /// In en, this message translates to:
-  /// **'Creates at'**
-  String get recurCreatesAt;
 
   /// No description provided for @recurDue.
   ///
@@ -1849,6 +1831,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tasks it already created stay.'**
   String get recurDeleteMessage;
+
+  /// No description provided for @recurStartsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Starts: {date}'**
+  String recurStartsOn(String date);
+
+  /// No description provided for @recurEndsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Ends: {date}'**
+  String recurEndsOn(String date);
+
+  /// No description provided for @recurEndsNever.
+  ///
+  /// In en, this message translates to:
+  /// **'Ends: never'**
+  String get recurEndsNever;
+
+  /// No description provided for @recurCreatesAtTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Creates at {time}'**
+  String recurCreatesAtTime(String time);
 }
 
 class _AppLocalizationsDelegate

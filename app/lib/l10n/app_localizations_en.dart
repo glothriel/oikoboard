@@ -1048,16 +1048,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get recurStarts => 'Starts';
-
-  @override
-  String get recurEnds => 'Ends';
-
-  @override
-  String get recurNoEnd => 'Never';
-
-  @override
-  String get recurCreatesAt => 'Creates at';
+  String get recurNoEnd => 'Remove end date';
 
   @override
   String get recurDue => 'Due';
@@ -1109,4 +1100,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recurDeleteMessage => 'Tasks it already created stay.';
+
+  @override
+  String recurStartsOn(String date) {
+    return 'Starts: $date';
+  }
+
+  @override
+  String recurEndsOn(String date) {
+    return 'Ends: $date';
+  }
+
+  @override
+  String get recurEndsNever => 'Ends: never';
+
+  @override
+  String recurCreatesAtTime(String time) {
+    return 'Creates at $time';
+  }
 }

@@ -13,6 +13,7 @@ import '../../core/mentions.dart';
 import '../../core/undo_delete.dart';
 import '../../core/widgets.dart';
 import 'models.dart';
+import 'recurring_screen.dart';
 import 'repository.dart';
 
 const listPalette = [
@@ -598,6 +599,12 @@ class _TodoItemsPaneState extends ConsumerState<TodoItemsPane> {
                                 ),
                             ],
                           ),
+                        ),
+                        IconButton(
+                          tooltip: l.recurringTitle,
+                          icon: const Icon(Icons.repeat),
+                          onPressed: () =>
+                              showRecurringDrawer(context, widget.list),
                         ),
                         IconButton(
                           tooltip: l.todoEditList,
