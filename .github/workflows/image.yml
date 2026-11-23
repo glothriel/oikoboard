@@ -68,7 +68,8 @@ jobs:
             org.opencontainers.image.version=${{ inputs.version }}
             org.opencontainers.image.revision=${{ inputs.ref }}
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # only releases write the cache: runs started by a PR comment (staging) get a read-only cache token
+          cache-to: ${{ github.event_name == 'push' && 'type=gha,mode=max' || '' }}
       - name: Compose artifact
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
