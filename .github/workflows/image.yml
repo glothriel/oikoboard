@@ -4,7 +4,7 @@
 #   ghcr.io/glothriel/oikoboard-compose:<tag>  docker-compose.yml with that image pinned by digest
 #
 # A server runs `docker compose -f oci://ghcr.io/glothriel/oikoboard-compose:<tag> up -d` from a directory
-# whose .env holds the config (nas-infra, components/oiko.py). `publish` would embed server/.env from
+# whose .env holds the config. `publish` would embed server/.env from
 # here, so the published file reads the server's config from ${OIKO_*} instead.
 name: Image
 

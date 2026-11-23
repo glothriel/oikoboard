@@ -1,6 +1,6 @@
 # `/deploy staging` in a PR comment, by someone with write access: builds the PR's head and moves the
-# `staging` compose artifact to it (image.yml). The staging server (https://soiko.karagiorgis.pl) follows
-# it within a minute; the newest /deploy wins. PRs from forks are never built here.
+# `staging` compose artifact to it (image.yml). The staging server follows it within a minute; the newest
+# /deploy wins. PRs from forks are never built here. Where it runs is not part of this repo.
 #
 # GitHub runs this file from master, so changes to it only take effect once merged.
 name: Staging
@@ -68,7 +68,7 @@ jobs:
           RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           if [ "$RESULT" = success ]; then
-            body="Staging: ${SHA:0:7} is on its way to https://soiko.karagiorgis.pl (within a minute). [Build]($RUN)"
+            body="Staging: ${SHA:0:7} is published, staging picks it up within a minute. [Build]($RUN)"
           else
             body="Staging: building ${SHA:0:7} ended with **$RESULT**. [Build]($RUN)"
           fi
