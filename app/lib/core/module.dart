@@ -37,12 +37,6 @@ abstract class FamilyModule {
   /// Buttons in the wall header (e.g. a filter for the module's tiles).
   List<Widget> buildWallActions(BuildContext context) => const [];
 
-  /// Columns for the wall's board (kanban) layout; by default the wall tile.
-  /// [ref] belongs to the wall, which rebuilds when watched data changes.
-  List<Widget> buildWallColumns(BuildContext context, WidgetRef ref) => [
-    ?buildWallTile(context),
-  ];
-
   /// Results for the app-wide search, matching [query] (trimmed, not
   /// empty). Read what's needed from [context] before the first await.
   /// Throws when the search can't be done (e.g. no connection).

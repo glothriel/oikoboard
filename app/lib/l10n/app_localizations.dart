@@ -956,18 +956,6 @@ abstract class AppLocalizations {
   /// **'List due'**
   String get todoDayListDue;
 
-  /// No description provided for @wallLayoutToday.
-  ///
-  /// In en, this message translates to:
-  /// **'Today'**
-  String get wallLayoutToday;
-
-  /// No description provided for @wallLayoutKanban.
-  ///
-  /// In en, this message translates to:
-  /// **'Board'**
-  String get wallLayoutKanban;
-
   /// No description provided for @calendarModuleTitle.
   ///
   /// In en, this message translates to:

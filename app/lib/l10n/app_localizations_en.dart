@@ -503,12 +503,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get todoDayListDue => 'List due';
 
   @override
-  String get wallLayoutToday => 'Today';
-
-  @override
-  String get wallLayoutKanban => 'Board';
-
-  @override
   String get calendarModuleTitle => 'Calendar';
 
   @override

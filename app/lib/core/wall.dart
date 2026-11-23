@@ -3,38 +3,10 @@ import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../modules/registry.dart';
-import 'device_prefs.dart';
 import 'family.dart';
 import 'format.dart';
 import 'l10n.dart';
 import 'session.dart';
-
-/// How the wall shows the modules: today's overview (cards) or a board with
-/// a column per list.
-enum WallLayout { today, kanban }
-
-/// The wall layout, remembered per member on this device.
-class WallLayoutPreference extends AsyncNotifier<WallLayout> {
-  String get _key => 'oiko.wall_layout.${ref.read(currentMemberProvider)}';
-
-  @override
-  Future<WallLayout> build() async {
-    ref.watch(currentMemberProvider);
-    final v = await DevicePrefs.get(_key);
-    return WallLayout.values.where((l) => l.name == v).firstOrNull ??
-        WallLayout.today;
-  }
-
-  Future<void> set(WallLayout layout) async {
-    state = AsyncData(layout);
-    await DevicePrefs.set(_key, layout.name);
-  }
-}
-
-final wallLayoutProvider =
-    AsyncNotifierProvider<WallLayoutPreference, WallLayout>(
-      WallLayoutPreference.new,
-    );
 
 /// Home screen — the “wall” with a tile (or board columns) for each module.
 class WallScreen extends ConsumerWidget {
@@ -47,7 +19,7 @@ class WallScreen extends ConsumerWidget {
     return l.wallGreetingEvening;
   }
 
-  Widget _header(BuildContext context, WidgetRef ref, WallLayout layout) {
+  Widget _header(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final session = ref.watch(sessionProvider)!;
     final l = context.l10n;
@@ -78,25 +50,6 @@ class WallScreen extends ConsumerWidget {
               ),
             ),
             for (final m in modules) ...m.buildWallActions(context),
-            const SizedBox(width: 8),
-            SegmentedButton<WallLayout>(
-              showSelectedIcon: false,
-              segments: [
-                ButtonSegment(
-                  value: WallLayout.today,
-                  icon: const Icon(Icons.dashboard_outlined),
-                  tooltip: l.wallLayoutToday,
-                ),
-                ButtonSegment(
-                  value: WallLayout.kanban,
-                  icon: const Icon(Icons.view_kanban_outlined),
-                  tooltip: l.wallLayoutKanban,
-                ),
-              ],
-              selected: {layout},
-              onSelectionChanged: (s) =>
-                  ref.read(wallLayoutProvider.notifier).set(s.single),
-            ),
           ],
         ),
         const SizedBox(height: 12),
@@ -116,39 +69,8 @@ class WallScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final layout = ref.watch(wallLayoutProvider).value ?? WallLayout.today;
     const pad = 16.0;
     const gap = 12.0;
-
-    if (layout == WallLayout.kanban) {
-      final columns = [
-        for (final m in modules) ...m.buildWallColumns(context, ref),
-      ];
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(pad, pad, 0, 0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(right: pad),
-              child: _header(context, ref, layout),
-            ),
-            Expanded(
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.only(right: pad, bottom: pad),
-                itemCount: columns.length,
-                separatorBuilder: (_, _) => const SizedBox(width: gap),
-                itemBuilder: (_, i) => SizedBox(
-                  width: 300,
-                  child: SingleChildScrollView(child: columns[i]),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
 
     final tiles = [for (final m in modules) ?m.buildWallTile(context)];
     return LayoutBuilder(
@@ -164,7 +86,7 @@ class WallScreen extends ConsumerWidget {
         return ListView(
           padding: const EdgeInsets.all(pad),
           children: [
-            _header(context, ref, layout),
+            _header(context, ref),
             Wrap(
               spacing: gap,
               runSpacing: gap,
