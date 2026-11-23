@@ -1,0 +1,75 @@
+# `/deploy staging` in a PR comment, by someone with write access: builds the PR's head and moves the
+# `staging` compose artifact to it (image.yml). The staging server (https://soiko.karagiorgis.pl) follows
+# it within a minute; the newest /deploy wins. PRs from forks are never built here.
+#
+# GitHub runs this file from master, so changes to it only take effect once merged.
+name: Staging
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  pr:
+    if: >-
+      github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/deploy staging') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+      issues: write # reaction on the comment
+    outputs:
+      sha: ${{ steps.pr.outputs.sha }}
+    steps:
+      - id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.issue.number }}
+          COMMENT: ${{ github.event.comment.id }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" > pr.json
+          if [ "$(jq -r .head.repo.full_name pr.json)" != "$GITHUB_REPOSITORY" ]; then
+            echo "::error::PRs from forks are not deployed"
+            exit 1
+          fi
+          echo "sha=$(jq -r .head.sha pr.json)" >> "$GITHUB_OUTPUT"
+          gh api -X POST "repos/$GITHUB_REPOSITORY/issues/comments/$COMMENT/reactions" -f content=rocket > /dev/null
+
+  image:
+    needs: pr
+    # only here, not on the workflow: every PR comment starts this workflow, and an unrelated one must
+    # not cancel a deploy in progress
+    concurrency:
+      group: staging
+      cancel-in-progress: true
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/image.yml
+    with:
+      ref: ${{ needs.pr.outputs.sha }}
+      version: pr-${{ github.event.issue.number }}
+      tags: pr-${{ github.event.issue.number }} staging
+
+  report:
+    needs: [pr, image]
+    if: always() && needs.pr.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.issue.number }}
+          SHA: ${{ needs.pr.outputs.sha }}
+          RESULT: ${{ needs.image.result }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ "$RESULT" = success ]; then
+            body="Staging: ${SHA:0:7} is on its way to https://soiko.karagiorgis.pl (within a minute). [Build]($RUN)"
+          else
+            body="Staging: building ${SHA:0:7} ended with **$RESULT**. [Build]($RUN)"
+          fi
+          gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body "$body"

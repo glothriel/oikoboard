@@ -4,6 +4,10 @@
 #
 # Server config: server/.env (see server/cmd/oikoboard/main.go). Compose variables (root .env or the
 # environment): OIKO_VERSION, OIKO_BIND, OIKO_HOST_PORT, POSTGRES_PASSWORD.
+#
+# Deployment: CI publishes this file as an OCI artifact, ghcr.io/glothriel/oikoboard-compose:<tag>, with the
+# server image pinned by digest and server/.env replaced by ${OIKO_*} from the deploy directory's .env
+# (see .github/workflows/image.yml). The server follows a tag: `latest` = production, `staging` = staging.
 name: oikoboard-prod # COMPOSE_PROJECT_NAME overrides it
 
 services:
@@ -30,7 +34,10 @@ services:
     environment:
       OIKO_DATABASE_URL: postgres://oiko:${POSTGRES_PASSWORD:-oiko}@postgres:5432/oiko?sslmode=disable
     ports:
-      - "${OIKO_BIND:-0.0.0.0}:${OIKO_HOST_PORT:-8090}:8090"
+      # long syntax: `docker compose publish` keeps ${...} unresolved, and the short form does not parse then
+      - host_ip: ${OIKO_BIND:-0.0.0.0}
+        published: ${OIKO_HOST_PORT:-8090}
+        target: 8090
     depends_on:
       postgres:
         condition: service_healthy

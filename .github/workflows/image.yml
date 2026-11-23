@@ -1,0 +1,92 @@
+# Builds the server image of one commit and publishes the compose artifact the servers follow
+# (called by release.yml and staging.yml):
+#   ghcr.io/glothriel/oikoboard:<tag>          the image, for each tag
+#   ghcr.io/glothriel/oikoboard-compose:<tag>  docker-compose.yml with that image pinned by digest
+#
+# A server runs `docker compose -f oci://ghcr.io/glothriel/oikoboard-compose:<tag> up -d` from a directory
+# whose .env holds the config (nas-infra, components/oiko.py). `publish` would embed server/.env from
+# here, so the published file reads the server's config from ${OIKO_*} instead.
+name: Image
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: commit to build (full sha)
+        required: true
+        type: string
+      version:
+        description: org.opencontainers.image.version label
+        required: true
+        type: string
+      tags:
+        description: space-separated tags for the image and the compose artifact
+        required: true
+        type: string
+
+env:
+  FLUTTER_VERSION: 3.50.0 # same as release.yml
+  # production config a server passes to the server container (everything else comes from the image)
+  SERVER_ENV: >-
+    OIKO_PUBLIC_URL OIKO_APP_URL OIKO_RETURN_URLS OIKO_SECRET_KEY
+    OIKO_GOOGLE_CLIENT_ID OIKO_GOOGLE_CLIENT_SECRET OIKO_CALENDAR_SYNC OIKO_STORAGE_QUOTA_MB
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: tags
+        env:
+          TAGS: ${{ inputs.tags }}
+        run: |
+          {
+            echo 'list<<EOF'
+            for t in $TAGS; do echo "ghcr.io/$GITHUB_REPOSITORY:$t"; done
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+      - id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          build-args: FLUTTER_VERSION=${{ env.FLUTTER_VERSION }}
+          tags: ${{ steps.tags.outputs.list }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ inputs.version }}
+            org.opencontainers.image.revision=${{ inputs.ref }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Compose artifact
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          TAGS: ${{ inputs.tags }}
+        run: |
+          set -euo pipefail
+          out=$RUNNER_TEMP/compose/docker-compose.yml
+          mkdir -p "$(dirname "$out")"
+          yq '
+            del(.services.server.build) |
+            del(.services.server.env_file) |
+            .services.server.image = "ghcr.io/" + strenv(GITHUB_REPOSITORY) + "@" + strenv(DIGEST)
+          ' docker-compose.yml > "$out"
+          for v in $SERVER_ENV; do
+            V=$v yq -i '.services.server.environment[strenv(V)] = "${" + strenv(V) + ":-}"' "$out"
+          done
+          cat "$out"
+          docker compose -f "$out" config -q
+          for t in $TAGS; do
+            docker compose -f "$out" publish -y "ghcr.io/$GITHUB_REPOSITORY-compose:$t"
+          done
