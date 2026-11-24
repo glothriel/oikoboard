@@ -123,11 +123,13 @@ class _InboxTile extends ConsumerWidget {
     final family = ref.watch(familyProvider);
     final actor = family.byId(entry.actorId);
     final name = actor?.name ?? l.todoCommentFormerMember;
-    final text = switch (entry.kind) {
-      InboxKind.mention => l.todoInboxMention(name, entry.title),
-      InboxKind.reply => l.todoInboxReply(name, entry.title),
-      InboxKind.assigned => l.todoInboxAssigned(name, entry.title),
-    };
+    final text = entry.recurring
+        ? l.todoInboxRecurring(entry.title)
+        : switch (entry.kind) {
+            InboxKind.mention => l.todoInboxMention(name, entry.title),
+            InboxKind.reply => l.todoInboxReply(name, entry.title),
+            InboxKind.assigned => l.todoInboxAssigned(name, entry.title),
+          };
     final local = entry.createdAt.toLocal();
     final when = isSameDay(local, DateTime.now())
         ? hm(local)

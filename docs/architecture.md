@@ -37,6 +37,15 @@ Flutter app (web + Android)                    Go server                        
 - **Search** is per module: each answers `GET /<module>/search?q=` (server-side, so done tasks and events outside
   the loaded range are found too) and implements `FamilyModule.search` in the app; the search sheet asks every module
   and each hit knows how to open itself (switch screen, select, open the editor).
+- **Recurring tasks** (`todo_recurring`): a template holds an RFC 5545 RRULE (no DTSTART/COUNT/UNTIL: `start_date`,
+  `end_date` and `create_time` are separate fields), the household-local creation time and a due offset in days. The
+  table is the source of truth; [DBOS](https://github.com/dbos-inc/dbos-transact-golang) (`internal/recurring`,
+  state in the `dbos` schema of the same Postgres) only decides *when* to wake up: one database-backed schedule per
+  active template, a daily 6-field cron (`0 M H * * *`) in the household timezone. A tick calls `todo.Generate(template,
+  local date)`, which checks the rule and inserts the task idempotently (unique `(recurring_id, occurrence_date)`), and
+  always advances `last_run_date`. At boot the schedules are reconciled with the table and a catch-up creates only the
+  latest occurrence missed while the server was down. Schedule edits reach other instances within DBOS's polling interval
+  (5 s). Changing a household's timezone must re-apply its schedules (`Reconcile`); there is no such endpoint yet.
 - **App data access** goes through repository interfaces with `Api*` and `Mock*` implementations; the mock (no server)
   must keep working.
 

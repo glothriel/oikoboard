@@ -11,7 +11,6 @@ import 'package:oikoboard/core/mock/mock_auth_api.dart';
 import 'package:oikoboard/core/mock/mock_store.dart';
 import 'package:oikoboard/core/session.dart';
 import 'package:oikoboard/modules/registry.dart';
-import 'package:oikoboard/modules/todo/repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// The wall's todo filter: hide lists, show only lists with my tasks or only

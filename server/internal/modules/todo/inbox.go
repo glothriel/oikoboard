@@ -28,9 +28,11 @@ type InboxEntry struct {
 	Title       string     `json:"title"`
 	Excerpt     string     `json:"excerpt"`
 	ReadAt      *time.Time `json:"read_at"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
-	Version     int        `json:"version" gorm:"default:1"`
+	// Recurring: made by a recurring task template (no human actor).
+	Recurring bool      `json:"recurring"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Version   int       `json:"version" gorm:"default:1"`
 }
 
 func (InboxEntry) TableName() string { return "todo_inbox" }
@@ -38,9 +40,10 @@ func (InboxEntry) TableName() string { return "todo_inbox" }
 const (
 	entityInbox = "todo_inbox"
 
-	kindMention  = "mention"
-	kindReply    = "reply"
-	kindAssigned = "assigned"
+	kindMention   = "mention"
+	kindReply     = "reply"
+	kindAssigned  = "assigned"
+	kindRecurring = "recurring"
 
 	inboxSnapshotLimit = 100
 	excerptRunes       = 280

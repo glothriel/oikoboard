@@ -285,6 +285,7 @@ class InboxEntry {
     this.actorId,
     this.excerpt = '',
     this.readAt,
+    this.recurring = false,
   });
 
   final String id;
@@ -304,6 +305,9 @@ class InboxEntry {
   final DateTime createdAt;
   final DateTime? readAt;
 
+  /// Created by a recurring task template (no human actor).
+  final bool recurring;
+
   bool get unread => readAt == null;
 
   factory InboxEntry.fromJson(Map<String, dynamic> j) => InboxEntry(
@@ -313,6 +317,7 @@ class InboxEntry {
     itemId: j['item_id'] as String?,
     commentId: j['comment_id'] as String?,
     actorId: j['actor_id'] as String?,
+    recurring: j['recurring'] as bool? ?? false,
     title: j['title'] as String,
     excerpt: (j['excerpt'] as String?) ?? '',
     createdAt: fromApiTime(j['created_at'])!,
