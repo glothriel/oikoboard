@@ -813,6 +813,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String todoInboxRecurring(String title) {
+    return 'Recurring task for you: “$title”';
+  }
+
+  @override
   String todoInboxAssigned(String name, String title) {
     return '$name assigned you “$title”';
   }
@@ -888,5 +893,234 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String todoMovedTo(String list) {
     return 'Moved to “$list”';
+  }
+
+  @override
+  String get recurringTitle => 'Recurring tasks';
+
+  @override
+  String get recurringEmpty =>
+      'No recurring tasks yet. They add a new task to this list on a schedule — for example every Monday and Friday.';
+
+  @override
+  String get recurringNew => 'New recurring task';
+
+  @override
+  String get recurringEdit => 'Edit recurring task';
+
+  @override
+  String recurringNext(String date) {
+    return 'Next: $date';
+  }
+
+  @override
+  String get recurringNoNext => 'No upcoming occurrences';
+
+  @override
+  String get recurringPaused => 'Paused';
+
+  @override
+  String get recurringActive => 'Active';
+
+  @override
+  String get recurringRepeat => 'Repeat';
+
+  @override
+  String get recurDailyChip => 'Daily';
+
+  @override
+  String get recurWeeklyChip => 'Weekly';
+
+  @override
+  String get recurMonthlyChip => 'Monthly';
+
+  @override
+  String get recurYearlyChip => 'Yearly';
+
+  @override
+  String get recurEvery => 'Every';
+
+  @override
+  String recurUnitDay(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'days',
+      one: 'day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String recurUnitWeek(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'weeks',
+      one: 'week',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String recurUnitMonth(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'months',
+      one: 'month',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String recurUnitYear(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'years',
+      one: 'year',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String recurOnDay(int day) {
+    return 'On day $day';
+  }
+
+  @override
+  String get recurLastDay => 'Last day of the month';
+
+  @override
+  String recurDaily(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'Every $n days',
+      one: 'Every day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String recurWeekly(int n, String days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'Every $n weeks on $days',
+      one: 'Every week on $days',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String recurMonthlyDay(int n, int day) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'Every $n months on day $day',
+      one: 'Every month on day $day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String recurMonthlyLast(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'Every $n months on the last day',
+      one: 'Every month on the last day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String recurYearly(int n, String date) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'Every $n years on $date',
+      one: 'Every year on $date',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String recurCustomRule(String rrule) {
+    return 'Custom schedule ($rrule)';
+  }
+
+  @override
+  String get recurNoEnd => 'Remove end date';
+
+  @override
+  String get recurDue => 'Due';
+
+  @override
+  String get recurDueNone => 'No due date';
+
+  @override
+  String get recurDueSameDay => 'Same day';
+
+  @override
+  String get recurDueAfter => 'After some days';
+
+  @override
+  String recurDueDays(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n days after creation',
+      one: '1 day after creation',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get recurDueDaysField => 'Days after creation';
+
+  @override
+  String get recurNextOccurrences => 'Next occurrences';
+
+  @override
+  String recurFirstDue(String date) {
+    return 'The first task will be due $date';
+  }
+
+  @override
+  String get recurPreviewFailed => 'Can\'t compute the preview right now';
+
+  @override
+  String get recurNoOccurrences => 'This schedule has no occurrences';
+
+  @override
+  String get recurWeekdays => 'Weekdays';
+
+  @override
+  String recurDeleteTitle(String name) {
+    return 'Delete “$name”?';
+  }
+
+  @override
+  String get recurDeleteMessage => 'Tasks it already created stay.';
+
+  @override
+  String recurStartsOn(String date) {
+    return 'Starts: $date';
+  }
+
+  @override
+  String recurEndsOn(String date) {
+    return 'Ends: $date';
+  }
+
+  @override
+  String get recurEndsNever => 'Ends: never';
+
+  @override
+  String recurCreatesAtTime(String time) {
+    return 'Creates at $time';
   }
 }

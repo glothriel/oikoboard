@@ -42,6 +42,8 @@ import (
 
 	"oikoboard/server/internal/app"
 	"oikoboard/server/internal/core"
+	"oikoboard/server/internal/modules/todo"
+	"oikoboard/server/internal/recurring"
 	"oikoboard/server/internal/seed"
 
 	_ "time/tzdata" // IANA zones for expanding recurring events, also in minimal containers
@@ -164,6 +166,34 @@ func main() {
 		slog.Info("serving the web app", "dir", dir)
 	}
 	go a.Run(ctx, db, dsn)
+
+	// Recurring tasks: DBOS schedules + a catch-up for what was missed while down.
+	sched, err := recurring.New(ctx, db, dsn, a.Calendar.TodosChanged)
+	if err != nil {
+		fatal("recurring tasks", err)
+	}
+	defer sched.Shutdown(10 * time.Second)
+	a.Recurring.Set(sched)
+	// A bad template or a DB blip must not keep the server from booting: log, go on,
+	// and let the periodic reconcile heal.
+	if err := sched.Reconcile(ctx); err != nil {
+		slog.Warn("recurring tasks: reconcile", "err", err)
+	}
+	if err := todo.CatchUp(ctx, db, a.Calendar.TodosChanged, time.Now()); err != nil {
+		slog.Warn("recurring tasks: catch-up", "err", err)
+	}
+	go func() { // converge schedules after failed or cross-instance changes
+		for t := time.NewTicker(time.Hour); ; {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				if err := sched.Reconcile(ctx); err != nil {
+					slog.Warn("recurring tasks: reconcile", "err", err)
+				}
+			}
+		}
+	}()
 
 	srv := &http.Server{Addr: addr, Handler: a.Router}
 	go func() {

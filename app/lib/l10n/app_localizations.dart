@@ -1460,6 +1460,12 @@ abstract class AppLocalizations {
   /// **'{name} replied in “{title}”'**
   String todoInboxReply(String name, String title);
 
+  /// No description provided for @todoInboxRecurring.
+  ///
+  /// In en, this message translates to:
+  /// **'Recurring task for you: “{title}”'**
+  String todoInboxRecurring(String title);
+
   /// No description provided for @todoInboxAssigned.
   ///
   /// In en, this message translates to:
@@ -1591,6 +1597,270 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Moved to “{list}”'**
   String todoMovedTo(String list);
+
+  /// No description provided for @recurringTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recurring tasks'**
+  String get recurringTitle;
+
+  /// No description provided for @recurringEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No recurring tasks yet. They add a new task to this list on a schedule — for example every Monday and Friday.'**
+  String get recurringEmpty;
+
+  /// No description provided for @recurringNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New recurring task'**
+  String get recurringNew;
+
+  /// No description provided for @recurringEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit recurring task'**
+  String get recurringEdit;
+
+  /// No description provided for @recurringNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next: {date}'**
+  String recurringNext(String date);
+
+  /// No description provided for @recurringNoNext.
+  ///
+  /// In en, this message translates to:
+  /// **'No upcoming occurrences'**
+  String get recurringNoNext;
+
+  /// No description provided for @recurringPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused'**
+  String get recurringPaused;
+
+  /// No description provided for @recurringActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get recurringActive;
+
+  /// No description provided for @recurringRepeat.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat'**
+  String get recurringRepeat;
+
+  /// No description provided for @recurDailyChip.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily'**
+  String get recurDailyChip;
+
+  /// No description provided for @recurWeeklyChip.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly'**
+  String get recurWeeklyChip;
+
+  /// No description provided for @recurMonthlyChip.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly'**
+  String get recurMonthlyChip;
+
+  /// No description provided for @recurYearlyChip.
+  ///
+  /// In en, this message translates to:
+  /// **'Yearly'**
+  String get recurYearlyChip;
+
+  /// No description provided for @recurEvery.
+  ///
+  /// In en, this message translates to:
+  /// **'Every'**
+  String get recurEvery;
+
+  /// No description provided for @recurUnitDay.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{day} other{days}}'**
+  String recurUnitDay(int n);
+
+  /// No description provided for @recurUnitWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{week} other{weeks}}'**
+  String recurUnitWeek(int n);
+
+  /// No description provided for @recurUnitMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{month} other{months}}'**
+  String recurUnitMonth(int n);
+
+  /// No description provided for @recurUnitYear.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{year} other{years}}'**
+  String recurUnitYear(int n);
+
+  /// No description provided for @recurOnDay.
+  ///
+  /// In en, this message translates to:
+  /// **'On day {day}'**
+  String recurOnDay(int day);
+
+  /// No description provided for @recurLastDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Last day of the month'**
+  String get recurLastDay;
+
+  /// No description provided for @recurDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{Every day} other{Every {n} days}}'**
+  String recurDaily(int n);
+
+  /// No description provided for @recurWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{Every week on {days}} other{Every {n} weeks on {days}}}'**
+  String recurWeekly(int n, String days);
+
+  /// No description provided for @recurMonthlyDay.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{Every month on day {day}} other{Every {n} months on day {day}}}'**
+  String recurMonthlyDay(int n, int day);
+
+  /// No description provided for @recurMonthlyLast.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{Every month on the last day} other{Every {n} months on the last day}}'**
+  String recurMonthlyLast(int n);
+
+  /// No description provided for @recurYearly.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{Every year on {date}} other{Every {n} years on {date}}}'**
+  String recurYearly(int n, String date);
+
+  /// No description provided for @recurCustomRule.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom schedule ({rrule})'**
+  String recurCustomRule(String rrule);
+
+  /// No description provided for @recurNoEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove end date'**
+  String get recurNoEnd;
+
+  /// No description provided for @recurDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Due'**
+  String get recurDue;
+
+  /// No description provided for @recurDueNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No due date'**
+  String get recurDueNone;
+
+  /// No description provided for @recurDueSameDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Same day'**
+  String get recurDueSameDay;
+
+  /// No description provided for @recurDueAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'After some days'**
+  String get recurDueAfter;
+
+  /// No description provided for @recurDueDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{1 day after creation} other{{n} days after creation}}'**
+  String recurDueDays(int n);
+
+  /// No description provided for @recurDueDaysField.
+  ///
+  /// In en, this message translates to:
+  /// **'Days after creation'**
+  String get recurDueDaysField;
+
+  /// No description provided for @recurNextOccurrences.
+  ///
+  /// In en, this message translates to:
+  /// **'Next occurrences'**
+  String get recurNextOccurrences;
+
+  /// No description provided for @recurFirstDue.
+  ///
+  /// In en, this message translates to:
+  /// **'The first task will be due {date}'**
+  String recurFirstDue(String date);
+
+  /// No description provided for @recurPreviewFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t compute the preview right now'**
+  String get recurPreviewFailed;
+
+  /// No description provided for @recurNoOccurrences.
+  ///
+  /// In en, this message translates to:
+  /// **'This schedule has no occurrences'**
+  String get recurNoOccurrences;
+
+  /// No description provided for @recurWeekdays.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekdays'**
+  String get recurWeekdays;
+
+  /// No description provided for @recurDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete “{name}”?'**
+  String recurDeleteTitle(String name);
+
+  /// No description provided for @recurDeleteMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Tasks it already created stay.'**
+  String get recurDeleteMessage;
+
+  /// No description provided for @recurStartsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Starts: {date}'**
+  String recurStartsOn(String date);
+
+  /// No description provided for @recurEndsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Ends: {date}'**
+  String recurEndsOn(String date);
+
+  /// No description provided for @recurEndsNever.
+  ///
+  /// In en, this message translates to:
+  /// **'Ends: never'**
+  String get recurEndsNever;
+
+  /// No description provided for @recurCreatesAtTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Creates at {time}'**
+  String recurCreatesAtTime(String time);
 }
 
 class _AppLocalizationsDelegate

@@ -13,6 +13,8 @@ import '../../core/mentions.dart';
 import '../../core/undo_delete.dart';
 import '../../core/widgets.dart';
 import 'models.dart';
+import 'recurring.dart';
+import 'recurring_screen.dart';
 import 'repository.dart';
 
 const listPalette = [
@@ -533,6 +535,10 @@ class _TodoItemsPaneState extends ConsumerState<TodoItemsPane> {
     final items =
         ref.watch(todoListItemsProvider(widget.list.id)).value ??
         const <TodoItem>[];
+    final recurringCount =
+        (ref.watch(recurringTasksProvider).value ?? const <RecurringTask>[])
+            .where((t) => t.listId == widget.list.id)
+            .length;
     final visible = items.where((i) => !_hidden.contains(i.id));
     final open = visible.where((i) => !i.done).toList()
       ..sort(TodoItem.byPosition);
@@ -598,6 +604,16 @@ class _TodoItemsPaneState extends ConsumerState<TodoItemsPane> {
                                 ),
                             ],
                           ),
+                        ),
+                        IconButton(
+                          tooltip: l.recurringTitle,
+                          icon: Badge.count(
+                            count: recurringCount,
+                            isLabelVisible: recurringCount > 0,
+                            child: const Icon(Icons.repeat),
+                          ),
+                          onPressed: () =>
+                              showRecurringDrawer(context, widget.list),
                         ),
                         IconButton(
                           tooltip: l.todoEditList,
