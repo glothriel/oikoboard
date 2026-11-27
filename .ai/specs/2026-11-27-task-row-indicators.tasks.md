@@ -9,6 +9,7 @@
 
 ## [ ] T2: App: indicators on the task row
 **Acceptance criteria:** R1, R2, R3, R5, R6.
+- Mockup: reuse the row indicators, `TodoItem` fields and mock seed/repository changes in `app/lib/modules/todo/{todo_screen,models,repository,todo_module}.dart` and the l10n keys from branch `em-mockups/issue-46` (`git show origin/em-mockups/issue-46:<path>`); match its look, adapt the code to this task.
 - `app/lib/modules/todo/models.dart` — `TodoItem`: add `commentCount` (int, default 0) and `occurrenceDate` (DateTime?, default null) as constructor fields; getter `bool get fromRecurring => occurrenceDate != null;` `fromJson` reads `comment_count` (`as int? ?? 0`) and `occurrence_date` via `fromApiDate`; `toJson` writes both (`toApiDate`); `copyWith` carries both over unchanged.
 - `app/lib/modules/todo/repository.dart` — `MockTodoRepository.addComment`: after storing the comment, re-put the item with `commentCount + 1`; `deleteComment`: look up the comment's item (before deleting) and put it with `commentCount - 1` (min 0, skip if the item is gone); `deleteItem` needs no change. `ApiTodoRepository` needs no change (server value is read as is). Keep `updateItem` from resetting the new fields (it copies via `copyWith`).
 - `app/lib/modules/todo/todo_module.dart` — in the mock seed (`store.seed(itemsEntity, …)` near line 123) add `comment_count` to a seed task that has seed comments (match the seed comments that exist, or give one task a seed comment) and `occurrence_date` to one task; made-up data only.

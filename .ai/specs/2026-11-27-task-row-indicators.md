@@ -16,6 +16,7 @@ comments and an icon when the task was created by a recurring task, so users see
 
 ## UI
 - Todo list screen (`TodoListScreen` task rows), also used for the same row elsewhere if it is the same widget: the trailing indicators.
+- Prototype: branch `em-mockups/issue-46` (never merged).
 
 ## Out of scope
 - Comment counts on the row; attachments indicator; indicators on the calendar or the recurring drawer.
