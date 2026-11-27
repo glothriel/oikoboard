@@ -2047,6 +2047,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter a height between 50 and 250 cm'**
   String get fitnessHeightInvalid;
+
+  /// No description provided for @fitnessWeighIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Weigh in'**
+  String get fitnessWeighIn;
+
+  /// No description provided for @fitnessWeighInScanning.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking for your scale… Step on it to wake it up.'**
+  String get fitnessWeighInScanning;
+
+  /// No description provided for @fitnessWeighInConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected to {scale}'**
+  String fitnessWeighInConnected(String scale);
+
+  /// No description provided for @fitnessWeighInDone.
+  ///
+  /// In en, this message translates to:
+  /// **'{scale}: all readings received'**
+  String fitnessWeighInDone(String scale);
+
+  /// No description provided for @fitnessWeighInNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No new readings'**
+  String get fitnessWeighInNone;
+
+  /// No description provided for @fitnessWeighInNoneHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Step on the scale, then scan again.'**
+  String get fitnessWeighInNoneHint;
+
+  /// No description provided for @fitnessWeighInScanAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan again'**
+  String get fitnessWeighInScanAgain;
+
+  /// No description provided for @fitnessWeighInBluetoothOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Bluetooth is off. Turn it on and try again.'**
+  String get fitnessWeighInBluetoothOff;
+
+  /// No description provided for @fitnessWeighInPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Bluetooth permission was denied. Allow it in the system settings and try again.'**
+  String get fitnessWeighInPermissionDenied;
+
+  /// No description provided for @fitnessWeighInNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No supported scale found nearby. Step on the scale to wake it up and try again.'**
+  String get fitnessWeighInNotFound;
+
+  /// No description provided for @fitnessWeighInFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not talk to the scale. Try again.'**
+  String get fitnessWeighInFailed;
+
+  /// No description provided for @fitnessWeighInImpedance.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} Ω'**
+  String fitnessWeighInImpedance(int value);
+
+  /// No description provided for @fitnessWeighInDiscard.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard'**
+  String get fitnessWeighInDiscard;
 }
 
 class _AppLocalizationsDelegate

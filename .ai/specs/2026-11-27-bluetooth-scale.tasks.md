@@ -99,7 +99,7 @@
 - `app/test/fitness_profile_mock_test.dart` — a valid profile saves, an invalid height is rejected, the hint disappears after saving.
 - Mockup: `em-mockups/issue-34` — reuse `profile_screen.dart` and the profile hint card in `fitness_hub.dart`.
 
-## [ ] T7: App: Bluetooth weigh-in
+## [x] T7: App: Bluetooth weigh-in
 **Goal:** Weigh on the scale from the app, assign each reading to a member or discard it, and save with composition.
 **Acceptance criteria:**
 - On Android with the real server the Measurements screen offers "Weigh in"; it scans, connects through `flutter_blue_plus`, runs the driver and lists new readings; with the real server on web the entry is hidden (R6, R10).

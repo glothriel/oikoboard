@@ -11,6 +11,7 @@ import '../../core/widgets.dart';
 import 'format.dart';
 import 'models.dart';
 import 'repository.dart';
+import 'scale/scale_session.dart';
 import 'trend_chart.dart';
 
 /// Header of a Fitness sub-screen: back arrow and title.
@@ -19,8 +20,10 @@ class FitnessHeader extends StatelessWidget {
     super.key,
     required this.title,
     this.actions = const [],
+    this.back = '/fitness',
   });
   final String title;
+  final String back;
   final List<Widget> actions;
 
   @override
@@ -30,7 +33,7 @@ class FitnessHeader extends StatelessWidget {
       children: [
         IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/fitness'),
+          onPressed: () => context.go(back),
         ),
         Expanded(
           child: Text(title, style: Theme.of(context).textTheme.titleLarge),
@@ -84,7 +87,17 @@ class _State extends ConsumerState<MeasurementsScreen> {
     return Scaffold(
       body: Column(
         children: [
-          FitnessHeader(title: l.fitnessMeasurementsTitle),
+          FitnessHeader(
+            title: l.fitnessMeasurementsTitle,
+            actions: [
+              if (ref.watch(scaleSessionProvider) != null)
+                TextButton.icon(
+                  onPressed: () => context.go('/fitness/weigh-in'),
+                  icon: const Icon(Icons.bluetooth),
+                  label: Text(l.fitnessWeighIn),
+                ),
+            ],
+          ),
           Expanded(
             child: async.isLoading && !async.hasValue
                 ? const Center(child: CircularProgressIndicator())

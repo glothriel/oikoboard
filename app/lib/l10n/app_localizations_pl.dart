@@ -1249,4 +1249,54 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get fitnessHeightInvalid => 'Podaj wzrost od 50 do 250 cm';
+
+  @override
+  String get fitnessWeighIn => 'Zważ się';
+
+  @override
+  String get fitnessWeighInScanning =>
+      'Szukam wagi… Wejdź na nią, aby ją obudzić.';
+
+  @override
+  String fitnessWeighInConnected(String scale) {
+    return 'Połączono z: $scale';
+  }
+
+  @override
+  String fitnessWeighInDone(String scale) {
+    return '$scale: odebrano wszystkie odczyty';
+  }
+
+  @override
+  String get fitnessWeighInNone => 'Brak nowych odczytów';
+
+  @override
+  String get fitnessWeighInNoneHint => 'Wejdź na wagę i skanuj ponownie.';
+
+  @override
+  String get fitnessWeighInScanAgain => 'Skanuj ponownie';
+
+  @override
+  String get fitnessWeighInBluetoothOff =>
+      'Bluetooth jest wyłączony. Włącz go i spróbuj ponownie.';
+
+  @override
+  String get fitnessWeighInPermissionDenied =>
+      'Brak zgody na Bluetooth. Zezwól w ustawieniach systemu i spróbuj ponownie.';
+
+  @override
+  String get fitnessWeighInNotFound =>
+      'Nie znaleziono obsługiwanej wagi w pobliżu. Wejdź na wagę, aby ją obudzić, i spróbuj ponownie.';
+
+  @override
+  String get fitnessWeighInFailed =>
+      'Nie udało się połączyć z wagą. Spróbuj ponownie.';
+
+  @override
+  String fitnessWeighInImpedance(int value) {
+    return '$value Ω';
+  }
+
+  @override
+  String get fitnessWeighInDiscard => 'Odrzuć';
 }
