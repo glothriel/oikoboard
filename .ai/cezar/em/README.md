@@ -19,6 +19,7 @@ main branch
 |---|---|---|
 | `.ai/cezar/workflows/em-plan.yaml` | label `agent` on an issue | settles the intent (open questions go to the issue, see below), creates the feature branch, writes a spec + task list, mockups, AI plan review, opens the plan PR as `stage:plan` |
 | `.ai/cezar/workflows/em-pr.yaml` | a human review on a `stage:plan` / `stage:final` PR | see below |
+| `.ai/cezar/workflows/em-cleanup.yaml` | a `stage:plan` / `stage:final` PR merged or closed | `cleanup.sh`: once the final PR is merged or closed (or the plan PR closed unmerged), closes leftover task PRs and deletes every branch of the issue |
 
 `em-plan` starts with the intent (`intent.md`): what the issue wants, scope and assumptions. With
 open product questions it posts them with the intent on the issue, drops the `agent` label and stops;
@@ -30,6 +31,8 @@ posts the intent for the record and goes on to the spec.
 - **approve on `stage:plan`**: merges the plan PR into the feature branch, runs the task loop, then
   opens the final PR (`stage:final`).
 - **changes/comment on `stage:plan`**: a planner revises the spec and tasks and answers on the PR.
+  When the revision affects the UI (the planner says so, or there are no mockups yet), a designer
+  reworks the previous prototype (`mock-restore.sh`) and posts new mockups before the answer.
 - **changes/comment on `stage:final`**: the review becomes task `R<n>` in the plan and runs through the
   same task loop (own PR into the feature branch); the developer answers each point on the final PR.
 - anything else: nothing. Approving the final PR is the human's cue to merge it.

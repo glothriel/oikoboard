@@ -1,0 +1,12 @@
+version: 2
+name: em-cleanup
+description: An em PR was merged or closed. When the issue's work is over (final PR merged or closed, plan PR closed unmerged), delete all its branches. Scripts in .ai/cezar/em/.
+nodes:
+  - { id: start, type: start }
+  - { id: cleanup, type: check, name: Delete the issue's branches, command: "bash .ai/cezar/em/cleanup.sh" }
+  - { id: done, type: end, status: success }
+  - { id: failed, type: end, status: failed }
+edges:
+  - { from: start, to: cleanup }
+  - { from: cleanup.pass, to: done }
+  - { from: cleanup.fail, to: failed }
