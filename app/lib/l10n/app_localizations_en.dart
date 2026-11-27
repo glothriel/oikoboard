@@ -1136,4 +1136,63 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get todoKeepForeverHint =>
       'Never deleted automatically, even when completed';
+
+  @override
+  String get fitnessModuleTitle => 'Fitness';
+
+  @override
+  String get fitnessMeasurementsTitle => 'Measurements';
+
+  @override
+  String fitnessLatest(String weight) {
+    return 'Latest: $weight kg';
+  }
+
+  @override
+  String get fitnessNoMeasurements => 'No measurements yet';
+
+  @override
+  String get fitnessNoMeasurementsHint =>
+      'Add a weight by hand to start tracking.';
+
+  @override
+  String get fitnessAddMeasurement => 'Add measurement';
+
+  @override
+  String get fitnessWeight => 'Weight (kg)';
+
+  @override
+  String get fitnessWeightInvalid => 'Enter a weight between 10 and 500 kg';
+
+  @override
+  String get fitnessWho => 'Who';
+
+  @override
+  String get fitnessWhen => 'When';
+
+  @override
+  String fitnessFatPct(String value) {
+    return 'Fat $value%';
+  }
+
+  @override
+  String fitnessWaterPct(String value) {
+    return 'Water $value%';
+  }
+
+  @override
+  String fitnessMusclePct(String value) {
+    return 'Muscle $value kg';
+  }
+
+  @override
+  String fitnessBmi(String value) {
+    return 'BMI $value';
+  }
+
+  @override
+  String get fitnessWallTitle => 'Weight';
+
+  @override
+  String get fitnessWallNone => 'No weight yet';
 }

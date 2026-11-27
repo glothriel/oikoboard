@@ -222,7 +222,6 @@ void main() {
 
     // Scroll the task clear of the bottom navigation bar.
     await tester.ensureVisible(find.text('Mleko'));
-    await tester.drag(find.byType(Scrollable).first, const Offset(0, -200));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Mleko'));
     await tester.pumpAndSettle();
