@@ -840,5 +840,16 @@
     }
   },
   "fitnessWallTitle": "Weight",
-  "fitnessWallNone": "No weight yet"
+  "fitnessWallNone": "No weight yet",
+  "fitnessProfileTitle": "Fitness profile",
+  "fitnessProfileAction": "Edit profile",
+  "fitnessProfileHintTitle": "Complete your profile",
+  "fitnessProfileHintBody": "Add your sex, birth date and height to get body composition from the scale.",
+  "fitnessSex": "Sex",
+  "fitnessSexMale": "Male",
+  "fitnessSexFemale": "Female",
+  "fitnessBirthDate": "Birth date",
+  "fitnessBirthDateInvalid": "Pick a birth date in the past",
+  "fitnessHeight": "Height (cm)",
+  "fitnessHeightInvalid": "Enter a height between 50 and 250 cm"
 }

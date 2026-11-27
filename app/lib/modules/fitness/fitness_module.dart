@@ -10,6 +10,7 @@ import '../../core/widgets.dart';
 import 'fitness_hub.dart';
 import 'format.dart';
 import 'measurements_screen.dart';
+import 'profile_screen.dart';
 import 'repository.dart';
 
 class FitnessModule extends FamilyModule {
@@ -33,6 +34,7 @@ class FitnessModule extends FamilyModule {
       path: 'measurements',
       builder: (_, _) => const MeasurementsScreen(),
     ),
+    GoRoute(path: 'profile', builder: (_, _) => const ProfileScreen()),
   ];
 
   @override

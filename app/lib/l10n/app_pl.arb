@@ -313,5 +313,16 @@
   "fitnessMusclePct": "Mięśnie {value} kg",
   "fitnessBmi": "BMI {value}",
   "fitnessWallTitle": "Waga",
-  "fitnessWallNone": "Brak wagi"
+  "fitnessWallNone": "Brak wagi",
+  "fitnessProfileTitle": "Profil fitness",
+  "fitnessProfileAction": "Edytuj profil",
+  "fitnessProfileHintTitle": "Uzupełnij profil",
+  "fitnessProfileHintBody": "Podaj płeć, datę urodzenia i wzrost, aby wagę rozbić na skład ciała.",
+  "fitnessSex": "Płeć",
+  "fitnessSexMale": "Mężczyzna",
+  "fitnessSexFemale": "Kobieta",
+  "fitnessBirthDate": "Data urodzenia",
+  "fitnessBirthDateInvalid": "Wybierz datę urodzenia z przeszłości",
+  "fitnessHeight": "Wzrost (cm)",
+  "fitnessHeightInvalid": "Podaj wzrost od 50 do 250 cm"
 }

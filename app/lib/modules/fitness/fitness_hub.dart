@@ -10,20 +10,60 @@ import 'trend_chart.dart';
 
 /// The Fitness section's home: one card per feature (cards sit side by side
 /// on wide screens).
-class FitnessHub extends StatelessWidget {
+class FitnessHub extends ConsumerWidget {
   const FitnessHub({super.key});
 
   @override
-  Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.all(16),
-    children: [
-      Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: const [_HubCard(width: 420, child: _MeasurementsCard())],
-      ),
-    ],
-  );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = context.l10n;
+    final me = ref.watch(currentMemberProvider);
+    final profiles = ref.watch(fitnessProfilesProvider);
+    // Only once the profiles have loaded, so the hint doesn't flash.
+    final missing =
+        profiles.hasValue && !profiles.value!.any((p) => p.id == me);
+    return Column(
+      children: [
+        Align(
+          alignment: Alignment.centerRight,
+          child: Padding(
+            padding: const EdgeInsets.only(right: 8, top: 4),
+            child: IconButton(
+              tooltip: l.fitnessProfileAction,
+              icon: const Icon(Icons.person_outline),
+              onPressed: () => context.go('/fitness/profile'),
+            ),
+          ),
+        ),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            children: [
+              if (missing) ...[
+                Card(
+                  color: Theme.of(context).colorScheme.secondaryContainer,
+                  child: ListTile(
+                    leading: const Icon(Icons.person_outline),
+                    title: Text(l.fitnessProfileHintTitle),
+                    subtitle: Text(l.fitnessProfileHintBody),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.go('/fitness/profile'),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: const [
+                  _HubCard(width: 420, child: _MeasurementsCard()),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _HubCard extends StatelessWidget {
