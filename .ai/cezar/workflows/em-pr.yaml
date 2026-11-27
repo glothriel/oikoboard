@@ -1,9 +1,10 @@
 version: 2
 name: em-pr
-description: Reacts to a human review on an em PR. Plan PR approved, merge it into the feature branch and implement task by task, one PR per task into the feature branch, then open the final PR; plan reviewed, the planner revises; final PR reviewed, the review becomes a task. Scripts in .ai/cezar/em/.
+description: Reacts to a human review on an em PR. Plan PR approved, merge it into the feature branch and implement task by task, one PR per task into the feature branch, then open the final PR; plan reviewed, the planner revises; final PR reviewed, the review becomes a task; label resume on the issue, back into the task loop. Scripts in .ai/cezar/em/.
 nodes:
   - { id: start, type: start }
   - { id: gate, type: check, name: Read review, command: "bash .ai/cezar/em/review-gate.sh" }
+  - { id: is-resume, type: if, name: "Resume?", condition: { kind: output, ref: gate.output, op: contains, value: resume } }
   - { id: is-approve, type: if, name: "Plan approved?", condition: { kind: output, ref: gate.output, op: contains, value: approve-plan } }
   - { id: is-impl, type: if, name: "Final PR reviewed?", condition: { kind: output, ref: gate.output, op: contains, value: changes-final } }
   - { id: is-plan, type: if, name: "Plan reviewed?", condition: { kind: output, ref: gate.output, op: contains, value: changes-plan } }
@@ -205,7 +206,9 @@ nodes:
 
 edges:
   - { from: start, to: gate }
-  - { from: gate.pass, to: is-approve }
+  - { from: gate.pass, to: is-resume }
+  - { from: is-resume.true, to: tasks }
+  - { from: is-resume.false, to: is-approve }
   - { from: is-approve.true, to: start-impl }
   - { from: is-approve.false, to: is-impl }
   - { from: is-impl.true, to: add-task }

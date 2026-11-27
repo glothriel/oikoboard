@@ -24,8 +24,29 @@ title=$(sed -E 's/^## \[ \] [^:]+: *//' <<<"$head")
 echo "$tasks" > "$S/tasks-file"
 echo "$id" > "$S/task-id"
 echo "$id: $title" > "$S/task-title"
-echo "em/issue-$(cat "$S/issue")-$(tr '[:upper:]' '[:lower:]' <<<"$id")" > "$S/head-ref"
+ref=em/issue-$(cat "$S/issue")-$(tr '[:upper:]' '[:lower:]' <<<"$id")
+echo "$ref" > "$S/head-ref"
 git rev-parse HEAD > "$S/base"
 echo 0 > "$S/rounds"
 rm -f "$S/pr" "$S/review.md" "$S/reply.md" "$S/answer.md"
+# An earlier attempt at this task (escalated, or its run died) left its branch: carry on from it.
+if git fetch -q origin "$ref" 2>/dev/null && git merge-base --is-ancestor HEAD FETCH_HEAD; then
+  git reset -q --hard FETCH_HEAD
+  pr=$(gh pr list -R "$(repo)" --head "$ref" --state open --json number --jq '.[0].number // empty')
+  {
+    echo
+    echo "## Resumed"
+    echo
+    echo "An earlier attempt at this task is already in the work tree (\`git diff \$(cat .ai/cezar/em/state/base)\`)."
+    if [ -n "$pr" ]; then
+      echo "Its PR #$pr has the exchange so far, including any human comments: \`gh pr view $pr --comments\`."
+      echo "Finish the task from there; do not start over."
+    fi
+  } >> "$S/current-task.md"
+  if [ -n "$pr" ]; then
+    gh pr edit "$pr" -R "$(repo)" --remove-label needs-human >/dev/null 2>&1 || true
+  fi
+  echo "$id: $title (resumed from $ref)"
+  exit 0
+fi
 echo "$id: $title"
