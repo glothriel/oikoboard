@@ -10,7 +10,7 @@ Every signed-in device of a household sees members added, edited or removed (and
 - R2: Member rows sent to clients carry `id`, `household_id`, `name`, `color`, `created_at`, `has_account` (user_id set) and `picture`; never `user_id` or `invite_email`, in snapshots and in live changes alike.
 - R3: A member's `picture` follows the account's picture: a login that changes `users.picture` produces a live `members` change for each family the account belongs to.
 - R4: The app's family (`familyProvider`) follows the `family.members` view in API mode: a new member is selectable in pickers, assignee chips and avatars without re-login; a removed one disappears.
-- R5: The app never crashes on an id with no member (removed member): assignee, comment author and mention lookups show a neutral placeholder ("removed member" label, neutral avatar) instead.
+- R5: The app never crashes on an id with no member (removed member): assignee, comment author and mention lookups show a neutral placeholder ("removed member" label, neutral avatar) instead. This covers stale or in-flight data only: the server unassigns a removed member's tasks (FK `SET NULL`), so server data never produces it.
 - R6: The server tracks online members per household: a member is online while at least one WebSocket of their account is connected, and goes offline 5 s after the last one closes (reconnect blips do not flicker).
 - R7: Every connection of a household receives a `{"t":"presence","online":[member ids]}` message after `ready` and on each change of the set; members without an account are never in it.
 - R8: `MemberAvatar` shows a small green dot for members in the online set, wherever it is used; mock mode shows presence too (seeded, toggled by the family simulator).

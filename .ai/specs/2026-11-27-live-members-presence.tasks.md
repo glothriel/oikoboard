@@ -10,7 +10,8 @@
 - `server/migrations/00021_members_live.sql` — add `members.picture`, backfill from `users`, triggers keeping it synced (members user_id, users picture); `oiko_track('members')`; Down.
 - `server/internal/core/view.go` — add optional `RowProjector` interface (`Project(entity string, row json.RawMessage) json.RawMessage`).
 - `server/internal/realtime/dispatcher.go` — in `emit`, run the row through `RowProjector` when the view implements it, for both upsert and remove rows.
-- `server/internal/core/members.go` — core module `Members` (no routes) with `family.members` view (no params): public columns + `has_account` in Snapshot; Matches `members`; Project strips/derives.
+- `server/internal/core/members.go` — `Members` module, same shape as `todo.Module` (`Name`, empty `Routes`, `Views`), in core as it is cross-cutting; `family.members` view (no params), Matches `members`.
+- `server/internal/core/members.go` — Snapshot selects only public columns plus `has_account`, so it needs no projection; `Project` applies to live changes only (strips `user_id`/`invite_email`, derives `has_account`).
 - `server/internal/app/app.go` — register the module in `Modules()`.
 - `server/internal/core/auth.go` — `/me` members query reads `m.picture` instead of joining `users`; `memberOut` unchanged in shape.
 - `server/internal/app/members_test.go` — websocket test: snapshot, insert via invite accept, rename via SQL, delete, second household sees nothing, no leaked fields, picture change propagates.
@@ -34,6 +35,8 @@
 **Changes:**
 - Mockup: `centurion-mockups/issue-1` — reuse `Member.removed`/`byIdOrRemoved` in `core/family.dart`, the placeholder avatar, and the `todo_screen.dart`/`todo_module.dart` call sites; the `memberRemoved` l10n key.
 - `app/lib/core/family.dart` — `membersProvider` (API: `syncClientProvider.watch('family.members')`; mock: session members), `familyProvider` derives from it; neutral `Member.removed` placeholder.
+- `app/lib/core/family.dart` — `familyOf(context)` reads the live `familyProvider` and its doc comment is corrected; its callers (`calendar_screen.dart`, `markdown.dart`, `mentions.dart`) rebuild on family changes.
+- `app/lib/modules/calendar/calendar_screen.dart`, `core/markdown.dart`, `core/mentions.dart` — unknown ids use `byIdOrRemoved`/the `memberRemoved` label instead of null.
 - `app/lib/modules/todo/todo_screen.dart`, `modules/calendar/todo_day_sheet.dart`, `modules/todo/inbox.dart` — replace `family.byId(...)!` and null-hiding spots with the placeholder avatar/label.
 - `app/lib/l10n/app_en.arb`, `app_pl.arb` — `memberRemoved` ("Removed member" / "Usunięty członek").
 - `app/test/family_live_mock_test.dart` — widget test on the mock backend: a provider override feeding a new member makes it appear in the assignee picker; an unknown assignee id renders the placeholder without exceptions.
