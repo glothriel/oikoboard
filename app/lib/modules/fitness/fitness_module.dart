@@ -12,6 +12,7 @@ import 'format.dart';
 import 'measurements_screen.dart';
 import 'profile_screen.dart';
 import 'repository.dart';
+import 'weigh_in_screen.dart';
 
 class FitnessModule extends FamilyModule {
   const FitnessModule();
@@ -34,6 +35,7 @@ class FitnessModule extends FamilyModule {
       path: 'measurements',
       builder: (_, _) => const MeasurementsScreen(),
     ),
+    GoRoute(path: 'weigh-in', builder: (_, _) => const WeighInScreen()),
     GoRoute(path: 'profile', builder: (_, _) => const ProfileScreen()),
   ];
 

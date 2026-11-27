@@ -324,5 +324,18 @@
   "fitnessBirthDate": "Data urodzenia",
   "fitnessBirthDateInvalid": "Wybierz datę urodzenia z przeszłości",
   "fitnessHeight": "Wzrost (cm)",
-  "fitnessHeightInvalid": "Podaj wzrost od 50 do 250 cm"
+  "fitnessHeightInvalid": "Podaj wzrost od 50 do 250 cm",
+  "fitnessWeighIn": "Zważ się",
+  "fitnessWeighInScanning": "Szukam wagi… Wejdź na nią, aby ją obudzić.",
+  "fitnessWeighInConnected": "Połączono z: {scale}",
+  "fitnessWeighInDone": "{scale}: odebrano wszystkie odczyty",
+  "fitnessWeighInNone": "Brak nowych odczytów",
+  "fitnessWeighInNoneHint": "Wejdź na wagę i skanuj ponownie.",
+  "fitnessWeighInScanAgain": "Skanuj ponownie",
+  "fitnessWeighInBluetoothOff": "Bluetooth jest wyłączony. Włącz go i spróbuj ponownie.",
+  "fitnessWeighInPermissionDenied": "Brak zgody na Bluetooth. Zezwól w ustawieniach systemu i spróbuj ponownie.",
+  "fitnessWeighInNotFound": "Nie znaleziono obsługiwanej wagi w pobliżu. Wejdź na wagę, aby ją obudzić, i spróbuj ponownie.",
+  "fitnessWeighInFailed": "Nie udało się połączyć z wagą. Spróbuj ponownie.",
+  "fitnessWeighInImpedance": "{value} Ω",
+  "fitnessWeighInDiscard": "Odrzuć"
 }

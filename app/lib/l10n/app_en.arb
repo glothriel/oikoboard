@@ -851,5 +851,39 @@
   "fitnessBirthDate": "Birth date",
   "fitnessBirthDateInvalid": "Pick a birth date in the past",
   "fitnessHeight": "Height (cm)",
-  "fitnessHeightInvalid": "Enter a height between 50 and 250 cm"
+  "fitnessHeightInvalid": "Enter a height between 50 and 250 cm",
+  "fitnessWeighIn": "Weigh in",
+  "fitnessWeighInScanning": "Looking for your scale… Step on it to wake it up.",
+  "fitnessWeighInConnected": "Connected to {scale}",
+  "@fitnessWeighInConnected": {
+    "placeholders": {
+      "scale": {
+        "type": "String"
+      }
+    }
+  },
+  "fitnessWeighInDone": "{scale}: all readings received",
+  "@fitnessWeighInDone": {
+    "placeholders": {
+      "scale": {
+        "type": "String"
+      }
+    }
+  },
+  "fitnessWeighInNone": "No new readings",
+  "fitnessWeighInNoneHint": "Step on the scale, then scan again.",
+  "fitnessWeighInScanAgain": "Scan again",
+  "fitnessWeighInBluetoothOff": "Bluetooth is off. Turn it on and try again.",
+  "fitnessWeighInPermissionDenied": "Bluetooth permission was denied. Allow it in the system settings and try again.",
+  "fitnessWeighInNotFound": "No supported scale found nearby. Step on the scale to wake it up and try again.",
+  "fitnessWeighInFailed": "Could not talk to the scale. Try again.",
+  "fitnessWeighInImpedance": "{value} Ω",
+  "@fitnessWeighInImpedance": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "fitnessWeighInDiscard": "Discard"
 }

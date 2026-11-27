@@ -1229,4 +1229,53 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fitnessHeightInvalid => 'Enter a height between 50 and 250 cm';
+
+  @override
+  String get fitnessWeighIn => 'Weigh in';
+
+  @override
+  String get fitnessWeighInScanning =>
+      'Looking for your scale… Step on it to wake it up.';
+
+  @override
+  String fitnessWeighInConnected(String scale) {
+    return 'Connected to $scale';
+  }
+
+  @override
+  String fitnessWeighInDone(String scale) {
+    return '$scale: all readings received';
+  }
+
+  @override
+  String get fitnessWeighInNone => 'No new readings';
+
+  @override
+  String get fitnessWeighInNoneHint => 'Step on the scale, then scan again.';
+
+  @override
+  String get fitnessWeighInScanAgain => 'Scan again';
+
+  @override
+  String get fitnessWeighInBluetoothOff =>
+      'Bluetooth is off. Turn it on and try again.';
+
+  @override
+  String get fitnessWeighInPermissionDenied =>
+      'Bluetooth permission was denied. Allow it in the system settings and try again.';
+
+  @override
+  String get fitnessWeighInNotFound =>
+      'No supported scale found nearby. Step on the scale to wake it up and try again.';
+
+  @override
+  String get fitnessWeighInFailed => 'Could not talk to the scale. Try again.';
+
+  @override
+  String fitnessWeighInImpedance(int value) {
+    return '$value Ω';
+  }
+
+  @override
+  String get fitnessWeighInDiscard => 'Discard';
 }
