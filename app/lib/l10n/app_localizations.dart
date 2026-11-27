@@ -1885,6 +1885,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Never deleted automatically, even when completed'**
   String get todoKeepForeverHint;
+
+  /// No description provided for @fitnessModuleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Fitness'**
+  String get fitnessModuleTitle;
+
+  /// No description provided for @fitnessMeasurementsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Measurements'**
+  String get fitnessMeasurementsTitle;
+
+  /// No description provided for @fitnessLatest.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest: {weight} kg'**
+  String fitnessLatest(String weight);
+
+  /// No description provided for @fitnessNoMeasurements.
+  ///
+  /// In en, this message translates to:
+  /// **'No measurements yet'**
+  String get fitnessNoMeasurements;
+
+  /// No description provided for @fitnessNoMeasurementsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a weight by hand to start tracking.'**
+  String get fitnessNoMeasurementsHint;
+
+  /// No description provided for @fitnessAddMeasurement.
+  ///
+  /// In en, this message translates to:
+  /// **'Add measurement'**
+  String get fitnessAddMeasurement;
+
+  /// No description provided for @fitnessWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight (kg)'**
+  String get fitnessWeight;
+
+  /// No description provided for @fitnessWeightInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a weight between 10 and 500 kg'**
+  String get fitnessWeightInvalid;
+
+  /// No description provided for @fitnessWho.
+  ///
+  /// In en, this message translates to:
+  /// **'Who'**
+  String get fitnessWho;
+
+  /// No description provided for @fitnessWhen.
+  ///
+  /// In en, this message translates to:
+  /// **'When'**
+  String get fitnessWhen;
+
+  /// No description provided for @fitnessFatPct.
+  ///
+  /// In en, this message translates to:
+  /// **'Fat {value}%'**
+  String fitnessFatPct(String value);
+
+  /// No description provided for @fitnessWaterPct.
+  ///
+  /// In en, this message translates to:
+  /// **'Water {value}%'**
+  String fitnessWaterPct(String value);
+
+  /// No description provided for @fitnessMusclePct.
+  ///
+  /// In en, this message translates to:
+  /// **'Muscle {value} kg'**
+  String fitnessMusclePct(String value);
+
+  /// No description provided for @fitnessBmi.
+  ///
+  /// In en, this message translates to:
+  /// **'BMI {value}'**
+  String fitnessBmi(String value);
+
+  /// No description provided for @fitnessWallTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight'**
+  String get fitnessWallTitle;
+
+  /// No description provided for @fitnessWallNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No weight yet'**
+  String get fitnessWallNone;
 }
 
 class _AppLocalizationsDelegate

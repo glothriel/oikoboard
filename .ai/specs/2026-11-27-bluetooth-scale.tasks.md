@@ -67,7 +67,7 @@
 - `app/test/fitness_repository_mock_test.dart` — add, delete and profile save in the mock; JSON round-trips.
 - `app/test/fitness_suggest_test.dart` — two recent versus one old measure rule, impedance tie-break, no-data fallback.
 
-## [ ] T5: App: Fitness module, hub, Measurements screen and wall tile
+## [x] T5: App: Fitness module, hub, Measurements screen and wall tile
 **Goal:** The Fitness section is reachable and shows, adds and deletes measurements.
 **Acceptance criteria:**
 - A 4th nav item opens the hub with a Measurements card (latest weight, trend); the card opens `/fitness/measurements` with a back arrow (R8).

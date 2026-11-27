@@ -789,5 +789,56 @@
     }
   },
   "todoKeepForever": "Keep forever",
-  "todoKeepForeverHint": "Never deleted automatically, even when completed"
+  "todoKeepForeverHint": "Never deleted automatically, even when completed",
+  "fitnessModuleTitle": "Fitness",
+  "fitnessMeasurementsTitle": "Measurements",
+  "fitnessLatest": "Latest: {weight} kg",
+  "@fitnessLatest": {
+    "placeholders": {
+      "weight": {
+        "type": "String"
+      }
+    }
+  },
+  "fitnessNoMeasurements": "No measurements yet",
+  "fitnessNoMeasurementsHint": "Add a weight by hand to start tracking.",
+  "fitnessAddMeasurement": "Add measurement",
+  "fitnessWeight": "Weight (kg)",
+  "fitnessWeightInvalid": "Enter a weight between 10 and 500 kg",
+  "fitnessWho": "Who",
+  "fitnessWhen": "When",
+  "fitnessFatPct": "Fat {value}%",
+  "@fitnessFatPct": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "fitnessWaterPct": "Water {value}%",
+  "@fitnessWaterPct": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "fitnessMusclePct": "Muscle {value} kg",
+  "@fitnessMusclePct": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "fitnessBmi": "BMI {value}",
+  "@fitnessBmi": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "fitnessWallTitle": "Weight",
+  "fitnessWallNone": "No weight yet"
 }

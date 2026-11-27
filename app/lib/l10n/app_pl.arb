@@ -297,5 +297,21 @@
   "recurEndsNever": "Koniec: nigdy",
   "recurCreatesAtTime": "Dodaje o {time}",
   "todoKeepForever": "Zachowaj na zawsze",
-  "todoKeepForeverHint": "Nigdy nie jest usuwany automatycznie, nawet po ukończeniu"
+  "todoKeepForeverHint": "Nigdy nie jest usuwany automatycznie, nawet po ukończeniu",
+  "fitnessModuleTitle": "Fitness",
+  "fitnessMeasurementsTitle": "Pomiary",
+  "fitnessLatest": "Ostatni: {weight} kg",
+  "fitnessNoMeasurements": "Brak pomiarów",
+  "fitnessNoMeasurementsHint": "Dodaj wagę ręcznie, aby zacząć śledzenie.",
+  "fitnessAddMeasurement": "Dodaj pomiar",
+  "fitnessWeight": "Waga (kg)",
+  "fitnessWeightInvalid": "Podaj wagę od 10 do 500 kg",
+  "fitnessWho": "Kto",
+  "fitnessWhen": "Kiedy",
+  "fitnessFatPct": "Tłuszcz {value}%",
+  "fitnessWaterPct": "Woda {value}%",
+  "fitnessMusclePct": "Mięśnie {value} kg",
+  "fitnessBmi": "BMI {value}",
+  "fitnessWallTitle": "Waga",
+  "fitnessWallNone": "Brak wagi"
 }
