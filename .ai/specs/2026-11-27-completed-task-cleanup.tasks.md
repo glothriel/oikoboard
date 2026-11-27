@@ -18,6 +18,6 @@
 - `app/lib/l10n/app_en.arb` and `app/lib/l10n/app_pl.arb` — keys `todoKeepForever` ("Keep forever" / "Zachowaj na zawsze") and `todoKeepForeverHint` ("Never deleted automatically, even when completed" / "Nigdy nie jest usuwany automatycznie, nawet po ukończeniu"); regenerate localizations with `flutter gen-l10n` (or `flutter pub get`) so the generated files are updated.
 - `app/test/` — add to the existing todo model/repository tests (find them with `grep -rl TodoItem app/test`): `TodoItem` JSON round-trip keeps `keepForever`, `copyWith(keepForever: …)` sets and clears it, and `MockTodoRepository` stores the flag on `addItem` and `updateItem`.
 
-## [ ] T3: Docs
+## [x] T3: Docs
 **Acceptance criteria:** R2 is documented where operational config lives.
 - `docs/architecture.md` — add one short bullet near the recurring-tasks bullet: completed tasks are hard-deleted `OIKO_DONE_RETENTION_DAYS` (default 30, 0 = off) days after `done_at` by a daily DBOS workflow (03:00 UTC), unless `todo_items.keep_forever`; deletes flow through the normal change feed.
