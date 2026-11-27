@@ -78,7 +78,7 @@
 - `app/lib/modules/fitness/measurements_screen.dart` — member chips, `TrendChart` (custom painter, kg), the measurement list with delete, add sheet (weight, date/time, member).
 - `app/lib/l10n/app_en.arb` and `app_pl.arb` — `fitness*` keys for titles, hub, empty state, add sheet, delete, wall tile; regenerate localizations.
 - `app/test/fitness_screen_mock_test.dart` — widget test in the mock: nav item present, hub card opens the list, add and delete a measurement, wall tile shows the latest weight.
-- Mockup: reuse the prototype of the Fitness hub, Measurements screen, add sheet and Home tile from `em-mockups/issue-34`.
+- Mockup: `em-mockups/issue-34` — reuse `fitness_hub.dart`, `measurements_screen.dart`, `trend_chart.dart` and the wall tile in `fitness_module.dart`; `sample.dart` is sample data only, replace it with providers.
 
 ## [ ] T6: App: Fitness profile form
 **Goal:** A member edits their sex, birth date and height, which enable body composition.
@@ -92,7 +92,7 @@
 - `app/lib/modules/fitness/fitness_hub.dart` — profile hint card above the sections and an app-bar action opening the profile.
 - `app/lib/l10n/app_en.arb` and `app_pl.arb` — profile form and hint keys.
 - `app/test/fitness_profile_mock_test.dart` — a valid profile saves, an invalid height is rejected, the hint disappears after saving.
-- Mockup: reuse the prototype of the profile form from `em-mockups/issue-34`.
+- Mockup: `em-mockups/issue-34` — reuse `profile_screen.dart` and the profile hint card in `fitness_hub.dart`.
 
 ## [ ] T7: App: Bluetooth weigh-in
 **Goal:** Weigh on the scale from the app, assign each reading to a member or discard it, and save with composition.
@@ -111,4 +111,4 @@
 - `app/lib/modules/fitness/measurements_screen.dart` — "Weigh in" action shown only when `scaleSessionProvider` is available.
 - `app/lib/l10n/app_en.arb` and `app_pl.arb` — weigh-in keys: states, permissions, save, discard.
 - `app/test/fitness_weigh_in_mock_test.dart` — with `FakeScaleSession`: readings appear with the suggested member, Save adds a measurement with composition, Discard drops it, a second session skips both.
-- Mockup: reuse the prototype of the weigh-in screen from `em-mockups/issue-34`.
+- Mockup: `em-mockups/issue-34` — reuse `weigh_in_screen.dart` (status header, reading cards with member picker, Save and Discard).

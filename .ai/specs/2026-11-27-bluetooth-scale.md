@@ -27,6 +27,8 @@ The model stays clean enough to export to Garmin Connect later.
 - Weigh-in screen (scan/connect states, readings with member picker, Save, Discard)
 - Home wall tile "Weight"
 
+Prototype: branch `em-mockups/issue-34` (never merged) holds all five views; tasks T5–T7 reuse it.
+
 ## Out of scope
 - Workouts and Calories sections, any placeholder for them
 - Garmin Connect (or other) exporter
