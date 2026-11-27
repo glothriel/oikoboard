@@ -219,6 +219,8 @@
   "todoWallFilterEmpty": "Nothing matches the filter",
   "todoDescription": "Description",
   "todoHasDescription": "Has a description",
+  "todoFromRecurring": "Created from a recurring task",
+  "todoHasComments": "Has comments",
   "todoColor": "Color",
   "markdownEdit": "Edit",
   "markdownPreview": "Preview",

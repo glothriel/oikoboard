@@ -110,6 +110,8 @@
   "todoWallFilterEmpty": "Nic nie pasuje do filtra",
   "todoDescription": "Opis",
   "todoHasDescription": "Ma opis",
+  "todoFromRecurring": "Utworzone z zadania cyklicznego",
+  "todoHasComments": "Ma komentarze",
   "todoColor": "Kolor",
   "markdownEdit": "Edycja",
   "markdownPreview": "Podgląd",
