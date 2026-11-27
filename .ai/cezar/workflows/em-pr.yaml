@@ -1,11 +1,11 @@
 version: 2
 name: em-pr
-description: Reacts to a human review on an em PR. Plan approved, implement task by task; plan reviewed, the planner revises; code reviewed, the review becomes a task. Scripts in .ai/cezar/em/.
+description: Reacts to a human review on an em PR. Plan PR approved, merge it into the feature branch and implement task by task, one PR per task into the feature branch, then open the final PR; plan reviewed, the planner revises; final PR reviewed, the review becomes a task. Scripts in .ai/cezar/em/.
 nodes:
   - { id: start, type: start }
   - { id: gate, type: check, name: Read review, command: "bash .ai/cezar/em/review-gate.sh" }
   - { id: is-approve, type: if, name: "Plan approved?", condition: { kind: output, ref: gate.output, op: contains, value: approve-plan } }
-  - { id: is-impl, type: if, name: "Code reviewed?", condition: { kind: output, ref: gate.output, op: contains, value: changes-impl } }
+  - { id: is-impl, type: if, name: "Final PR reviewed?", condition: { kind: output, ref: gate.output, op: contains, value: changes-final } }
   - { id: is-plan, type: if, name: "Plan reviewed?", condition: { kind: output, ref: gate.output, op: contains, value: changes-plan } }
   - { id: start-impl, type: check, name: Start implementation, command: "bash .ai/cezar/em/start-impl.sh" }
   - { id: add-task, type: check, name: Review becomes a task, command: "bash .ai/cezar/em/add-review-task.sh" }
@@ -25,6 +25,7 @@ nodes:
       If this is a review task (id R<n>), the human reviewer expects an answer: write one per point to
       `.ai/cezar/em/state/answer.md` (what you changed, or why not).
   - { id: tests, type: check, name: Verify, command: "bash .ai/cezar/em/verify.sh" }
+  - { id: task-pr, type: check, name: Open task PR, command: "bash .ai/cezar/em/task-pr.sh" }
   - { id: fixes, type: loop, name: Fix fuse, max: 10 }
   - id: fix
     type: agent
@@ -70,7 +71,7 @@ nodes:
       {{nodes.tests-a.output}}
 
       Fix the cause, not the tests.
-  - { id: post-reply, type: check, name: Post reply, command: "bash .ai/cezar/em/post-comment.sh developer .ai/cezar/em/state/reply.md" }
+  - { id: post-reply, type: check, name: Push + post reply, command: "bash .ai/cezar/em/push.sh && bash .ai/cezar/em/post-comment.sh developer .ai/cezar/em/state/reply.md" }
   - id: rereview
     type: agent
     name: Reviewer re-reviews
@@ -82,7 +83,7 @@ nodes:
       when it is sound; insist only on what still matters. Rewrite `.ai/cezar/em/state/review.md` with
       what is still open, or the single line "No findings."
   - { id: done-task, type: check, name: Task approved, command: "bash .ai/cezar/em/mark-done.sh" }
-  - { id: impl-ready, type: check, name: Hand to human, command: "bash .ai/cezar/em/impl-ready.sh" }
+  - { id: impl-ready, type: check, name: Open final PR, command: "bash .ai/cezar/em/impl-ready.sh" }
 
   # ---- plan reviewed by a human: a fresh planner revises it
   - id: replanner
@@ -131,7 +132,8 @@ edges:
   - { from: no-task.true, to: impl-ready }
   - { from: no-task.false, to: implement }
   - { from: implement.done, to: tests }
-  - { from: tests.pass, to: review }
+  - { from: tests.pass, to: task-pr }
+  - { from: task-pr.pass, to: review }
   - { from: tests.fail, to: fixes }
   - { from: fixes.repeat, to: fix }
   - { from: fixes.exhausted, to: escalate }

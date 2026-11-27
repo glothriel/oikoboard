@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
-# The plan was approved: move the PR to stage:impl and say so.
+# The plan was approved: merge the plan PR into the feature branch; the task loop takes over.
 set -euo pipefail
 d=$(dirname "$0")
 . "$d/lib.sh"
-gh pr edit "$(target)" -R "$(repo)" --remove-label stage:plan --add-label stage:impl >/dev/null
-echo workflow > "$S/task-id"
-echo "▶️ Plan approved by @$(cat "$S/reviewer"). Implementing it task by task on this PR." > "$S/start.md"
+echo plan > "$S/task-id"
+echo "▶️ Plan approved by @$(cat "$S/reviewer"). Merging it into \`$(cat "$S/feature")\`; every task follows as its own PR into that branch." > "$S/start.md"
 bash "$d/post-comment.sh" workflow "$S/start.md"
+gh api -X PUT "repos/$(repo)/pulls/$(target)/merge" -f merge_method=merge >/dev/null
+gh api -X DELETE "repos/$(repo)/git/refs/heads/$(cat "$S/head-ref")" >/dev/null || true
+# From here on each task opens its own PR.
+rm -f "$S/pr" "$S/head-ref"
+echo "merged plan PR into $(cat "$S/feature")"

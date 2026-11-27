@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
-# Pick the first open task ("## [ ] <id>: <title>") of the plan this branch adds, reset per-task state.
+# Start the next task: move to the tip of the feature branch (earlier tasks are merged there), pick
+# its first open task ("## [ ] <id>: <title>") and reset per-task state.
 # Prints "<id>: <title>", or "NONE" when every task is done. Non-zero exit only on errors.
 set -euo pipefail
 . "$(dirname "$0")/lib.sh"
+feature=$(cat "$S/feature")
+git fetch -q origin "$feature"
+git reset -q --hard "origin/$feature"
 tasks=$(grep -l '^## \[ \] ' $(plan_tasks_files) 2>/dev/null | head -1 || true)
 if [ -z "$tasks" ]; then echo "NONE"; exit 0; fi
 awk '/^## /{ if (p) exit } /^## \[ \] /{ p=1 } p' "$tasks" > "$S/task-body.md"
@@ -20,7 +24,8 @@ title=$(sed -E 's/^## \[ \] [^:]+: *//' <<<"$head")
 echo "$tasks" > "$S/tasks-file"
 echo "$id" > "$S/task-id"
 echo "$id: $title" > "$S/task-title"
+echo "em/issue-$(cat "$S/issue")-$(tr '[:upper:]' '[:lower:]' <<<"$id")" > "$S/head-ref"
 git rev-parse HEAD > "$S/base"
 echo 0 > "$S/rounds"
-rm -f "$S/review.md" "$S/reply.md" "$S/answer.md"
+rm -f "$S/pr" "$S/review.md" "$S/reply.md" "$S/answer.md"
 echo "$id: $title"
