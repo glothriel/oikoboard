@@ -122,6 +122,9 @@ nodes:
       (`git diff --name-only origin/master...HEAD -- .ai/specs`). Follow `.ai/cezar/em/planner.md` and
       the repository rules in `.ai/cezar/em/rules.md`. Change the plan or explain why not, for each point, and write your answer per point to
       `.ai/cezar/em/state/answer.md`. Commit nothing.
+      If the review or your changes affect how the views of the plan look or behave (including comments
+      on the mockups), write the single line `redo` to `.ai/cezar/em/state/mockups`: a designer then
+      reworks the mockups.
   - { id: pvalidate, type: check, name: Validate plan, command: "bash .ai/cezar/em/validate-plan.sh" }
   - { id: ploop, type: loop, name: Format fixes, max: 3 }
   - id: pfix
@@ -132,6 +135,64 @@ nodes:
       `bash .ai/cezar/em/validate-plan.sh` found problems:
 
       {{nodes.pvalidate.output}}
+
+      Fix the plan files.
+  # the revised plan changes the UI: the designer reworks the prototype, new mockups go to the PR
+  - { id: remock, type: check, name: "Mockups to redo?", command: "bash .ai/cezar/em/remock-check.sh" }
+  - { id: needs-remock, type: if, name: "Redo mockups?", condition: { kind: output, ref: remock.output, op: contains, value: needed } }
+  - { id: mock-restore, type: check, name: Restore prototype, command: "bash .ai/cezar/em/mock-restore.sh" }
+  - id: designer
+    type: agent
+    name: Designer
+    prompt: |
+      You are the DESIGNER. A human reviewed the plan on this PR (`.ai/cezar/em/state/human-review.md`)
+      and the planner revised it (`.ai/cezar/em/state/answer.md`). The plan is the spec and the tasks
+      this branch adds (`git diff --name-only origin/master...HEAD -- .ai/specs`). The previous prototype:
+
+      {{nodes.mock-restore.output}}
+
+      Follow `.claude/skills/ui-mockups/SKILL.md` and `.ai/cezar/em/rules.md`: rework the prototype so it
+      shows every view of the revised plan (the spec's `## UI` section), screenshot each new or changed
+      one on the mock backend and leave the final PNGs and `captions.md` (say what changed since the last
+      mockups) in `.ai/cezar/em/state/screens/`. Do not change the plan files. The prototype is kept on a
+      side branch as the reference the developers reuse.
+  - { id: mock-publish, type: check, name: Post mockups, command: "bash .ai/cezar/em/screens-publish.sh designer" }
+  - { id: mloop, type: loop, name: Mockup retries, max: 2 }
+  - id: designer-again
+    type: agent
+    name: Designer retries
+    session: { continue: designer }
+    prompt: |
+      Publishing failed:
+
+      {{nodes.mock-publish.output}}
+
+      Leave the final screenshots in `.ai/cezar/em/state/screens/`.
+  - { id: mock-save, type: check, name: Keep prototype on a branch, command: "bash .ai/cezar/em/mock-save.sh" }
+  - id: mock-plan
+    type: agent
+    name: Planner points tasks at mockups
+    session: { continue: replanner }
+    prompt: |
+      The designer reworked the prototype for your revised plan:
+
+      {{nodes.mock-save.output}}
+
+      If a prototype was kept, the developers should reuse it. Read it (`git fetch -q origin <branch>`,
+      then `git diff HEAD origin/<branch>`) and make sure every task that builds one of these views has
+      one up-to-date bullet: "- Mockup: reuse <files / widgets> from branch <branch>
+      (git show origin/<branch>:<path>); match its look, adapt the code to this task." and the spec's
+      `## UI` section names the branch. Change nothing else in the plan.
+  - { id: validate-m, type: check, name: Validate plan, command: "bash .ai/cezar/em/validate-plan.sh" }
+  - { id: vloop-m, type: loop, name: Format fixes, max: 3 }
+  - id: mfix
+    type: agent
+    name: Planner fixes format
+    session: { continue: replanner }
+    prompt: |
+      `bash .ai/cezar/em/validate-plan.sh` found problems:
+
+      {{nodes.validate-m.output}}
 
       Fix the plan files.
   - { id: answered, type: check, name: Push + answer, command: "bash .ai/cezar/em/plan-answered.sh" }
@@ -198,7 +259,24 @@ edges:
   - { from: ploop.repeat, to: pfix }
   - { from: ploop.exhausted, to: escalate }
   - { from: pfix.done, to: pvalidate }
-  - { from: pvalidate.pass, to: answered }
+  - { from: pvalidate.pass, to: remock }
+  - { from: remock.pass, to: needs-remock }
+  - { from: needs-remock.false, to: answered }
+  - { from: needs-remock.true, to: mock-restore }
+  - { from: mock-restore.pass, to: designer }
+  - { from: designer.done, to: mock-publish }
+  - { from: mock-publish.pass, to: mock-save }
+  - { from: mock-publish.fail, to: mloop }
+  - { from: mloop.repeat, to: designer-again }
+  - { from: mloop.exhausted, to: escalate }
+  - { from: designer-again.done, to: mock-publish }
+  - { from: mock-save.pass, to: mock-plan }
+  - { from: mock-plan.done, to: validate-m }
+  - { from: validate-m.fail, to: vloop-m }
+  - { from: vloop-m.repeat, to: mfix }
+  - { from: vloop-m.exhausted, to: escalate }
+  - { from: mfix.done, to: validate-m }
+  - { from: validate-m.pass, to: answered }
   - { from: answered.pass, to: done }
 
   - { from: escalate.pass, to: stuck }
