@@ -1195,4 +1195,38 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fitnessWallNone => 'No weight yet';
+
+  @override
+  String get fitnessProfileTitle => 'Fitness profile';
+
+  @override
+  String get fitnessProfileAction => 'Edit profile';
+
+  @override
+  String get fitnessProfileHintTitle => 'Complete your profile';
+
+  @override
+  String get fitnessProfileHintBody =>
+      'Add your sex, birth date and height to get body composition from the scale.';
+
+  @override
+  String get fitnessSex => 'Sex';
+
+  @override
+  String get fitnessSexMale => 'Male';
+
+  @override
+  String get fitnessSexFemale => 'Female';
+
+  @override
+  String get fitnessBirthDate => 'Birth date';
+
+  @override
+  String get fitnessBirthDateInvalid => 'Pick a birth date in the past';
+
+  @override
+  String get fitnessHeight => 'Height (cm)';
+
+  @override
+  String get fitnessHeightInvalid => 'Enter a height between 50 and 250 cm';
 }

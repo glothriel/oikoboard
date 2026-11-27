@@ -1981,6 +1981,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No weight yet'**
   String get fitnessWallNone;
+
+  /// No description provided for @fitnessProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Fitness profile'**
+  String get fitnessProfileTitle;
+
+  /// No description provided for @fitnessProfileAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit profile'**
+  String get fitnessProfileAction;
+
+  /// No description provided for @fitnessProfileHintTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete your profile'**
+  String get fitnessProfileHintTitle;
+
+  /// No description provided for @fitnessProfileHintBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your sex, birth date and height to get body composition from the scale.'**
+  String get fitnessProfileHintBody;
+
+  /// No description provided for @fitnessSex.
+  ///
+  /// In en, this message translates to:
+  /// **'Sex'**
+  String get fitnessSex;
+
+  /// No description provided for @fitnessSexMale.
+  ///
+  /// In en, this message translates to:
+  /// **'Male'**
+  String get fitnessSexMale;
+
+  /// No description provided for @fitnessSexFemale.
+  ///
+  /// In en, this message translates to:
+  /// **'Female'**
+  String get fitnessSexFemale;
+
+  /// No description provided for @fitnessBirthDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Birth date'**
+  String get fitnessBirthDate;
+
+  /// No description provided for @fitnessBirthDateInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a birth date in the past'**
+  String get fitnessBirthDateInvalid;
+
+  /// No description provided for @fitnessHeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Height (cm)'**
+  String get fitnessHeight;
+
+  /// No description provided for @fitnessHeightInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a height between 50 and 250 cm'**
+  String get fitnessHeightInvalid;
 }
 
 class _AppLocalizationsDelegate

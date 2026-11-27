@@ -85,7 +85,7 @@
 - `app/test/fitness_screen_mock_test.dart` — widget test in the mock: nav item present, hub card opens the list, add and delete a measurement, wall tile shows the latest weight.
 - Mockup: `em-mockups/issue-34` — reuse `fitness_hub.dart`, `measurements_screen.dart`, `trend_chart.dart` and the wall tile in `fitness_module.dart`; `sample.dart` is sample data only, replace it with providers.
 
-## [ ] T6: App: Fitness profile form
+## [x] T6: App: Fitness profile form
 **Goal:** A member edits their sex, birth date and height, which enable body composition.
 **Acceptance criteria:**
 - The form at `/fitness/profile` loads the signed-in member's profile, validates (height 50–250 cm, birth date in the past) and saves via the repository (R2, R8).

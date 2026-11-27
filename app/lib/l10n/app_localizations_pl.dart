@@ -1215,4 +1215,38 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get fitnessWallNone => 'Brak wagi';
+
+  @override
+  String get fitnessProfileTitle => 'Profil fitness';
+
+  @override
+  String get fitnessProfileAction => 'Edytuj profil';
+
+  @override
+  String get fitnessProfileHintTitle => 'Uzupełnij profil';
+
+  @override
+  String get fitnessProfileHintBody =>
+      'Podaj płeć, datę urodzenia i wzrost, aby wagę rozbić na skład ciała.';
+
+  @override
+  String get fitnessSex => 'Płeć';
+
+  @override
+  String get fitnessSexMale => 'Mężczyzna';
+
+  @override
+  String get fitnessSexFemale => 'Kobieta';
+
+  @override
+  String get fitnessBirthDate => 'Data urodzenia';
+
+  @override
+  String get fitnessBirthDateInvalid => 'Wybierz datę urodzenia z przeszłości';
+
+  @override
+  String get fitnessHeight => 'Wzrost (cm)';
+
+  @override
+  String get fitnessHeightInvalid => 'Podaj wzrost od 50 do 250 cm';
 }
