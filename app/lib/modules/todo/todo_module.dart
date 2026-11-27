@@ -118,6 +118,8 @@ class TodoModule extends FamilyModule {
       bool done = false,
       String? who,
       int? dueInDays,
+      int comments = 0,
+      bool recurring = false,
     }) {
       final id = 'seed-${n + 1}';
       store.seed(itemsEntity, {
@@ -133,6 +135,10 @@ class TodoModule extends FamilyModule {
               : DateTime(now.year, now.month, now.day + dueInDays),
         ),
         'done_at': done ? now.toIso8601String() : null,
+        'comment_count': comments,
+        'occurrence_date': recurring
+            ? toApiDate(DateTime(now.year, now.month, now.day))
+            : null,
       });
       return id;
     }
@@ -185,11 +191,16 @@ class TodoModule extends FamilyModule {
     item('dom', 'Wymienić żarówkę w łazience', who: 'tata');
     item('dom', 'Odkurzyć pokój', who: 'kuba', dueInDays: 0);
     item('dom', 'Zapłacić za prąd', who: 'mama', dueInDays: 2);
-    item('dom', 'Podlać kwiatki', who: 'ola', dueInDays: -1);
+    item('dom', 'Podlać kwiatki', who: 'ola', dueInDays: -1, recurring: true);
     item('dom', 'Wynieść śmieci', done: true, who: 'kuba');
 
     item('wakacje', 'Zarezerwować nocleg', who: 'mama');
-    final passport = item('wakacje', 'Paszport dla Oli', dueInDays: 14);
+    final passport = item(
+      'wakacje',
+      'Paszport dla Oli',
+      dueInDays: 14,
+      comments: 2,
+    );
     comment(
       passport,
       'wakacje',

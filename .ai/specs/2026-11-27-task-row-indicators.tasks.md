@@ -7,7 +7,7 @@
 - `server/internal/app/todo_test.go` — new `TestTodoCommentCount`: create task (count 0); add two comments → `todo.list` view row has `comment_count` 2 and a `todo_items` change reaches a websocket subscribed to `todo.list`; delete one → 1; delete the task with comments → no error.
 - `server/internal/app/recurring_test.go` — in `TestRecurringGenerate` (or a small new test) assert a generated item has `occurrence_date` set and still has it after the template is deleted.
 
-## [ ] T2: App: indicators on the task row
+## [x] T2: App: indicators on the task row
 **Acceptance criteria:** R1, R2, R3, R5, R6.
 - Mockup: reuse the row indicators, `TodoItem` fields and mock seed/repository changes in `app/lib/modules/todo/{todo_screen,models,repository,todo_module}.dart` and the l10n keys from branch `em-mockups/issue-46` (`git show origin/em-mockups/issue-46:<path>`); match its look, adapt the code to this task.
 - `app/lib/modules/todo/models.dart` — `TodoItem`: add `commentCount` (int, default 0) and `occurrenceDate` (DateTime?, default null) as constructor fields; getter `bool get fromRecurring => occurrenceDate != null;` `fromJson` reads `comment_count` (`as int? ?? 0`) and `occurrence_date` via `fromApiDate`; `toJson` writes both (`toApiDate`); `copyWith` carries both over unchanged.
