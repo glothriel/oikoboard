@@ -23,7 +23,7 @@
 - `server/internal/app/fitness_test.go` — view snapshots, a change reaching a websocket subscriber, and a delegated (OAuth) token refused on the views and routes (pattern of `oauth_test.go`).
 - `docs/architecture.md` — one bullet: Fitness module (`measurements`, `fitness_profiles`, composition computed on the device, scale access behind `ScaleDriver`, Android only).
 
-## [ ] T2: App: body composition calculator
+## [x] T2: App: body composition calculator
 **Goal:** A pure function computing variant B body composition from the issue's equations.
 **Acceptance criteria:**
 - Returns all fields of R3 for known inputs, applying every clamp and the sex/age branches (R3).
