@@ -51,7 +51,7 @@
 - `app/test/fitness_mi_scale_test.dart` — a second fake driver registered in a test registry is picked for its own device name, proving the registry is open.
 - `app/test/fitness_mi_scale_test.dart` — fake `GattIo` recording writes; frames for kg/lb/jin, stable/removed/impedance flags, double frame, v1 chunks, name matching, fallback timer, cursor.
 
-## [ ] T4: App: fitness data layer with mock
+## [x] T4: App: fitness data layer with mock
 **Goal:** Models, repository with `Api*` and `Mock*` implementations, providers and member suggestion.
 **Acceptance criteria:**
 - Measurements and profiles stream from the views and update live; add and delete go through the outbox; profile save is an upsert for the signed-in member (R1, R2).
