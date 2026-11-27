@@ -85,6 +85,7 @@ class TodoItem {
     this.due,
     this.dueTime,
     this.doneAt,
+    this.keepForever = false,
     double? position,
   }) : position = position ?? -createdAt.microsecondsSinceEpoch / 1e6;
 
@@ -104,6 +105,9 @@ class TodoItem {
   /// Optional time of [due]; null without a [due].
   final TimeOfDay? dueTime;
   final DateTime? doneAt;
+
+  /// Exempt from the automatic cleanup of completed tasks.
+  final bool keepForever;
 
   /// Manual order within the list, ascending; minus the seconds since the
   /// epoch at creation, so new tasks go first.
@@ -137,6 +141,7 @@ class TodoItem {
     due: fromApiDate(j['due']),
     dueTime: fromApiClock(j['due_time']),
     doneAt: fromApiTime(j['done_at']),
+    keepForever: j['keep_forever'] as bool? ?? false,
     position: (j['position'] as num?)?.toDouble(),
   );
 
@@ -151,6 +156,7 @@ class TodoItem {
     'due': toApiDate(due),
     'due_time': toApiClock(dueTime),
     'done_at': toApiTime(doneAt),
+    'keep_forever': keepForever,
     'position': position,
   };
 
@@ -165,6 +171,7 @@ class TodoItem {
     Object? due = _unset,
     Object? dueTime = _unset,
     Object? doneAt = _unset,
+    bool? keepForever,
     double? position,
   }) => TodoItem(
     id: id,
@@ -183,6 +190,7 @@ class TodoItem {
         ? this.dueTime
         : dueTime as TimeOfDay?,
     doneAt: identical(doneAt, _unset) ? this.doneAt : doneAt as DateTime?,
+    keepForever: keepForever ?? this.keepForever,
     position: position ?? this.position,
   );
 

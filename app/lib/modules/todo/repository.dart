@@ -46,6 +46,7 @@ abstract interface class TodoRepository {
     DateTime? due,
     TimeOfDay? dueTime,
     String description = '',
+    bool keepForever = false,
     List<StoredFile> attachments = const [],
   });
 
@@ -121,6 +122,7 @@ class ApiTodoRepository implements TodoRepository {
     'assignee_id',
     'due',
     'due_time',
+    'keep_forever',
     'position',
   ];
 
@@ -234,6 +236,7 @@ class ApiTodoRepository implements TodoRepository {
     DateTime? due,
     TimeOfDay? dueTime,
     String description = '',
+    bool keepForever = false,
     List<StoredFile> attachments = const [],
   }) async {
     final item = TodoItem(
@@ -246,6 +249,7 @@ class ApiTodoRepository implements TodoRepository {
       due: due,
       dueTime: due == null ? null : dueTime,
       description: description,
+      keepForever: keepForever,
     );
     outbox.enqueue(
       Mutation.create(
@@ -260,6 +264,7 @@ class ApiTodoRepository implements TodoRepository {
           'due': toApiDate(due),
           'due_time': toApiClock(item.dueTime),
           'description': description,
+          'keep_forever': keepForever,
           'position': item.position,
           if (attachments.isNotEmpty)
             'attachment_ids': [for (final f in attachments) f.id],
@@ -516,6 +521,7 @@ class MockTodoRepository implements TodoRepository {
     DateTime? due,
     TimeOfDay? dueTime,
     String description = '',
+    bool keepForever = false,
     List<StoredFile> attachments = const [],
   }) async {
     final item = TodoItem(
@@ -528,6 +534,7 @@ class MockTodoRepository implements TodoRepository {
       due: due,
       dueTime: due == null ? null : dueTime,
       description: description,
+      keepForever: keepForever,
     );
     await store.put(itemsEntity, item.toJson(), actorId: actorId);
     await attach(item.id, attachments);
@@ -551,6 +558,7 @@ class MockTodoRepository implements TodoRepository {
         'assignee_id',
         'due',
         'due_time',
+        'keep_forever',
         'position',
       ]),
       actorId: actorId,

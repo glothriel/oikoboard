@@ -825,6 +825,7 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
   late String? _assignee = widget.item.assigneeId;
   late DateTime? _due = widget.item.due;
   late TimeOfDay? _dueTime = widget.item.dueTime;
+  late bool _keepForever = widget.item.keepForever;
   late String _listId = widget.item.listId;
 
   /// Files picked in this editor; attached on save.
@@ -867,6 +868,7 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
       assigneeId: _assignee,
       due: _due,
       dueTime: _due == null ? null : _dueTime,
+      keepForever: _keepForever,
     );
   }
 
@@ -883,6 +885,7 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
         due: item.due,
         dueTime: item.dueTime,
         description: item.description,
+        keepForever: item.keepForever,
         attachments: _uploads.files,
       );
     } else {
@@ -1056,6 +1059,13 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
           time: _dueTime,
           onPickTime: _pickDueTime,
           onClearTime: () => setState(() => _dueTime = null),
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(l.todoKeepForever),
+          subtitle: Text(l.todoKeepForeverHint),
+          value: _keepForever,
+          onChanged: (v) => setState(() => _keepForever = v),
         ),
         const SizedBox(height: 16),
         MarkdownField(controller: _description, label: l.todoDescription),

@@ -785,5 +785,7 @@
         "type": "String"
       }
     }
-  }
+  },
+  "todoKeepForever": "Keep forever",
+  "todoKeepForeverHint": "Never deleted automatically, even when completed"
 }
