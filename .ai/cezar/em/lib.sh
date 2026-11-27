@@ -19,11 +19,15 @@ target() {
 main_base() { git rev-parse -q --verify --abbrev-ref origin/HEAD 2>/dev/null || echo origin/master; }
 main_branch() { local b; b=$(main_base); echo "${b#origin/}"; }
 
-# The task lists (.ai/specs/*.tasks.md) this branch adds or changes against the main branch.
+# The task lists (.ai/specs/*.tasks.md) this branch adds or changes against the main branch,
+# committed or not (agents check their plan before cezar commits it at the end of their turn).
 plan_tasks_files() {
   local base; base=$(main_base)
   if git rev-parse -q --verify "$base" >/dev/null; then
-    git diff --name-only "$base"...HEAD -- '.ai/specs/*.tasks.md'
+    {
+      git diff --name-only "$(git merge-base "$base" HEAD)" -- '.ai/specs/*.tasks.md'
+      git ls-files --others --exclude-standard -- '.ai/specs/*.tasks.md'
+    } | sort -u
   else
     ls .ai/specs/*.tasks.md 2>/dev/null || true
   fi

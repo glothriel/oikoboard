@@ -20,7 +20,8 @@ time, each reviewed by a reviewer agent. A human reviews your plan on the PR bef
 ## Files
 
 Name both after today's date and a short slug: `.ai/specs/<YYYY-MM-DD>-<slug>.md` (spec) and
-`.ai/specs/<YYYY-MM-DD>-<slug>.tasks.md` (tasks). Write them in English. Commit nothing yourself.
+`.ai/specs/<YYYY-MM-DD>-<slug>.tasks.md` (tasks). Write them in English. Commit nothing yourself; before you finish, run
+`bash .ai/cezar/em/validate-plan.sh` (it checks the uncommitted files too) and fix what it reports.
 
 ### Spec: these sections, short
 
