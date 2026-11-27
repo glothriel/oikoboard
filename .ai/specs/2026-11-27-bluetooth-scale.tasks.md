@@ -116,4 +116,4 @@
 - `app/lib/modules/fitness/measurements_screen.dart` — "Weigh in" action shown only when `scaleSessionProvider` is available.
 - `app/lib/l10n/app_en.arb` and `app_pl.arb` — weigh-in keys: states, permissions, save, discard.
 - `app/test/fitness_weigh_in_mock_test.dart` — with `FakeScaleSession`: readings appear with the suggested member, Save adds a measurement with composition, Discard drops it, a second session on the same scale skips both.
-- Mockup: `em-mockups/issue-34` — reuse `weigh_in_screen.dart` (status header, reading cards with member picker, Save and Discard).
+- Mockup: `em-mockups/issue-34` — reuse `weigh_in_screen.dart` (scale-name status card, reading cards, all variants) and the "Weigh in" action in `measurements_screen.dart`.

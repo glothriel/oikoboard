@@ -30,7 +30,7 @@ The Mi Scale 2 is the only scale supported now (the one the author owns), but th
 - Weigh-in screen (scan/connect states, readings with member picker, Save, Discard)
 - Home wall tile "Weight"
 
-Prototype: branch `em-mockups/issue-34` (never merged) holds all five views; tasks T5–T7 reuse it.
+Prototype: branch `em-mockups/issue-34` (never merged) holds all five views, including the scale name in the weigh-in status card; tasks T5–T7 reuse it.
 
 ## Out of scope
 - Workouts and Calories sections, any placeholder for them
