@@ -125,6 +125,58 @@ func TestTodoDescriptions(t *testing.T) {
 	}
 }
 
+func TestTodoCommentCount(t *testing.T) {
+	e := setup(t)
+	a := e.newFamily("Kowalscy")
+	list := a.firstList()
+	var item struct{ ID string }
+	a.do("POST", "/todo/items", map[string]any{"list_id": list, "title": "Paszport"}, &item)
+	count := func() float64 {
+		t.Helper()
+		_, d := a.view("todo.list", map[string]any{"list_id": list})
+		for _, r := range d["todo_items"] {
+			if r["id"] == item.ID {
+				return r["comment_count"].(float64)
+			}
+		}
+		t.Fatal("task not in the list view")
+		return -1
+	}
+	if n := count(); n != 0 {
+		t.Fatalf("new task: %v", n)
+	}
+
+	w := a.ws()
+	w.sub("l", "todo.list", map[string]any{"list_id": list})
+	var c1, c2 struct{ ID string }
+	a.do("POST", "/todo/comments", map[string]any{"item_id": item.ID, "body": "one"}, &c1)
+	a.do("POST", "/todo/comments", map[string]any{"item_id": item.ID, "body": "two"}, &c2)
+	sawItem := false
+	for i := 0; i < 2; i++ {
+		if m := w.next(); m.Entity == "todo_items" && m.ID == item.ID {
+			sawItem = true
+		}
+	}
+	if !sawItem {
+		t.Error("no todo_items change reached the list subscription")
+	}
+	if n := count(); n != 2 {
+		t.Fatalf("after two comments: %v", n)
+	}
+	a.do("DELETE", "/todo/comments/"+c1.ID, nil, nil)
+	if n := count(); n != 1 {
+		t.Fatalf("after delete: %v", n)
+	}
+	// a client can't set it
+	a.do("PATCH", "/todo/items/"+item.ID, map[string]any{"comment_count": 9}, nil)
+	if n := count(); n != 1 {
+		t.Fatalf("patched count: %v", n)
+	}
+	if st := a.do("DELETE", "/todo/items/"+item.ID, nil, nil); st != http.StatusNoContent {
+		t.Fatalf("delete task with comments: %d", st)
+	}
+}
+
 func TestCleanupDone(t *testing.T) {
 	e := setup(t)
 	a := e.newFamily("Kowalscy")

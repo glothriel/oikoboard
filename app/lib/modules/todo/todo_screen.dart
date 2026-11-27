@@ -755,18 +755,12 @@ class TodoItemTile extends ConsumerWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (item.fromRecurring)
+              _RowIndicator(Icons.repeat, context.l10n.todoFromRecurring),
+            if (item.commentCount > 0)
+              _RowIndicator(Icons.forum_outlined, context.l10n.todoHasComments),
             if (item.description.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: Tooltip(
-                  message: context.l10n.todoHasDescription,
-                  child: Icon(
-                    Icons.notes,
-                    size: 18,
-                    color: theme.colorScheme.outline,
-                  ),
-                ),
-              ),
+              _RowIndicator(Icons.notes, context.l10n.todoHasDescription),
             if (member != null) MemberAvatar(member, radius: 14),
           ],
         ),
@@ -1311,4 +1305,21 @@ class _TodoCommentComposerState extends ConsumerState<TodoCommentComposer> {
       ),
     );
   }
+}
+
+/// A small outline icon in a task row that says something about the task.
+class _RowIndicator extends StatelessWidget {
+  const _RowIndicator(this.icon, this.tooltip);
+
+  final IconData icon;
+  final String tooltip;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(right: 8),
+    child: Tooltip(
+      message: tooltip,
+      child: Icon(icon, size: 18, color: Theme.of(context).colorScheme.outline),
+    ),
+  );
 }

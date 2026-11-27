@@ -380,6 +380,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get todoHasDescription => 'Has a description';
 
   @override
+  String get todoFromRecurring => 'Created from a recurring task';
+
+  @override
+  String get todoHasComments => 'Has comments';
+
+  @override
   String get todoColor => 'Color';
 
   @override

@@ -758,6 +758,18 @@ abstract class AppLocalizations {
   /// **'Has a description'**
   String get todoHasDescription;
 
+  /// No description provided for @todoFromRecurring.
+  ///
+  /// In en, this message translates to:
+  /// **'Created from a recurring task'**
+  String get todoFromRecurring;
+
+  /// No description provided for @todoHasComments.
+  ///
+  /// In en, this message translates to:
+  /// **'Has comments'**
+  String get todoHasComments;
+
   /// No description provided for @todoColor.
   ///
   /// In en, this message translates to:

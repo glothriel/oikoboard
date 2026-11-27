@@ -156,6 +156,12 @@ func TestRecurringGenerate(t *testing.T) {
 	if n != 1 {
 		t.Fatalf("the generated task must stay after the template is deleted, got %d", n)
 	}
+	// ... and keeps its occurrence date, which is what marks it as recurring
+	for _, it := range d["todo_items"] {
+		if it["title"] == "Zakupy" && it["occurrence_date"] != "2026-11-23" {
+			t.Errorf("occurrence_date after template delete: %v", it["occurrence_date"])
+		}
+	}
 }
 
 func TestRecurringCatchUp(t *testing.T) {

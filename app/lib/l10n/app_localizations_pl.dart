@@ -380,6 +380,12 @@ class AppLocalizationsPl extends AppLocalizations {
   String get todoHasDescription => 'Ma opis';
 
   @override
+  String get todoFromRecurring => 'Utworzone z zadania cyklicznego';
+
+  @override
+  String get todoHasComments => 'Ma komentarze';
+
+  @override
   String get todoColor => 'Kolor';
 
   @override

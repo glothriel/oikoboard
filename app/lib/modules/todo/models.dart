@@ -85,6 +85,8 @@ class TodoItem {
     this.due,
     this.dueTime,
     this.doneAt,
+    this.occurrenceDate,
+    this.commentCount = 0,
     this.keepForever = false,
     double? position,
   }) : position = position ?? -createdAt.microsecondsSinceEpoch / 1e6;
@@ -105,6 +107,14 @@ class TodoItem {
   /// Optional time of [due]; null without a [due].
   final TimeOfDay? dueTime;
   final DateTime? doneAt;
+
+  /// Set when created from a recurring task (the day it was for).
+  final DateTime? occurrenceDate;
+
+  /// Number of comments, kept by the server.
+  final int commentCount;
+
+  bool get fromRecurring => occurrenceDate != null;
 
   /// Exempt from the automatic cleanup of completed tasks.
   final bool keepForever;
@@ -141,6 +151,8 @@ class TodoItem {
     due: fromApiDate(j['due']),
     dueTime: fromApiClock(j['due_time']),
     doneAt: fromApiTime(j['done_at']),
+    occurrenceDate: fromApiDate(j['occurrence_date']),
+    commentCount: j['comment_count'] as int? ?? 0,
     keepForever: j['keep_forever'] as bool? ?? false,
     position: (j['position'] as num?)?.toDouble(),
   );
@@ -156,6 +168,8 @@ class TodoItem {
     'due': toApiDate(due),
     'due_time': toApiClock(dueTime),
     'done_at': toApiTime(doneAt),
+    'occurrence_date': toApiDate(occurrenceDate),
+    'comment_count': commentCount,
     'keep_forever': keepForever,
     'position': position,
   };
@@ -190,6 +204,8 @@ class TodoItem {
         ? this.dueTime
         : dueTime as TimeOfDay?,
     doneAt: identical(doneAt, _unset) ? this.doneAt : doneAt as DateTime?,
+    occurrenceDate: occurrenceDate,
+    commentCount: commentCount,
     keepForever: keepForever ?? this.keepForever,
     position: position ?? this.position,
   );

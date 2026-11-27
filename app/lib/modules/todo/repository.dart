@@ -1,3 +1,5 @@
+import 'dart:math' show max;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart' show TimeOfDay;
 
@@ -624,6 +626,7 @@ class MockTodoRepository implements TodoRepository {
       authorId: actorId,
     );
     await store.put(commentsEntity, comment.toJson(), actorId: actorId);
+    await _bumpCommentCount(itemId, 1);
     for (final f in attachments) {
       await store.put(
         attachmentsEntity,
@@ -663,6 +666,21 @@ class MockTodoRepository implements TodoRepository {
     await _deleteAttachments((a) => a['comment_id'] == comment.id);
     await _deleteInbox((e) => e['comment_id'] == comment.id);
     await store.delete(commentsEntity, comment.id, actorId: actorId);
+    await _bumpCommentCount(comment.itemId, -1);
+  }
+
+  /// What the server's trigger does: keeps `comment_count` in step.
+  Future<void> _bumpCommentCount(String itemId, int delta) async {
+    final item = store
+        .list(itemsEntity)
+        .map(TodoItem.fromJson)
+        .where((i) => i.id == itemId)
+        .firstOrNull;
+    if (item == null) return;
+    await store.put(itemsEntity, {
+      ...item.toJson(),
+      'comment_count': max(0, item.commentCount + delta),
+    }, actorId: actorId);
   }
 
   @override
