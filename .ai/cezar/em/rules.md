@@ -2,6 +2,7 @@
 
 Read by the planner, the designer, the developers and both reviewers. They come on top of
 `AGENTS.md`, `CODE_REVIEW.md` and `planner.md`. The reviewers treat a broken rule as a finding.
+The reviewers review the plan and the code, not the screenshots: those are for the human.
 
 ## Spec
 
@@ -21,7 +22,11 @@ Every view a change adds or changes is shown as a screenshot of the real app on 
 (no server): `bash .ai/cezar/em/screens.sh <steps.json>`, how-to in `.claude/skills/ui-mockups/SKILL.md`.
 
 - Plan: a designer prototypes the new and changed views and posts screenshots on the plan PR,
-  so the look is reviewed with the plan. The prototype itself is thrown away.
+  so the look is reviewed with the plan. The prototype code is kept on `em-mockups/issue-<n>`
+  (never merged) and every task that builds one of those views says so in a "Mockup:" bullet.
+- Task with a "Mockup:" bullet: reuse the prototype and match its look; adapt the code to the task
+  rather than copying it line by line. A deliberate difference from the mockup is explained in the
+  task's screenshot captions.
 - Task: after a task that touches `app/lib/` is green, its developer screenshots every view the task
   changed and they are posted on the task PR. A changed view without a screenshot is not done.
 - Use only made-up sample data (the repository is public). One screenshot per view and state that

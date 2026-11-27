@@ -17,8 +17,13 @@ main branch
 
 | Workflow | Started by | Does |
 |---|---|---|
-| `.ai/cezar/workflows/em-plan.yaml` | label `agent` on an issue | creates the feature branch, writes a spec + task list, AI plan review, opens the plan PR as `stage:plan` |
+| `.ai/cezar/workflows/em-plan.yaml` | label `agent` on an issue | settles the intent (open questions go to the issue, see below), creates the feature branch, writes a spec + task list, mockups, AI plan review, opens the plan PR as `stage:plan` |
 | `.ai/cezar/workflows/em-pr.yaml` | a human review on a `stage:plan` / `stage:final` PR | see below |
+
+`em-plan` starts with the intent (`intent.md`): what the issue wants, scope and assumptions. With
+open product questions it posts them with the intent on the issue, drops the `agent` label and stops;
+answer in a comment and add the label again (the next run reads the answers). Without questions it
+posts the intent for the record and goes on to the spec.
 
 `em-pr` reads the latest review (`review-gate.sh`) and:
 
@@ -63,9 +68,11 @@ commits the PNGs to the side branch `em-screens/issue-<n>` (never merged) and co
 links, since GitHub has no API to attach images.
 
 - `em-plan`: when the plan touches the UI, a designer prototypes the views and posts mockups on the plan
-  PR; the prototype is reset away.
+  PR. `mock-save.sh` keeps the prototype code on `em-mockups/issue-<n>` (never merged) and the planner
+  adds a "Mockup:" bullet to the tasks that build those views, so the developers reuse it.
 - `em-pr`: when a task's diff touches the UI, its developer posts screenshots of every changed view on
-  the task PR before the review; no screenshots, no review.
+  the task PR before the review; no screenshots, no review. The reviewers do not look at them: they
+  are for the human.
 
 Every comment carries a banner with the role that wrote it (🟣 planner, 🟠 designer, 🔴 reviewer,
 🔵 developer, 🟢 workflow), since all of them are posted by the same GitHub identity.

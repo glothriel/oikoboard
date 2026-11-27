@@ -60,7 +60,10 @@ Outside the workflows (mockups for an issue): `echo <issue> > .ai/cezar/em/state
 
 ## 4. Hand over
 
-- A plan prototype is thrown away after the screenshots (the em workflow resets it). Put the open
-  product questions you hit while designing into the captions.
+- A plan prototype is kept on the side branch `em-mockups/issue-<n>` (the em workflow commits it) and
+  the developers reuse it, so build it in the files where the plan puts the views, with real widgets.
+  Put the open product questions you hit while designing into the captions.
+- A task whose plan has a "Mockup:" bullet matches that prototype's look; explain any deliberate
+  difference in the captions.
 - In a task, the screenshots show the real implementation: never stub data or hide parts of the view
   just to make the shot look right.
