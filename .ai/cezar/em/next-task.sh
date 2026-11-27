@@ -1,19 +1,12 @@
 #!/usr/bin/env bash
 # Pick the first open task ("## [ ] <id>: <title>") of the plan this branch adds, reset per-task state.
-# exit 0 + "<id>: <title>" = a task to do; exit 1 = no open task left.
+# Prints "<id>: <title>", or "NONE" when every task is done. Non-zero exit only on errors.
 set -euo pipefail
-s=.ai/cezar/em/state
-mkdir -p "$s"
-base=origin/${CEZ_PR_BASE_REF:-${CEZ_BASE:-master}}
-if git rev-parse -q --verify "$base" >/dev/null; then
-  plans=$(git diff --name-only "$base"...HEAD -- '.ai/specs/*.tasks.md')
-else
-  plans=$(ls .ai/specs/*.tasks.md 2>/dev/null || true)
-fi
-tasks=$(grep -l '^## \[ \] ' $plans 2>/dev/null | head -1 || true)
-if [ -z "$tasks" ]; then echo "no open tasks"; exit 1; fi
-awk '/^## /{ if (p) exit } /^## \[ \] /{ p=1 } p' "$tasks" > "$s/task-body.md"
-head=$(head -1 "$s/task-body.md")
+. "$(dirname "$0")/lib.sh"
+tasks=$(grep -l '^## \[ \] ' $(plan_tasks_files) 2>/dev/null | head -1 || true)
+if [ -z "$tasks" ]; then echo "NONE"; exit 0; fi
+awk '/^## /{ if (p) exit } /^## \[ \] /{ p=1 } p' "$tasks" > "$S/task-body.md"
+head=$(head -1 "$S/task-body.md")
 id=$(sed -E 's/^## \[ \] ([^:]+):.*/\1/' <<<"$head")
 title=$(sed -E 's/^## \[ \] [^:]+: *//' <<<"$head")
 {
@@ -22,12 +15,12 @@ title=$(sed -E 's/^## \[ \] [^:]+: *//' <<<"$head")
   echo "- Spec: \`${tasks%.tasks.md}.md\`"
   echo "- Full task list: \`$tasks\` (tasks marked [x] are done; do not start later ones)"
   echo
-  cat "$s/task-body.md"
-} > "$s/current-task.md"
-echo "$tasks" > "$s/tasks-file"
-echo "$id" > "$s/task-id"
-echo "$id: $title" > "$s/task-title"
-git rev-parse HEAD > "$s/base"
-echo 0 > "$s/rounds"
-rm -f "$s/review.md" "$s/reply.md"
+  cat "$S/task-body.md"
+} > "$S/current-task.md"
+echo "$tasks" > "$S/tasks-file"
+echo "$id" > "$S/task-id"
+echo "$id: $title" > "$S/task-title"
+git rev-parse HEAD > "$S/base"
+echo 0 > "$S/rounds"
+rm -f "$S/review.md" "$S/reply.md" "$S/answer.md"
 echo "$id: $title"

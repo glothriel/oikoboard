@@ -1,0 +1,118 @@
+version: 2
+name: em-plan
+description: From a labelled issue to a reviewed plan PR (spec + tasks). The planner and the plan reviewer argue with memory; a human reviews the result. Scripts in .ai/cezar/em/.
+nodes:
+  - { id: start, type: start }
+  - { id: init, type: check, name: Read issue, command: "bash .ai/cezar/em/plan-init.sh" }
+  - id: planner
+    type: agent
+    name: Planner
+    verdicts: [ready, questions]
+    prompt: |
+      You are the PLANNER. {{task}}
+      The issue with its comments is in `.ai/cezar/em/state/issue.md`. Follow `.ai/cezar/em/planner.md`.
+      If a question blocks the plan, write the numbered questions to `.ai/cezar/em/state/questions.md`,
+      write no plan, and end with verdict questions. Otherwise write the spec and the tasks and end
+      with verdict ready.
+  - { id: ask, type: check, name: Ask on the issue, command: "bash .ai/cezar/em/ask-issue.sh" }
+
+  - { id: validate, type: check, name: Validate plan, command: "bash .ai/cezar/em/validate-plan.sh" }
+  - { id: vloop, type: loop, name: Format fixes, max: 3 }
+  - id: replan
+    type: agent
+    name: Planner fixes format
+    session: { continue: planner }
+    prompt: |
+      `bash .ai/cezar/em/validate-plan.sh` found problems:
+
+      {{nodes.validate.output}}
+
+      Fix the plan files.
+  - { id: open, type: check, name: Open plan PR, command: "bash .ai/cezar/em/open-pr.sh" }
+
+  - id: preview
+    type: agent
+    name: Plan reviewer
+    verdicts: [approve, changes]
+    prompt: |
+      You are the PLAN REVIEWER. {{task}}
+      The issue is in `.ai/cezar/em/state/issue.md`; the plan is the spec and the tasks this branch adds
+      (`git diff --name-only origin/master...HEAD -- .ai/specs`); the rules it must follow are in
+      `.ai/cezar/em/planner.md`. Check it against the actual code: requirements of the issue it misses,
+      wrong paths, types or patterns, tasks that would not build or pass on their own, missed reuse of
+      existing code, over-engineering. Do not re-decide product choices under "Decisions and why" unless
+      they contradict the issue. Write your findings to `.ai/cezar/em/state/review.md` (numbered), or the
+      single line "No findings." Do not edit any other file.
+  - { id: post-review, type: check, name: Post review, command: "bash .ai/cezar/em/post-comment.sh reviewer .ai/cezar/em/state/review.md" }
+  - { id: guard, type: check, name: Round guard, command: "bash .ai/cezar/em/round-guard.sh" }
+  - { id: rounds, type: loop, name: Review fuse, max: 30 }
+  - id: paddress
+    type: agent
+    name: Planner answers review
+    session: { continue: planner }
+    prompt: |
+      The plan reviewer asked for changes (full text in `.ai/cezar/em/state/review.md`). For each point
+      either change the plan or explain why not. Write your answer per point to
+      `.ai/cezar/em/state/answer.md`. Commit nothing.
+  - { id: validate-a, type: check, name: Validate plan, command: "bash .ai/cezar/em/validate-plan.sh" }
+  - { id: vloop-a, type: loop, name: Format fixes, max: 3 }
+  - id: pfix
+    type: agent
+    name: Planner fixes format
+    session: { continue: planner }
+    prompt: |
+      `bash .ai/cezar/em/validate-plan.sh` found problems:
+
+      {{nodes.validate-a.output}}
+
+      Fix the plan files.
+  - { id: reply, type: check, name: Push + post answer, command: "bash .ai/cezar/em/push.sh && bash .ai/cezar/em/post-comment.sh planner .ai/cezar/em/state/answer.md" }
+  - id: rereview
+    type: agent
+    name: Plan reviewer re-reviews
+    verdicts: [approve, changes]
+    session: { continue: preview }
+    prompt: |
+      The planner answered your points in `.ai/cezar/em/state/answer.md` and revised the plan. Accept a
+      justification when it is sound; insist only on what still matters. Rewrite
+      `.ai/cezar/em/state/review.md` with what is still open, or the single line "No findings."
+
+  - { id: ready, type: check, name: Hand to human, command: "bash .ai/cezar/em/plan-ready.sh" }
+  - { id: escalate, type: check, name: Escalate, command: "bash .ai/cezar/em/escalate.sh" }
+  - { id: planned, type: end, name: Plan PR ready, status: success }
+  - { id: asked, type: end, name: Questions asked, status: success }
+  - { id: stuck, type: end, status: failed }
+
+edges:
+  - { from: start, to: init }
+  - { from: init.pass, to: planner }
+  - { from: planner.questions, to: ask }
+  - { from: ask.pass, to: asked }
+  - { from: planner.ready, to: validate }
+
+  - { from: validate.fail, to: vloop }
+  - { from: vloop.repeat, to: replan }
+  - { from: vloop.exhausted, to: escalate }
+  - { from: replan.done, to: validate }
+  - { from: validate.pass, to: open }
+  - { from: open.pass, to: preview }
+
+  - { from: preview.approve, to: ready }
+  - { from: preview.changes, to: post-review }
+  - { from: post-review.pass, to: guard }
+  - { from: guard.pass, to: rounds }
+  - { from: guard.fail, to: escalate }
+  - { from: rounds.repeat, to: paddress }
+  - { from: rounds.exhausted, to: escalate }
+  - { from: paddress.done, to: validate-a }
+  - { from: validate-a.fail, to: vloop-a }
+  - { from: vloop-a.repeat, to: pfix }
+  - { from: vloop-a.exhausted, to: escalate }
+  - { from: pfix.done, to: validate-a }
+  - { from: validate-a.pass, to: reply }
+  - { from: reply.pass, to: rereview }
+  - { from: rereview.approve, to: ready }
+  - { from: rereview.changes, to: post-review }
+
+  - { from: ready.pass, to: planned }
+  - { from: escalate.pass, to: stuck }

@@ -1,0 +1,166 @@
+version: 2
+name: em-pr
+description: Reacts to a human review on an em PR. Plan approved, implement task by task; plan reviewed, the planner revises; code reviewed, the review becomes a task. Scripts in .ai/cezar/em/.
+nodes:
+  - { id: start, type: start }
+  - { id: gate, type: check, name: Read review, command: "bash .ai/cezar/em/review-gate.sh" }
+  - { id: is-approve, type: if, name: "Plan approved?", condition: { kind: output, ref: gate.output, op: contains, value: approve-plan } }
+  - { id: is-impl, type: if, name: "Code reviewed?", condition: { kind: output, ref: gate.output, op: contains, value: changes-impl } }
+  - { id: is-plan, type: if, name: "Plan reviewed?", condition: { kind: output, ref: gate.output, op: contains, value: changes-plan } }
+  - { id: start-impl, type: check, name: Start implementation, command: "bash .ai/cezar/em/start-impl.sh" }
+  - { id: add-task, type: check, name: Review becomes a task, command: "bash .ai/cezar/em/add-review-task.sh" }
+
+  # ---- task loop: one task at a time, developer and reviewer keep their sessions within a task
+  - { id: tasks, type: loop, name: Task fuse, max: 30 }
+  - { id: next, type: check, name: Next task, command: "bash .ai/cezar/em/next-task.sh" }
+  - { id: no-task, type: if, name: "All done?", condition: { kind: output, ref: next.output, op: contains, value: NONE } }
+  - id: implement
+    type: agent
+    name: Developer
+    prompt: |
+      You are the DEVELOPER on one task of a plan. Read `.ai/cezar/em/state/current-task.md` (the task)
+      and the spec and full task list it points to. Implement exactly this task, with tests for new
+      logic. Run `bash .ai/cezar/em/verify.sh` before you finish. Do not push and do not comment on
+      GitHub: the workflow does that.
+      If this is a review task (id R<n>), the human reviewer expects an answer: write one per point to
+      `.ai/cezar/em/state/answer.md` (what you changed, or why not).
+  - { id: tests, type: check, name: Verify, command: "bash .ai/cezar/em/verify.sh" }
+  - { id: fixes, type: loop, name: Fix fuse, max: 10 }
+  - id: fix
+    type: agent
+    name: Developer fixes verify
+    session: { continue: implement }
+    prompt: |
+      `bash .ai/cezar/em/verify.sh` failed:
+
+      {{nodes.tests.output}}
+
+      Fix the cause, not the tests.
+  - id: review
+    type: agent
+    name: Reviewer
+    verdicts: [approve, changes]
+    prompt: |
+      You are the REVIEWER of one task of a plan. Read `.ai/cezar/em/state/current-task.md`, the spec and
+      the task list it points to, then the task's change: `git diff $(cat .ai/cezar/em/state/base)`.
+      Apply `CODE_REVIEW.md`. Report only real problems: wrong behaviour, a missed acceptance criterion,
+      broken contract, missing tests for new logic, needless complexity. No style nits, no speculative
+      edge cases. Write your findings to `.ai/cezar/em/state/review.md` (numbered, each with file:line),
+      or the single line "No findings." Do not edit any other file.
+  - { id: post-review, type: check, name: Post review, command: "bash .ai/cezar/em/post-comment.sh reviewer .ai/cezar/em/state/review.md" }
+  - { id: guard, type: check, name: Round guard, command: "bash .ai/cezar/em/round-guard.sh" }
+  - { id: rounds, type: loop, name: Review fuse, max: 30 }
+  - id: address
+    type: agent
+    name: Developer answers review
+    session: { continue: implement }
+    prompt: |
+      The reviewer asked for changes (full text in `.ai/cezar/em/state/review.md`). For each finding
+      either fix it or explain why it is wrong or not worth it. Write your answer per finding to
+      `.ai/cezar/em/state/reply.md`. Run `bash .ai/cezar/em/verify.sh` before you finish.
+  - { id: tests-a, type: check, name: Verify, command: "bash .ai/cezar/em/verify.sh" }
+  - { id: fixes-a, type: loop, name: Fix fuse, max: 10 }
+  - id: fix-a
+    type: agent
+    name: Developer fixes verify
+    session: { continue: implement }
+    prompt: |
+      `bash .ai/cezar/em/verify.sh` failed:
+
+      {{nodes.tests-a.output}}
+
+      Fix the cause, not the tests.
+  - { id: post-reply, type: check, name: Post reply, command: "bash .ai/cezar/em/post-comment.sh developer .ai/cezar/em/state/reply.md" }
+  - id: rereview
+    type: agent
+    name: Reviewer re-reviews
+    verdicts: [approve, changes]
+    session: { continue: review }
+    prompt: |
+      The developer answered your findings in `.ai/cezar/em/state/reply.md` and changed the code
+      (`git diff $(cat .ai/cezar/em/state/base)` is the whole task so far). Accept a justification
+      when it is sound; insist only on what still matters. Rewrite `.ai/cezar/em/state/review.md` with
+      what is still open, or the single line "No findings."
+  - { id: done-task, type: check, name: Task approved, command: "bash .ai/cezar/em/mark-done.sh" }
+  - { id: impl-ready, type: check, name: Hand to human, command: "bash .ai/cezar/em/impl-ready.sh" }
+
+  # ---- plan reviewed by a human: a fresh planner revises it
+  - id: replanner
+    type: agent
+    name: Planner revises
+    prompt: |
+      You are the PLANNER. A human reviewed the plan on this PR; the review is in
+      `.ai/cezar/em/state/human-review.md`. The plan is the spec and the tasks this branch adds
+      (`git diff --name-only origin/master...HEAD -- .ai/specs`). Follow `.ai/cezar/em/planner.md`.
+      Change the plan or explain why not, for each point, and write your answer per point to
+      `.ai/cezar/em/state/answer.md`. Commit nothing.
+  - { id: pvalidate, type: check, name: Validate plan, command: "bash .ai/cezar/em/validate-plan.sh" }
+  - { id: ploop, type: loop, name: Format fixes, max: 3 }
+  - id: pfix
+    type: agent
+    name: Planner fixes format
+    session: { continue: replanner }
+    prompt: |
+      `bash .ai/cezar/em/validate-plan.sh` found problems:
+
+      {{nodes.pvalidate.output}}
+
+      Fix the plan files.
+  - { id: answered, type: check, name: Push + answer, command: "bash .ai/cezar/em/plan-answered.sh" }
+
+  - { id: escalate, type: check, name: Escalate, command: "bash .ai/cezar/em/escalate.sh" }
+  - { id: skipped, type: end, name: Nothing to do, status: success }
+  - { id: done, type: end, status: success }
+  - { id: stuck, type: end, status: failed }
+
+edges:
+  - { from: start, to: gate }
+  - { from: gate.pass, to: is-approve }
+  - { from: is-approve.true, to: start-impl }
+  - { from: is-approve.false, to: is-impl }
+  - { from: is-impl.true, to: add-task }
+  - { from: is-impl.false, to: is-plan }
+  - { from: is-plan.true, to: replanner }
+  - { from: is-plan.false, to: skipped }
+  - { from: start-impl.pass, to: tasks }
+  - { from: add-task.pass, to: tasks }
+
+  - { from: tasks.repeat, to: next }
+  - { from: tasks.exhausted, to: escalate }
+  - { from: next.pass, to: no-task }
+  - { from: no-task.true, to: impl-ready }
+  - { from: no-task.false, to: implement }
+  - { from: implement.done, to: tests }
+  - { from: tests.pass, to: review }
+  - { from: tests.fail, to: fixes }
+  - { from: fixes.repeat, to: fix }
+  - { from: fixes.exhausted, to: escalate }
+  - { from: fix.done, to: tests }
+  - { from: review.approve, to: done-task }
+  - { from: review.changes, to: post-review }
+  - { from: post-review.pass, to: guard }
+  - { from: guard.pass, to: rounds }
+  - { from: guard.fail, to: escalate }
+  - { from: rounds.repeat, to: address }
+  - { from: rounds.exhausted, to: escalate }
+  - { from: address.done, to: tests-a }
+  - { from: tests-a.pass, to: post-reply }
+  - { from: tests-a.fail, to: fixes-a }
+  - { from: fixes-a.repeat, to: fix-a }
+  - { from: fixes-a.exhausted, to: escalate }
+  - { from: fix-a.done, to: tests-a }
+  - { from: post-reply.pass, to: rereview }
+  - { from: rereview.approve, to: done-task }
+  - { from: rereview.changes, to: post-review }
+  - { from: done-task.pass, to: tasks }
+  - { from: impl-ready.pass, to: done }
+
+  - { from: replanner.done, to: pvalidate }
+  - { from: pvalidate.fail, to: ploop }
+  - { from: ploop.repeat, to: pfix }
+  - { from: ploop.exhausted, to: escalate }
+  - { from: pfix.done, to: pvalidate }
+  - { from: pvalidate.pass, to: answered }
+  - { from: answered.pass, to: done }
+
+  - { from: escalate.pass, to: stuck }
