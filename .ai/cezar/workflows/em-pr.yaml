@@ -21,7 +21,9 @@ nodes:
       You are the DEVELOPER on one task of a plan. Read `.ai/cezar/em/state/current-task.md` (the task)
       and the spec and full task list it points to. Implement exactly this task, with tests for new
       logic, following the repository rules in `.ai/cezar/em/rules.md`. If the task has a "Mockup:"
-      bullet, fetch that branch and reuse the prototype: same look, code adapted to the task. Run `bash .ai/cezar/em/verify.sh` before you finish. Do not push and
+      bullet, reuse that prototype (`git fetch -q origin <branch>`, `git show origin/<branch>:<path>`):
+      same look, code adapted to the task. The plan fixes the design; the implementation details are
+      yours. If the code shows a planned design is wrong, do it right and say why in your summary. Run `bash .ai/cezar/em/verify.sh` before you finish. Do not push and
       do not comment on GitHub: the workflow does that.
       If this is a review task (id R<n>), the human reviewer expects an answer: write one per point to
       `.ai/cezar/em/state/answer.md` (what you changed, or why not).
@@ -180,8 +182,7 @@ nodes:
 
       If a prototype was kept, the developers should reuse it. Read it (`git fetch -q origin <branch>`,
       then `git diff HEAD origin/<branch>`) and make sure every task that builds one of these views has
-      one up-to-date bullet: "- Mockup: reuse <files / widgets> from branch <branch>
-      (git show origin/<branch>:<path>); match its look, adapt the code to this task." and the spec's
+      one up-to-date short bullet: "- Mockup: `<branch>` — <which files / widgets to reuse>", and the spec's
       `## UI` section names the branch. Change nothing else in the plan.
   - { id: validate-m, type: check, name: Validate plan, command: "bash .ai/cezar/em/validate-plan.sh" }
   - { id: vloop-m, type: loop, name: Format fixes, max: 3 }
