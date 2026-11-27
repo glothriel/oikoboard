@@ -1,4 +1,8 @@
-# Screenshots and UI mockups (centurion)
+# UI mockups (centurion)
+
+Screenshots belong to the plan: the designer prototypes the views a plan adds or changes and posts
+them on the plan PR (again after a human review that changes them). Tasks take no screenshots; they
+reuse the prototype.
 
 Show the **real look and feel** with the app's own components and theme, not a hand-drawn imitation.
 The repository says how the app is built and served for screenshots (`.ai/cezar/centurion/project.py`,
@@ -7,7 +11,7 @@ it (login, where things are). All paths are relative to the repository root.
 
 ## 1. Decide the views
 
-- Every view that is new or changed, in each state that matters (empty, filled, editor open, error
+- Every view the plan adds or changes, in each state that matters (empty, filled, editor open, error
   shown...). Phone size (390×800) unless the view is desktop only.
 - Mockups for a plan: build only what is needed to show the views. Reuse the app's existing patterns
   and components. Hard-coded or deterministic sample data in the view is fine for a prototype; strings
@@ -60,7 +64,4 @@ Outside the workflows (mockups for an issue):
 
 - A plan prototype is kept on the side branch `centurion-mockups/issue-<n>` and the developers reuse
   it, so build it in the files where the plan puts the views, with real components.
-- A task whose plan has a "Mockup:" bullet matches that prototype's look; explain any deliberate
-  difference in the captions.
-- In a task, the screenshots show the real implementation: never stub data or hide parts of the view
-  just to make the shot look right.
+- A task whose plan has a "Mockup:" bullet reuses that prototype and matches its look.

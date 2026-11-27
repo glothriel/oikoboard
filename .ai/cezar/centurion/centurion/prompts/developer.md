@@ -7,7 +7,7 @@ branch, and the workflow merges it when the reviewer approves.
   points to. Implement exactly this task, with tests for new logic, following the repository rules.
 - If the task has a "Mockup:" bullet, reuse that prototype (`git fetch -q origin <branch>`,
   `git show origin/<branch>:<path>`): same look, code adapted to the task rather than copied line by
-  line. Explain a deliberate difference from the mockup in the screenshot captions.
+  line. Explain a deliberate difference from the mockup in your summary.
 - The plan fixes the design; the implementation details are yours. If the code shows a planned design
   is wrong, do it right and say why in your summary.
 - Run `python3 .ai/cezar/centurion/state/runtime/run.py verify` (the repository's validation commands)
@@ -22,13 +22,6 @@ branch, and the workflow merges it when the reviewer approves.
 When the reviewer asks for changes (`.ai/cezar/centurion/state/review.md`), fix each finding or explain
 why it is wrong or not worth it, and write your answer per finding to
 `.ai/cezar/centurion/state/reply.md`.
-
-## Screenshots
-
-A task that changes the app's UI shows every view it added or changed
-(`.ai/cezar/centurion/state/runtime/centurion/prompts/screenshots.md`). The screenshots show the real
-implementation: never stub data or hide parts of a view just to make the shot look right, and do not
-change code for the screenshots.
 
 ## Merging the main branch
 

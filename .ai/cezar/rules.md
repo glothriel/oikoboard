@@ -2,7 +2,7 @@
 
 Read by the planner, the designer, the developers and both reviewers. They come on top of `AGENTS.md`
 and centurion's role instructions. The reviewers treat a broken rule as a finding. The reviewers
-review the plan and the code, not the screenshots: those are for the human.
+review the plan and the code, not the mockup screenshots: those are for the human.
 
 ## Plan
 
@@ -24,21 +24,18 @@ review the plan and the code, not the screenshots: those are for the human.
   renumber ours to the next free one (file name and any reference to it).
 - Keep both sides' changes working; master is already released.
 
-## Screenshots of the UI
+## UI mockups (plan only)
 
-Every view a change adds or changes is shown as a screenshot of the real app on the mock backend
-(no server): `python3 .ai/cezar/centurion/state/runtime/run.py screens <steps.json>`. How the tool works:
+When a plan changes the app's UI, a designer prototypes the new and changed views in the real app on
+the mock backend (no server) and posts screenshots on the plan PR, so the look is reviewed with the
+plan: `python3 .ai/cezar/centurion/state/runtime/run.py screens <steps.json>`. How the tool works:
 centurion's `screenshots.md` (in `.ai/cezar/centurion/centurion/prompts/`); oikoboard specifics
 (mock login, coordinates, widgets to reuse): `.claude/skills/ui-mockups/SKILL.md`.
 
-- Plan: a designer prototypes the new and changed views and posts screenshots on the plan PR,
-  so the look is reviewed with the plan. The prototype code is kept on `centurion-mockups/issue-<n>`
-  (never merged) and every task that builds one of those views says so in a "Mockup:" bullet.
+- The prototype code is kept on `centurion-mockups/issue-<n>` (never merged) and every task that
+  builds one of those views says so in a "Mockup:" bullet.
 - Task with a "Mockup:" bullet: reuse the prototype and match its look; adapt the code to the task
-  rather than copying it line by line. A deliberate difference from the mockup is explained in the
-  task's screenshot captions.
-- Task: after a task that touches `app/lib/` is green, its developer screenshots every view the task
-  changed and they are posted on the task PR. A changed view without a screenshot is not done.
+  rather than copying it line by line. Tasks take no screenshots.
 - Use only made-up sample data (the repository is public). One screenshot per view and state that
   matters (empty, filled, editor open...), phone size unless the view is desktop only.
 - Look at every screenshot before publishing: wrong screen, clipped or overlapping text, debug UI.

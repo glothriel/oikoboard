@@ -23,6 +23,29 @@ def check(g, id, name, step, *args):
     return g.check(id, name, cmd(step, *args), step, args)
 
 
+FUSE = 100  # loop nodes only stop runaway runs; the real budgets are counted per task and round
+
+
+def budget(g, id, name, tries):
+    """A retry budget of `tries` per task (and per review round). cezar's loop counters never reset
+    within a run, so the loop node is only a fuse and the `retry` step does the counting."""
+    g.loop(id, f"{name} fuse", FUSE)
+    check(g, f"{id}-left", f"{name} left?", "retry", id, str(tries))
+    g.budgets = getattr(g, "budgets", set()) | {id}
+
+
+def wire_budgets(g):
+    """Route every budget loop's repeat port through its guard; out of budget: escalate."""
+    edges = []
+    for frm, to in g.edges:
+        node, _, port = frm.partition(".")
+        if node in getattr(g, "budgets", ()) and port == "repeat":
+            edges += [(frm, f"{node}-left"), (f"{node}-left.pass", to), (f"{node}-left.fail", "escalate")]
+        else:
+            edges.append((frm, to))
+    g.edges = edges
+
+
 def format_fix(g, id, validate_node, cont):
     return g.agent(id, "Planner fixes format", f"""
 `{C} validate-plan` found problems:
@@ -57,7 +80,7 @@ with verdict ready.
     check(g, "ask", "Ask on the issue", "ask-issue", "plan")
 
     check(g, "validate", "Validate plan", "validate-plan")
-    g.loop("vloop", "Format fixes", 3)
+    budget(g, "vloop", "Format fixes", 3)
     format_fix(g, "replan", "validate", "planner")
     check(g, "open", "Open plan PR", "open-pr")
 
@@ -74,7 +97,7 @@ tasks this branch adds (`{C} plan-files`): prototype every view the plan adds or
 in `{S}/screens/`. Do not change the plan files.
 """)
     check(g, "mock-publish", "Post mockups", "screens-publish", "designer")
-    g.loop("mloop", "Mockup retries", 2)
+    budget(g, "mloop", "Mockup retries", 2)
     g.agent("designer-again", "Designer retries", f"""
 Publishing failed:
 
@@ -94,7 +117,7 @@ short bullet: "- Mockup: `<branch>` — <which files / widgets to reuse>". In th
 `## UI` section add one line naming the branch. Change nothing else in the plan.
 """, cont="planner")
     check(g, "validate-m", "Validate plan", "validate-plan")
-    g.loop("vloop-m", "Format fixes", 3)
+    budget(g, "vloop-m", "Format fixes", 3)
     format_fix(g, "mfix", "validate-m", "planner")
     check(g, "push-m", "Push plan", "push")
 
@@ -112,7 +135,7 @@ either change the plan or explain why not. Write your answer per point to
 `{S}/answer.md`. Commit nothing.
 """, cont="planner")
     check(g, "validate-a", "Validate plan", "validate-plan")
-    g.loop("vloop-a", "Format fixes", 3)
+    budget(g, "vloop-a", "Format fixes", 3)
     format_fix(g, "pfix", "validate-a", "planner")
     check(g, "reply", "Push + post answer", "plan-reply")
     g.agent("rereview", "Plan reviewer re-reviews", f"""
@@ -156,6 +179,7 @@ justification when it is sound; insist only on what still matters. Rewrite
 
         ("ready.pass", "planned"), ("escalate.pass", "stuck"),
     )
+    wire_budgets(g)
     return g
 
 
@@ -180,7 +204,7 @@ def pr_graph():
     check(g, "sync", "Merge main branch", "sync-main")
     g.if_contains("is-synced", "Up to date?", "sync", "up-to-date")
     check(g, "sync-verify", "Check merge", "sync-check")
-    g.loop("syncloop", "Merge fixes", 5)
+    budget(g, "syncloop", "Merge fixes", 5)
     g.agent("resolve", "Developer resolves merge", f"""
 You are the DEVELOPER. Merging the main branch into this issue's feature branch needs you.
 `{S}/conflicts.md` lists the conflicted files and what each side did; follow
@@ -202,24 +226,7 @@ rules in `{R}`. The task is in `{S}/current-task.md`.
 """)
     check(g, "tests", "Verify", "verify")
     check(g, "task-pr", "Open task PR", "task-pr")
-    g.comment("a task that touches the UI shows every view it changed before review")
-    check(g, "ui-task", "UI changed?", "screens-check", "task")
-    g.if_contains("needs-shots", "Screenshots needed?", "ui-task", "needed")
-    g.agent("shoot", "Developer screenshots", f"""
-This task changed the app's UI. Following `{P}/screenshots.md` and the repository rules,
-screenshot every view it added or changed, in each state that matters, and leave the final PNGs
-and `captions.md` in `{S}/screens/`. Do not change code for the screenshots.
-""", cont="implement")
-    check(g, "shots-publish", "Post screenshots", "screens-publish", "developer")
-    g.loop("sloop", "Screenshot retries", 2)
-    g.agent("shoot-again", "Developer retries screenshots", f"""
-Publishing the screenshots failed:
-
-{{{{nodes.shots-publish.output}}}}
-
-Leave the final screenshots in `{S}/screens/`.
-""", cont="implement")
-    g.loop("fixes", "Fix fuse", 10)
+    budget(g, "fixes", "Verify fixes", 10)
     g.agent("fix", "Developer fixes verify", f"""
 `{C} verify` failed:
 
@@ -237,12 +244,10 @@ in `{R}`. The task is in `{S}/current-task.md`; its change is `{C} task-diff`.
     g.agent("address", "Developer answers review", f"""
 The reviewer asked for changes (full text in `{S}/review.md`). For each finding
 either fix it or explain why it is wrong or not worth it. Write your answer per finding to
-`{S}/reply.md`. If you changed a view, take its screenshot again into
-`{S}/screens/` (`{P}/screenshots.md`). Run `{C} verify`
-before you finish.
+`{S}/reply.md`. Run `{C} verify` before you finish.
 """, cont="implement")
     check(g, "tests-a", "Verify", "verify")
-    g.loop("fixes-a", "Fix fuse", 10)
+    budget(g, "fixes-a", "Verify fixes", 10)
     g.agent("fix-a", "Developer fixes verify", f"""
 `{C} verify` failed:
 
@@ -272,7 +277,7 @@ on the mockups), write the single line `redo` to `{S}/mockups`: a designer then
 reworks the mockups.
 """)
     check(g, "pvalidate", "Validate plan", "validate-plan")
-    g.loop("ploop", "Format fixes", 3)
+    budget(g, "ploop", "Format fixes", 3)
     format_fix(g, "pfix", "pvalidate", "replanner")
     g.comment("the revised plan changes the UI: the designer reworks the prototype, new mockups go to the PR")
     check(g, "remock", "Mockups to redo?", "remock-check")
@@ -291,7 +296,7 @@ one and leave the final PNGs and `captions.md` (say what changed since the last 
 `{S}/screens/`. Do not change the plan files.
 """)
     check(g, "mock-publish", "Post mockups", "screens-publish", "designer")
-    g.loop("mloop", "Mockup retries", 2)
+    budget(g, "mloop", "Mockup retries", 2)
     g.agent("designer-again", "Designer retries", f"""
 Publishing failed:
 
@@ -311,7 +316,7 @@ one up-to-date short bullet: "- Mockup: `<branch>` — <which files / widgets to
 `## UI` section names the branch. Change nothing else in the plan.
 """, cont="replanner")
     check(g, "validate-m", "Validate plan", "validate-plan")
-    g.loop("vloop-m", "Format fixes", 3)
+    budget(g, "vloop-m", "Format fixes", 3)
     format_fix(g, "mfix", "validate-m", "replanner")
     check(g, "answered", "Push + answer", "plan-answered")
 
@@ -337,12 +342,7 @@ one up-to-date short bullet: "- Mockup: `<branch>` — <which files / widgets to
         ("next.pass", "no-task"),
         ("no-task.true", "impl-ready"), ("no-task.false", "implement"),
         ("implement.done", "tests"), ("tests.pass", "task-pr"),
-        ("task-pr.pass", "ui-task"), ("ui-task.pass", "needs-shots"),
-        ("needs-shots.true", "shoot"), ("needs-shots.false", "review"),
-        ("shoot.done", "shots-publish"),
-        ("shots-publish.pass", "review"), ("shots-publish.fail", "sloop"),
-        ("sloop.repeat", "shoot-again"), ("sloop.exhausted", "escalate"),
-        ("shoot-again.done", "shots-publish"),
+        ("task-pr.pass", "review"),
         ("tests.fail", "fixes"), ("fixes.repeat", "fix"), ("fixes.exhausted", "escalate"),
         ("fix.done", "tests"),
         ("review.approve", "done-task"), ("review.changes", "post-review"),
@@ -372,6 +372,7 @@ one up-to-date short bullet: "- Mockup: `<branch>` — <which files / widgets to
 
         ("escalate.pass", "stuck"),
     )
+    wire_budgets(g)
     return g
 
 

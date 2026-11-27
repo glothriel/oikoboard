@@ -233,21 +233,17 @@ def open_pr(ctx, args):
     ctx.say(f"PR #{pr}: {ref} -> {feature}")
 
 
-def ui_touched(ctx, kind):
+def plan_touches_ui(ctx):
     paths = tuple(ctx.project.ui_paths)
-    if not paths:
-        return False
-    if kind == "plan":
-        return any(p in (ctx.root / f).read_text() for f in ctx.plan_tasks_files() for p in paths)
-    return any(f.startswith(paths) for f in ctx.changed_files(ctx.state["base"]))
+    return any(p in (ctx.root / f).read_text() for f in ctx.plan_tasks_files() for p in paths)
 
 
-@step("screens-check", "plan|task")
+@step("screens-check", "plan")
 def screens_check(ctx, args):
-    """Are screenshots required? `needed` when the plan names, or the task's diff touches, a UI path."""
-    if not args or args[0] not in ("plan", "task"):
-        raise StepError("usage: screens-check plan|task", 2)
-    ctx.say("needed" if ui_touched(ctx, args[0]) else "none")
+    """Mockups needed? `needed` when the plan names a UI path of the repository, else `none`."""
+    if args != ["plan"]:
+        raise StepError("usage: screens-check plan", 2)
+    ctx.say("needed" if plan_touches_ui(ctx) else "none")
 
 
 @step("mock-base")
@@ -340,7 +336,7 @@ def mock_restore(ctx, args):
 def remock_check(ctx, args):
     """After a human review of the plan: redo the mockups? `needed` when the plan touches the UI and
     the planner asked for it (state file `mockups` says redo) or there are no mockups yet."""
-    if not ui_touched(ctx, "plan"):
+    if not plan_touches_ui(ctx):
         ctx.say("none")
         return
     if "redo" in ctx.read("mockups", "").splitlines():
@@ -365,15 +361,46 @@ def post_comment_step(ctx, args):
 
 @step("round-guard")
 def round_guard(ctx, args):
-    """Count the review rounds of the current task (or the plan); fail past the maximum."""
+    """Count the review rounds of the current task (or the plan); fail past the maximum. A new round
+    gets fresh retry budgets."""
     n = int(ctx.state.get("rounds") or 0) + 1
+    reset_budgets(ctx)
     ctx.state.update(rounds=n)
     task = ctx.state.get("task_id")
     top = ctx.project.max_rounds
     if n > top:
+        ctx.state.update(exhausted=f"{task} is still open after {top} review rounds")
         ctx.say(f"{task}: still open after {top} review rounds")
         return 1
     ctx.say(f"{task}: review round {n}/{top}")
+
+
+RETRY_LABELS = {"vloop": "plan format fixes", "vloop-m": "plan format fixes", "vloop-a": "plan format fixes",
+                "ploop": "plan format fixes", "mloop": "mockup retries", "syncloop": "merge fixes",
+                "fixes": "verify fixes", "fixes-a": "verify fixes"}
+
+
+def reset_budgets(ctx):
+    ctx.state.drop("retries", "exhausted")
+
+
+@step("retry", "<budget> <tries>")
+def retry(ctx, args):
+    """Count one retry of a budget; fail past `tries`. Budgets restart with every task, review round
+    and merge of the main branch (cezar's own loop counters never reset within a run)."""
+    if len(args) != 2 or not args[1].isdigit():
+        raise StepError("usage: retry <budget> <tries>", 2)
+    key, top = args[0], int(args[1])
+    counts = dict(ctx.state.get("retries") or {})
+    counts[key] = n = counts.get(key, 0) + 1
+    ctx.state.update(retries=counts)
+    task = ctx.state.get("task_id") or "plan"
+    label = RETRY_LABELS.get(key, key)
+    if n > top:
+        ctx.state.update(exhausted=f"{task} is out of {label} ({top} tries)")
+        ctx.say(f"{task}: out of {label} ({top} tries)")
+        return 1
+    ctx.say(f"{task}: {label} {n}/{top}")
 
 
 @step("plan-reply")
@@ -417,7 +444,8 @@ def escalate(ctx, args):
     ctx.git("add", "-A")
     ctx.git("commit", "-q", "-m", f"{task}: work in progress", check=False)
     push_work(ctx)
-    head = f"⛔ stuck on {task} after {rounds} review round(s). The exchange so far is in the comments above."
+    why = ctx.state.get("exhausted") or f"{task} is stuck after {rounds} review round(s)"
+    head = f"⛔ {why}. The exchange so far is in the comments above."
     has_pr = bool(ctx.state.get("pr") or ctx.env.get("CEZ_PR_HEAD_REF"))
     target = ctx.target()
     ref = ctx.state.get("head_ref") or "this branch"
@@ -562,6 +590,7 @@ def sync_main(ctx, args):
     main = ctx.main_branch()
     ctx.state.update(task_id="sync", rounds=0)
     ctx.state.drop("pr", "head_ref", "sync_conflicts")
+    reset_budgets(ctx)
     if not ctx.fetch(feature):
         raise StepError(f"origin has no {feature}")
     ctx.fetch(main)
@@ -658,6 +687,7 @@ def next_task(ctx, args):
     ctx.state.update(tasks_file=tasks, task_id=task_id, task_title=f"{task_id}: {title}", task_body=body,
                      head_ref=ref, base=base, rounds=0)
     ctx.state.drop("pr")
+    reset_budgets(ctx)
     ctx.remove("review.md", "reply.md", "answer.md")
     doc = [f"# Current task: {task_id}", "",
            f"- Spec: `{plan.spec_for(tasks)}`",
@@ -724,10 +754,9 @@ def task_pr(ctx, args):
 
 @step("task-reply")
 def task_reply(ctx, args):
-    """Push the developer's fixes, post the answer to the review and any new screenshots."""
+    """Push the developer's fixes and post the answer to the review."""
     push_work(ctx)
     post_comment(ctx, "developer", state_file(ctx, "reply.md").read_text())
-    return screens.publish(ctx, "developer", optional=True)
 
 
 @step("mark-done")

@@ -180,12 +180,6 @@ class Ctx:
     def push(self, ref, force=False, src="HEAD"):
         self.git("push", "-q", *(["--force"] if force else []), "origin", f"{src}:refs/heads/{ref}")
 
-    def changed_files(self, base):
-        """Files changed against `base` (committed or not) plus untracked ones."""
-        names = self.git("diff", "--name-only", base).splitlines()
-        names += self.git("ls-files", "--others", "--exclude-standard").splitlines()
-        return sorted(set(n for n in names if n))
-
     def plan_tasks_files(self):
         """The task lists (.ai/specs/*.tasks.md) this branch adds or changes against the main
         branch, committed or not (agents check their plan before cezar commits their turn)."""
