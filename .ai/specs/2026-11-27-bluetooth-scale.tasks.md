@@ -33,7 +33,7 @@
 - `app/lib/modules/fitness/composition.dart` — `BodyComposition computeComposition({sex, age, heightCm, weightKg, impedance})` and `int ageAt(DateTime birth, DateTime at)`; callers skip it without impedance or profile.
 - `app/test/fitness_composition_test.dart` — hand-computed values for a male and a female case, each Schofield age bracket, both visceral fat branches per sex, clamp boundaries, the LBM cap, `ageAt` around a birthday.
 
-## [ ] T3: App: scale driver framework and Mi Scale 2 protocol
+## [x] T3: App: scale driver framework and Mi Scale 2 protocol
 **Goal:** The transport-independent scale layer: driver interface, registry, Mi Scale 2 parsing and connect sequences, dedup.
 **Acceptance criteria:**
 - The driver matches `MIBFS`/`MIBCS`/`MI SCALE2`/`MI_SCALE…` names, picks v2 under `0x181B` and v1 under `0x181D` (R4).
