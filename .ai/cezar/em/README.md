@@ -46,7 +46,28 @@ main branch
 The plan gets the same treatment in `em-plan`: planner and plan reviewer keep their sessions across
 rounds, and `validate-plan.sh` checks the format before any review.
 
-Every comment carries a banner with the role that wrote it (🟣 planner, 🔴 reviewer, 🔵 developer,
-🟢 workflow), since all of them are posted by the same GitHub identity.
+## Repository rules
+
+Generic scripts, repository-specific rules (both live here, so a fork of this directory into another
+repository only needs these files changed):
+
+- `rules.md`: rules every agent gets (spec contents, code conventions, screenshots).
+- `spec.sections`: sections `validate-plan.sh` requires in a spec.
+- `screens.paths`: path prefixes that count as UI; a plan or task touching them needs screenshots.
+
+## Screenshots
+
+`screens.sh` builds the app on the mock backend, serves it and drives headless Chrome with a steps file
+written by the agent (`shot.mjs`; how-to in `.claude/skills/ui-mockups/SKILL.md`). `screens-publish.sh`
+commits the PNGs to the side branch `em-screens/issue-<n>` (never merged) and comments with SHA-pinned
+links, since GitHub has no API to attach images.
+
+- `em-plan`: when the plan touches the UI, a designer prototypes the views and posts mockups on the plan
+  PR; the prototype is reset away.
+- `em-pr`: when a task's diff touches the UI, its developer posts screenshots of every changed view on
+  the task PR before the review; no screenshots, no review.
+
+Every comment carries a banner with the role that wrote it (🟣 planner, 🟠 designer, 🔴 reviewer,
+🔵 developer, 🟢 workflow), since all of them are posted by the same GitHub identity.
 
 Run state (current task, findings, answers, round counter) lives in `state/`, which git ignores.

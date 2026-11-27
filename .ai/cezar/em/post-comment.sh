@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# post-comment.sh <reviewer|developer|planner|workflow> <file>: one comment with a role banner,
+# post-comment.sh <reviewer|developer|planner|designer|workflow> <file>: one comment with a role banner,
 # since every comment is posted by the same GitHub identity.
 set -euo pipefail
 . "$(dirname "$0")/lib.sh"
@@ -11,6 +11,8 @@ case $role in
 > 🔴 **REVIEWER** · $task · round $((rounds + 1))" ;;
   developer) head="> [!NOTE]
 > 🔵 **DEVELOPER** · $task" ;;
+  designer)  head="> [!WARNING]
+> 🟠 **DESIGNER** · $task · UI mockups" ;;
   planner)   head="> [!IMPORTANT]
 > 🟣 **PLANNER** · $task" ;;
   workflow)  head="> [!TIP]
