@@ -44,10 +44,11 @@
 - `cd app && dart format --output=none --set-exit-if-changed . && flutter analyze && flutter test` passes.
 **Changes:**
 - `app/lib/modules/fitness/scale/scale_driver.dart` — `abstract interface class GattIo` (`write`, `setNotify`, `serviceUuids`), `enum LinkMode {gatt, broadcast}`, `class ScaleReading` (time, weightKg, impedance?).
-- `app/lib/modules/fitness/scale/scale_driver.dart` — `abstract class ScaleDriver`: `matches(name, serviceUuids)`, `linkMode`, `onConnected(GattIo)`, `onNotify(uuid, bytes)`, `Stream<ScaleReading> readings`.
+- `app/lib/modules/fitness/scale/scale_driver.dart` — `abstract class ScaleDriver`: `displayName`, `matches(name, serviceUuids)`, `linkMode`, `onConnected(GattIo)`, `onNotify(uuid, bytes)`, `Stream<ScaleReading> readings`.
 - `app/lib/modules/fitness/scale/mi_scale2.dart` — `MiScale2Driver`: UUIDs, v2 and v1 connect sequences, frame and record parsing, fallback timer with an injectable delay.
 - `app/lib/modules/fitness/scale/registry.dart` — ordered `scaleDrivers` list and `ScaleDriver? driverFor(name, serviceUuids)`; first match wins.
 - `app/lib/modules/fitness/scale/import_cursor.dart` — `ImportCursor` per scale id: last timestamp at minute resolution via `DevicePrefs`, `isNew`, `advance`, `isKnown` (false for a never-seen scale).
+- `app/test/fitness_mi_scale_test.dart` — a second fake driver registered in a test registry is picked for its own device name, proving the registry is open.
 - `app/test/fitness_mi_scale_test.dart` — fake `GattIo` recording writes; frames for kg/lb/jin, stable/removed/impedance flags, double frame, v1 chunks, name matching, fallback timer, cursor.
 
 ## [ ] T4: App: fitness data layer with mock
@@ -109,9 +110,9 @@
 **Changes:**
 - `app/pubspec.yaml` — add `flutter_blue_plus`.
 - `app/android/app/src/main/AndroidManifest.xml` — `BLUETOOTH_SCAN` (neverForLocation), `BLUETOOTH_CONNECT` and the legacy permissions with `maxSdkVersion` as the plugin documents.
-- `app/lib/modules/fitness/scale/scale_session.dart` — `ScaleSession`: scan by name, connect, discover services, `driverFor`, readings filtered by `ImportCursor`, states scanning/connected/error/done, disconnect on dispose.
+- `app/lib/modules/fitness/scale/scale_session.dart` — `ScaleSession`: scan for all registered drivers' names, connect, `driverFor`, readings filtered by `ImportCursor`, states scanning/connected/error/done.
 - `app/lib/modules/fitness/scale/scale_session.dart` — `FlutterBlueGattIo implements GattIo`; `scaleSessionProvider` gives a `FakeScaleSession` whenever the backend is the mock (also on web), null for the real backend on web.
-- `app/lib/modules/fitness/weigh_in_screen.dart` — screen at `/fitness/weigh-in`: status header, reading cards with member dropdown, Save and Discard, `computeComposition` with the picked member's profile.
+- `app/lib/modules/fitness/weigh_in_screen.dart` — screen at `/fitness/weigh-in`: status header with the scale's `displayName`, reading cards with member dropdown, Save and Discard.
 - `app/lib/modules/fitness/measurements_screen.dart` — "Weigh in" action shown only when `scaleSessionProvider` is available.
 - `app/lib/l10n/app_en.arb` and `app_pl.arb` — weigh-in keys: states, permissions, save, discard.
 - `app/test/fitness_weigh_in_mock_test.dart` — with `FakeScaleSession`: readings appear with the suggested member, Save adds a measurement with composition, Discard drops it, a second session on the same scale skips both.

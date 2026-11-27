@@ -6,12 +6,14 @@ Source: issue #34.
 Household members record body weight (and, when the scale reports impedance, body composition) by weighing on a
 Xiaomi Mi Body Composition Scale 2 over Bluetooth, and see the household's history in a new Fitness section.
 The model stays clean enough to export to Garmin Connect later.
+The Mi Scale 2 is the only scale supported now (the one the author owns), but the code and the UI are built so another scale is added by writing one driver and registering it.
 
 ## Requirements
 - R1: Server table `measurements` (household- and member-scoped, typed columns, kg) with REST add and delete and a realtime view; every household member sees all measurements.
 - R2: Server table `fitness_profiles` (sex, birth date, height) with one row per member, written only by that member, with a realtime view.
 - R3: Body composition (variant B of the issue: LBM, fat %, water %, protein %, bone, muscle, BMR, visceral fat, BMI) is computed on the device from weight, impedance and the member's profile; skipped (weight only) without a profile or without impedance.
 - R4: A `ScaleDriver` interface, an ordered driver registry (first match wins) and a GATT session class; the Mi Scale 2 driver implements the v2 connect sequence and 13-byte frames, and the v1 weight-only 10-byte records, including kg/lb/jin parsing.
+- R4a: Nothing outside the Mi Scale driver knows the Mi protocol: `ScaleDriver` exposes a `displayName`, the session scans for every registered driver, and the weigh-in UI and strings are scale-agnostic (they show the connected scale's `displayName`, never a hard-coded model). Adding a scale touches only a new driver file and the registry.
 - R5: Only stable, not-removed frames are kept; frames at or before the last imported timestamp of that scale (minute resolution) are dropped.
 - R6: Weigh-in screen (Android, real server): connects to the scale, lists the received readings; each reading has a member picker defaulting to the member with the most similar recent results, a Save action and a Discard action.
 - R7: The suggested member is the one whose last 2 measurements (if both are from the last 30 days, else only the last one) are closest to the reading by weight plus absolute impedance difference; no data at all → the signed-in member.
@@ -37,6 +39,7 @@ Prototype: branch `em-mockups/issue-34` (never merged) holds all five views; tas
 - lb/jin display units, per-member privacy of body data, push of live-mode partial frames
 
 ## Decisions and why
+- Extensibility over a scale chooser: only one driver is registered, so there is no scale-selection UI now; the weigh-in screen already shows the detected scale's name and works with whichever driver matches, so a second scale needs no UI change (a chooser would be speculative).
 - Clean-room: the Mi Scale protocol and formulas are implemented from the issue text only, as the author required.
 - `fitness_profiles.id` is the member id (FK to `members`): `oiko_track` needs an `id` column, and it makes the row one-per-member without a lookup. Written by `POST /fitness/profiles` as an upsert for the caller's own member only (403 otherwise).
 - Measurements are written for any member by any household member (the scale cannot tell people apart and mistakes must be fixable), so any household member may delete any measurement; household data is shared like todos.
