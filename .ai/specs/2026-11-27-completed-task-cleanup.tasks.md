@@ -1,0 +1,22 @@
+# Tasks
+
+## [ ] T1: Server: keep_forever flag and cleanup of completed tasks
+**Acceptance criteria:** R1–R6, R8. `cd server && gofmt -l . && go vet ./... && go test -race ./...` passes, including the new tests.
+- `server/migrations/00019_todo_keep_forever.sql` — goose Up: `ALTER TABLE todo_items ADD COLUMN keep_forever boolean NOT NULL DEFAULT false;`; Down drops the column.
+- `server/internal/modules/todo/todo.go` — add `KeepForever bool \`json:"keep_forever"\`` to `Item`; in `createItem` accept `KeepForever bool` in the request and set it on the row; in `updateItem` add `keepForever bool` to the `p.Apply` map under `"keep_forever"` and reject an explicit null (add the column to the existing `position`/`list_id` null check loop).
+- `server/internal/modules/todo/cleanup.go` — new. `func CleanupDone(ctx context.Context, db *gorm.DB, days int, onChanged func(uuid.UUID)) error`: no-op when `days <= 0`; otherwise `SELECT DISTINCT household_id` of the matching rows, then inside `core.Write(ctx, db, core.Actor{}, "", ...)` run `DELETE FROM todo_items WHERE done AND NOT keep_forever AND done_at < now() - make_interval(days => ?)`; afterwards call `onChanged` for each affected household (nil-safe).
+- `server/internal/app/app.go` — give `App` a field `DoneRetentionDays int`; in the hourly loop of `Run`, after `a.Files.Cleanup(ctx)`, call `todo.CleanupDone(ctx, db, a.DoneRetentionDays, a.Calendar.TodosChanged)` and `slog.Warn` on error.
+- `server/cmd/oikoboard/main.go` — document `OIKO_DONE_RETENTION_DAYS` in the header comment; before `go a.Run(...)` set `a.DoneRetentionDays` from it (default 30, invalid or negative falls back to 30, `0` disables), following the `OIKO_STORAGE_QUOTA_MB` pattern.
+- `server/internal/app/todo_test.go` — new test `TestCleanupDone` using the `setup`/`newFamily` helpers: create tasks (done old, done old + keep_forever, done recent, open old); backdate `done_at`/`created_at` with a direct DB update; call `todo.CleanupDone(…, 30, nil)`; assert only the old done non-kept task is gone and its comment is gone; assert `days = 0` deletes nothing; assert the delete change is emitted to a websocket subscriber; assert `keep_forever` can be set and cleared via PATCH and is accepted on POST, and null is rejected with 400.
+
+## [ ] T2: App: "Keep forever" switch on the task
+**Acceptance criteria:** R7. `cd app && dart format --output=none --set-exit-if-changed . && flutter analyze && flutter test` passes, including the new tests.
+- `app/lib/modules/todo/models.dart` — `TodoItem`: add `final bool keepForever` (constructor default `false`), read `j['keep_forever'] as bool? ?? false` in `fromJson`, write `'keep_forever'` in `toJson`, add `bool? keepForever` to `copyWith`.
+- `app/lib/modules/todo/repository.dart` — add `'keep_forever'` to `_itemFields` and to the field list in `MockTodoRepository.updateItem`; add `bool keepForever = false` to `addItem` in the interface and both implementations, put it in the item JSON, and in `ApiTodoRepository.addItem` in the POST body as `'keep_forever'`.
+- `app/lib/modules/todo/todo_screen.dart` — in `_TodoItemEditorState` add `late bool _keepForever = widget.item.keepForever;`, include it in `_edited()` and pass it to `repo.addItem(...)` in `_save`; below the `_DueRow` add a `SwitchListTile` titled `l.todoKeepForever` with subtitle `l.todoKeepForeverHint` bound to `_keepForever`.
+- `app/lib/l10n/app_en.arb` and `app/lib/l10n/app_pl.arb` — keys `todoKeepForever` ("Keep forever" / "Zachowaj na zawsze") and `todoKeepForeverHint` ("Never deleted automatically, even when completed" / "Nigdy nie jest usuwany automatycznie, nawet po ukończeniu"); regenerate localizations with `flutter gen-l10n` (or `flutter pub get`) so the generated files are updated.
+- `app/test/` — add to the existing todo model/repository tests (find them with `grep -rl TodoItem app/test`): `TodoItem` JSON round-trip keeps `keepForever`, `copyWith(keepForever: …)` sets and clears it, and `MockTodoRepository` stores the flag on `addItem` and `updateItem`.
+
+## [ ] T3: Docs
+**Acceptance criteria:** R2 is documented where operational config lives.
+- `docs/architecture.md` — add one short bullet near the recurring-tasks bullet: completed tasks are hard-deleted `OIKO_DONE_RETENTION_DAYS` (default 30, 0 = off) days after `done_at` by the hourly loop in `App.Run`, unless `todo_items.keep_forever`; deletes flow through the normal change feed.
