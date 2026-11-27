@@ -20,7 +20,8 @@ nodes:
     prompt: |
       You are the DEVELOPER on one task of a plan. Read `.ai/cezar/em/state/current-task.md` (the task)
       and the spec and full task list it points to. Implement exactly this task, with tests for new
-      logic, following the repository rules in `.ai/cezar/em/rules.md`. Run `bash .ai/cezar/em/verify.sh` before you finish. Do not push and
+      logic, following the repository rules in `.ai/cezar/em/rules.md`. If the task has a "Mockup:"
+      bullet, fetch that branch and reuse the prototype: same look, code adapted to the task. Run `bash .ai/cezar/em/verify.sh` before you finish. Do not push and
       do not comment on GitHub: the workflow does that.
       If this is a review task (id R<n>), the human reviewer expects an answer: write one per point to
       `.ai/cezar/em/state/answer.md` (what you changed, or why not).
@@ -67,8 +68,8 @@ nodes:
     prompt: |
       You are the REVIEWER of one task of a plan. Read `.ai/cezar/em/state/current-task.md`, the spec and
       the task list it points to, then the task's change: `git diff $(cat .ai/cezar/em/state/base)`.
-      Apply `CODE_REVIEW.md` and `.ai/cezar/em/rules.md`. Screenshots of the views the task changed, if
-      any, are in `.ai/cezar/em/state/screens-published/`: look at them. Report only real problems: wrong behaviour, a missed acceptance criterion,
+      Apply `CODE_REVIEW.md` and `.ai/cezar/em/rules.md`. Review the code only; the screenshots are for
+      the human. Report only real problems: wrong behaviour, a missed acceptance criterion,
       broken contract, missing tests for new logic, needless complexity. No style nits, no speculative
       edge cases. Write your findings to `.ai/cezar/em/state/review.md` (numbered, each with file:line),
       or the single line "No findings." Do not edit any other file.
