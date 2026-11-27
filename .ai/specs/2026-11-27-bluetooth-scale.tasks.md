@@ -1,6 +1,6 @@
 # Tasks
 
-## [ ] T1: Server: measurements and fitness profiles
+## [x] T1: Server: measurements and fitness profiles
 **Goal:** Store and broadcast household measurements and per-member fitness profiles.
 **Acceptance criteria:**
 - Measurements can be created (idempotent by client id) for any household member and deleted by any household member; foreign household or member ids are rejected (R1).

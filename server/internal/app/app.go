@@ -15,6 +15,7 @@ import (
 	"oikoboard/server/internal/core"
 	"oikoboard/server/internal/mcp"
 	"oikoboard/server/internal/modules/calendar"
+	"oikoboard/server/internal/modules/fitness"
 	"oikoboard/server/internal/modules/todo"
 	"oikoboard/server/internal/realtime"
 )
@@ -24,6 +25,7 @@ func Modules(db *gorm.DB, auth *core.Auth, cal *calendar.Syncer, sched todo.Sche
 	return []core.Module{
 		todo.Module{DB: db, OnItemsChanged: cal.TodosChanged, Scheduler: sched},
 		calendar.Module{DB: db, Auth: auth, Providers: cal.Providers, Syncer: cal},
+		fitness.Module{DB: db},
 	}
 }
 
