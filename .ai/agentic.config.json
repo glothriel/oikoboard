@@ -6,7 +6,8 @@
   "validation": {
     "commands": [
       "git diff --quiet origin/master -- server || (cd server && test -z \"$(gofmt -l .)\" && go vet ./... && go test -race ./...)",
-      "git diff --quiet origin/master -- app || (cd app && dart format --output=none --set-exit-if-changed . && flutter analyze && flutter test)"
+      "git diff --quiet origin/master -- app || (cd app && dart format --output=none --set-exit-if-changed . && flutter analyze && flutter test)",
+      "test ! -f .ai/cezar/centurion/run.py || python3 .ai/cezar/centurion/run.py check"
     ]
   },
   "labels": {
