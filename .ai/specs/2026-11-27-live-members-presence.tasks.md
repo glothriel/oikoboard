@@ -32,6 +32,7 @@
 - R4: in API mode `familyProvider` reflects `family.members` upserts/removes; before the first snapshot it uses the session's members.
 - R5: assignee, comment author, inbox actor and day-sheet assignee for an unknown id show the placeholder, no `!` crash.
 **Changes:**
+- Mockup: `centurion-mockups/issue-1` — reuse `Member.removed`/`byIdOrRemoved` in `core/family.dart`, the placeholder avatar, and the `todo_screen.dart`/`todo_module.dart` call sites; the `memberRemoved` l10n key.
 - `app/lib/core/family.dart` — `membersProvider` (API: `syncClientProvider.watch('family.members')`; mock: session members), `familyProvider` derives from it; neutral `Member.removed` placeholder.
 - `app/lib/modules/todo/todo_screen.dart`, `modules/calendar/todo_day_sheet.dart`, `modules/todo/inbox.dart` — replace `family.byId(...)!` and null-hiding spots with the placeholder avatar/label.
 - `app/lib/l10n/app_en.arb`, `app_pl.arb` — `memberRemoved` ("Removed member" / "Usunięty członek").
@@ -43,6 +44,7 @@
 **Acceptance criteria:**
 - R8: members in the online set show the dot; others and accountless members do not; it updates on a `presence` message; mock mode shows a seeded online member.
 **Changes:**
+- Mockup: `centurion-mockups/issue-1` — reuse the `MemberAvatar` online dot (size, green, surface border, Semantics label) in `core/family.dart` and the `memberOnline` l10n key; the provider there is a fixed stub.
 - `app/lib/core/api/sync_client.dart` — handle `presence` messages (before the `sub` lookup), keep `Set<String> online`, expose `Stream<Set<String>> get presence`; clear it on disconnect.
 - `app/lib/core/family.dart` — `onlineMembersProvider` (API: `SyncClient.presence`; mock: `MockStore`); `MemberAvatar` becomes a `ConsumerWidget` with a small green dot and semantic label.
 - `app/lib/core/mock/mock_store.dart`, `app/lib/core/mock/simulator.dart` — mock presence set (me + one seeded member) as a stream; the simulator toggles a random other member's presence on each tick.

@@ -18,6 +18,7 @@ Every signed-in device of a household sees members added, edited or removed (and
 ## UI
 - `MemberAvatar` (shared widget; seen in the member picker/list, task rows, calendar chips, shell drawer, wall): optional online dot.
 - Removed-member placeholder in task row assignee, task comments, inbox and calendar day sheet.
+- Prototype: branch `centurion-mockups/issue-1` (never merged).
 
 ## Backward compatibility
 Additive. Migration `00021` adds a nullable-safe `members.picture` column (backfilled) and a new tracked entity; older apps ignore the `family.members` view and the unknown `presence` message (the sync client drops messages for unknown subs/types). `/me` keeps its shape (`picture` is still returned).
