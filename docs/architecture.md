@@ -46,6 +46,9 @@ Flutter app (web + Android)                    Go server                        
   always advances `last_run_date`. At boot the schedules are reconciled with the table and a catch-up creates only the
   latest occurrence missed while the server was down. Schedule edits reach other instances within DBOS's polling interval
   (5 s). Changing a household's timezone must re-apply its schedules (`Reconcile`); there is no such endpoint yet.
+- **Completed-task cleanup**: a daily DBOS workflow (03:00 UTC) hard-deletes tasks `OIKO_DONE_RETENTION_DAYS` days
+  (default 30, `0` = off) after `done_at`, unless `todo_items.keep_forever` is set. Deletes go through the normal
+  change feed.
 - **App data access** goes through repository interfaces with `Api*` and `Mock*` implementations; the mock (no server)
   must keep working.
 

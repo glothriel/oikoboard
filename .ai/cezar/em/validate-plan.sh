@@ -28,6 +28,12 @@ bad=$(grep -E '^## ' "$tasks" | grep -vE '^## \[[ x]\] [TR][0-9]+: .+' || true)
 [ -z "$bad" ] || errors+=("$tasks: headings not in the '## [ ] T<n>: <title>' form: $bad")
 missing=$(awk '/^## \[[ x]\] /{ if (id && !ac) print id; match($0, /[TR][0-9]+/); id=substr($0, RSTART, RLENGTH); ac=0 } /Acceptance criteria/{ ac=1 } END{ if (id && !ac) print id }' "$tasks")
 [ -z "$missing" ] || errors+=("$tasks: no 'Acceptance criteria' in: $(echo $missing)")
+if grep -q '^```' "$tasks"; then
+  errors+=("$tasks: code blocks in tasks; the plan names types and signatures, the developer writes the code")
+fi
+long=$(awk -v max=240 '/^## \[[ x]\] /{ match($0, /[TR][0-9]+/); id=substr($0, RSTART, RLENGTH) } /^- / && length($0) > max { printf "%s: %s...\n", id, substr($0, 1, 70) }' "$tasks")
+[ -z "$long" ] || errors+=("$tasks: bullets over 240 characters (one line per change; leave the implementation to the developer):
+$long")
 open=$(grep -nE '\b(TBD|TODO)\b|\?\?\?' "$spec" "$tasks" 2>/dev/null || true)
 [ -z "$open" ] || errors+=("unresolved placeholders: $open")
 if [ "${#errors[@]}" -gt 0 ]; then printf -- '- %s\n' "${errors[@]}"; exit 1; fi

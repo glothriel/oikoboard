@@ -295,5 +295,7 @@
   "recurStartsOn": "Początek: {date}",
   "recurEndsOn": "Koniec: {date}",
   "recurEndsNever": "Koniec: nigdy",
-  "recurCreatesAtTime": "Dodaje o {time}"
+  "recurCreatesAtTime": "Dodaje o {time}",
+  "todoKeepForever": "Zachowaj na zawsze",
+  "todoKeepForeverHint": "Nigdy nie jest usuwany automatycznie, nawet po ukończeniu"
 }

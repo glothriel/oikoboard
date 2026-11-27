@@ -1129,4 +1129,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String recurCreatesAtTime(String time) {
     return 'Creates at $time';
   }
+
+  @override
+  String get todoKeepForever => 'Keep forever';
+
+  @override
+  String get todoKeepForeverHint =>
+      'Never deleted automatically, even when completed';
 }

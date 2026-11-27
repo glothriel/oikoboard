@@ -60,7 +60,7 @@ func TestDBOSScheduler(t *testing.T) {
 	hh, list := hhs[0], lists[0]
 	loc := todo.HouseholdLocation(db, hh)
 
-	d, err := New(ctx, db, dsn, nil)
+	d, err := New(ctx, db, dsn, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

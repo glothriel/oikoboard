@@ -18,6 +18,6 @@ if [ -s "$S/answer.md" ]; then
 fi
 echo "✅ approved after $(cat "$S/rounds") round(s) of changes; merging into \`$(cat "$S/feature")\`." > "$S/done.md"
 bash "$d/post-comment.sh" workflow "$S/done.md"
-gh api -X PUT "repos/$(repo)/pulls/$(target)/merge" -f merge_method=squash >/dev/null
+merge_pr "$(target)" squash "$(git rev-parse HEAD)"
 gh api -X DELETE "repos/$(repo)/git/refs/heads/$(cat "$S/head-ref")" >/dev/null || true
 echo "$id merged"

@@ -19,6 +19,7 @@
 //	OIKO_SECRET_KEY             32 bytes (base64/hex) encrypting stored credentials; required for Google Calendar
 //	OIKO_CALENDAR_SYNC          calendar polling interval (default 2m)
 //	OIKO_STORAGE_QUOTA_MB       uploaded files a family may store (default 1024)
+//	OIKO_DONE_RETENTION_DAYS    days after completion a task is deleted unless "keep forever" (default 30, 0 = never)
 //	OIKO_WEB_DIR                built web app to serve on / (the production image sets it)
 //	OIKO_SEED=1                 add a sample family when the database is empty — LOCAL ONLY
 //	OIKO_SEED_EMAILS            e.g. "Tata=someone@gmail.com,Mama=..." for the seed
@@ -168,7 +169,17 @@ func main() {
 	go a.Run(ctx, db, dsn)
 
 	// Recurring tasks: DBOS schedules + a catch-up for what was missed while down.
-	sched, err := recurring.New(ctx, db, dsn, a.Calendar.TodosChanged)
+	days := 30
+	if n, err := strconv.Atoi(env("OIKO_DONE_RETENTION_DAYS", "")); err == nil && n >= 0 {
+		days = n
+	}
+	var cleanup func(context.Context) error
+	if days > 0 {
+		cleanup = func(ctx context.Context) error {
+			return todo.CleanupDone(ctx, db, days, a.Calendar.TodosChanged)
+		}
+	}
+	sched, err := recurring.New(ctx, db, dsn, a.Calendar.TodosChanged, cleanup)
 	if err != nil {
 		fatal("recurring tasks", err)
 	}
@@ -178,6 +189,9 @@ func main() {
 	// and let the periodic reconcile heal.
 	if err := sched.Reconcile(ctx); err != nil {
 		slog.Warn("recurring tasks: reconcile", "err", err)
+	}
+	if err := sched.SyncCleanup(days > 0); err != nil {
+		slog.Warn("completed-task cleanup: schedule", "err", err)
 	}
 	if err := todo.CatchUp(ctx, db, a.Calendar.TodosChanged, time.Now()); err != nil {
 		slog.Warn("recurring tasks: catch-up", "err", err)

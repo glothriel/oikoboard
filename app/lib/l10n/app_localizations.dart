@@ -1873,6 +1873,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Creates at {time}'**
   String recurCreatesAtTime(String time);
+
+  /// No description provided for @todoKeepForever.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep forever'**
+  String get todoKeepForever;
+
+  /// No description provided for @todoKeepForeverHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Never deleted automatically, even when completed'**
+  String get todoKeepForeverHint;
 }
 
 class _AppLocalizationsDelegate

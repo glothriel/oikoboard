@@ -87,6 +87,7 @@ class TodoItem {
     this.doneAt,
     this.occurrenceDate,
     this.commentCount = 0,
+    this.keepForever = false,
     double? position,
   }) : position = position ?? -createdAt.microsecondsSinceEpoch / 1e6;
 
@@ -114,6 +115,9 @@ class TodoItem {
   final int commentCount;
 
   bool get fromRecurring => occurrenceDate != null;
+
+  /// Exempt from the automatic cleanup of completed tasks.
+  final bool keepForever;
 
   /// Manual order within the list, ascending; minus the seconds since the
   /// epoch at creation, so new tasks go first.
@@ -149,6 +153,7 @@ class TodoItem {
     doneAt: fromApiTime(j['done_at']),
     occurrenceDate: fromApiDate(j['occurrence_date']),
     commentCount: j['comment_count'] as int? ?? 0,
+    keepForever: j['keep_forever'] as bool? ?? false,
     position: (j['position'] as num?)?.toDouble(),
   );
 
@@ -165,6 +170,7 @@ class TodoItem {
     'done_at': toApiTime(doneAt),
     'occurrence_date': toApiDate(occurrenceDate),
     'comment_count': commentCount,
+    'keep_forever': keepForever,
     'position': position,
   };
 
@@ -179,6 +185,7 @@ class TodoItem {
     Object? due = _unset,
     Object? dueTime = _unset,
     Object? doneAt = _unset,
+    bool? keepForever,
     double? position,
   }) => TodoItem(
     id: id,
@@ -199,6 +206,7 @@ class TodoItem {
     doneAt: identical(doneAt, _unset) ? this.doneAt : doneAt as DateTime?,
     occurrenceDate: occurrenceDate,
     commentCount: commentCount,
+    keepForever: keepForever ?? this.keepForever,
     position: position ?? this.position,
   );
 

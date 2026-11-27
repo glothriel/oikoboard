@@ -6,7 +6,7 @@ d=$(dirname "$0")
 echo plan > "$S/task-id"
 echo "▶️ Plan approved by @$(cat "$S/reviewer"). Merging it into \`$(cat "$S/feature")\`; every task follows as its own PR into that branch." > "$S/start.md"
 bash "$d/post-comment.sh" workflow "$S/start.md"
-gh api -X PUT "repos/$(repo)/pulls/$(target)/merge" -f merge_method=merge >/dev/null
+merge_pr "$(target)" merge
 gh api -X DELETE "repos/$(repo)/git/refs/heads/$(cat "$S/head-ref")" >/dev/null || true
 # From here on each task opens its own PR.
 rm -f "$S/pr" "$S/head-ref"

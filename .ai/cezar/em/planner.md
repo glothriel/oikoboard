@@ -20,7 +20,8 @@ time, each reviewed by a reviewer agent. A human reviews your plan on the PR bef
 ## Files
 
 Name both after today's date and a short slug: `.ai/specs/<YYYY-MM-DD>-<slug>.md` (spec) and
-`.ai/specs/<YYYY-MM-DD>-<slug>.tasks.md` (tasks). Write them in English. Commit nothing yourself.
+`.ai/specs/<YYYY-MM-DD>-<slug>.tasks.md` (tasks). Write them in English. Commit nothing yourself; before you finish, run
+`bash .ai/cezar/em/validate-plan.sh` (it checks the uncommitted files too) and fix what it reports.
 
 ### Spec: these sections, short
 
@@ -49,20 +50,30 @@ One or two sentences: what changes for whom.
 # Tasks
 
 ## [ ] T1: <title>
-**Acceptance criteria:** <which R's, verifiable>
-- `path/to/file.go` — <concrete change: types, signatures, behaviour>
-- `path/to/file_test.go` — <test cases>
+**Goal:** <one sentence>
+**Acceptance criteria:**
+- <verifiable behaviour; which R's>
+**Changes:**
+- `path/to/file.go` — <what is added / changed / removed: types, signatures, patterns to follow>
+- `path/to/file_test.go` — <what the tests cover>
 
 ## [ ] T2: <title>
 ...
 ```
 
+The plan decides **design**, the developer decides **implementation**:
+
+- Decide what a reviewer of the design needs: which files and modules change, new types, fields,
+  function signatures and API shapes, data model and migrations (what, not the SQL), which existing
+  pattern or helper to follow, where defaults live, what is tested.
+- Leave the rest to the developer, who reads the code: function bodies, SQL, exact line numbers,
+  widget trees, test steps, seed data values. No code blocks in the tasks.
+- One line per bullet. If a bullet needs more, the task is doing too much or you are writing the code.
 - A task is a small slice of working functionality: it builds, passes the validation gate on its own and
   carries its own tests. Never a separate "tests" or "validation" task.
-- Bullets name files and say exactly what changes. The developer makes no design decisions; you do.
-  No "consider", "explore", "as discussed".
+- No "consider", "explore", "as discussed": state each design decision.
 - Server first, then the app, unless the order does not matter.
 - A change to the UI lists the views under `## UI` in the spec. Their mockups come after the plan:
   the workflow then asks you to add a `- Mockup: ...` bullet to the tasks that build them.
 - The validation gate is `.ai/agentic.config.json` (`bash .ai/cezar/em/validate-plan.sh` checks the plan's
-  format; the gate checks the code later).
+  format and size; the gate checks the code later).
