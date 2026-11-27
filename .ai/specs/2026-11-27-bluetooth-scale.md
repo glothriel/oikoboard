@@ -17,8 +17,9 @@ The model stays clean enough to export to Garmin Connect later.
 - R7: The suggested member is the one whose last 2 measurements (if both are from the last 30 days, else only the last one) are closest to the reading by weight plus absolute impedance difference; no data at all → the signed-in member.
 - R8: New top-level Fitness module (4th nav item) with a hub screen, a Measurements sub-route (trend + list, manual add, delete) and a Fitness profile form; Workouts and Calories are not shown.
 - R9: Home wall tile shows the signed-in member's latest weight.
-- R10: Everything works in the mock backend (`Mock*` repositories, a fake scale in mock mode); on web the weigh-in entry is hidden and manual entry works.
+- R10: Everything works in the mock backend (`Mock*` repositories, a fake scale in mock mode); the mock wins over the platform, so the weigh-in screen is reachable in the mock on web too; with the real server on web the weigh-in entry is hidden and manual entry works.
 - R11: All new UI strings exist in `app_en.arb` and `app_pl.arb`; weights are displayed in kg only.
+- R12: Body data is not readable by OAuth/MCP (delegated) clients: the `fitness.*` views and `/fitness/` routes refuse them.
 
 ## UI
 - Fitness hub (one Measurements card with latest weight and trend)
@@ -47,5 +48,9 @@ Prototype: branch `em-mockups/issue-34` (never merged) holds all five views; tas
 - BLE uses `flutter_blue_plus` behind a `GattIo` abstraction, so drivers and the session are unit-tested with fake byte streams and no plugin.
 - Similarity compares weight in kg plus |impedance difference|/100, so both are of similar magnitude; the weights of the formula are a constant in code.
 
+- Delegated (ChatGPT/MCP) clients may read any view snapshot via `ToolAllowed`; the fitness views are explicitly excluded for them because weight and birth date are sensitive. Writes were already disallowed by default.
+- Deleting a member or household cascades to their measurements and profile (composite FKs, as todo tables).
+- Dedup is per scale, so the first connect to a scale never seen on this device asks only for its last record and stores that timestamp; older stored history is intentionally not imported.
+
 ## Backward compatibility
-None breaking: a new migration adds two tables, new REST routes and two new views/entity types (`measurements`, `fitness_profiles`); existing endpoints, entities and data are untouched, and older app versions simply never read the new views. A new app against an older server shows the Fitness section only once its views exist; no compatibility path is added for that.
+None breaking: a new migration adds two tables, new REST routes and two new views/entity types (`measurements`, `fitness_profiles`); existing endpoints, entities and data are untouched, and the new views are not exposed to OAuth/MCP clients, and older app versions simply never read the new views. A new app against an older server shows the Fitness section only once its views exist; no compatibility path is added for that.
