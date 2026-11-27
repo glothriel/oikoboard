@@ -20,12 +20,35 @@ nodes:
     prompt: |
       You are the DEVELOPER on one task of a plan. Read `.ai/cezar/em/state/current-task.md` (the task)
       and the spec and full task list it points to. Implement exactly this task, with tests for new
-      logic. Run `bash .ai/cezar/em/verify.sh` before you finish. Do not push and do not comment on
-      GitHub: the workflow does that.
+      logic, following the repository rules in `.ai/cezar/em/rules.md`. Run `bash .ai/cezar/em/verify.sh` before you finish. Do not push and
+      do not comment on GitHub: the workflow does that.
       If this is a review task (id R<n>), the human reviewer expects an answer: write one per point to
       `.ai/cezar/em/state/answer.md` (what you changed, or why not).
   - { id: tests, type: check, name: Verify, command: "bash .ai/cezar/em/verify.sh" }
   - { id: task-pr, type: check, name: Open task PR, command: "bash .ai/cezar/em/task-pr.sh" }
+  # a task that touches the UI shows every view it changed before review
+  - { id: ui-task, type: check, name: "UI changed?", command: "bash .ai/cezar/em/screens-check.sh task" }
+  - { id: needs-shots, type: if, name: "Screenshots needed?", condition: { kind: output, ref: ui-task.output, op: contains, value: needed } }
+  - id: shoot
+    type: agent
+    name: Developer screenshots
+    session: { continue: implement }
+    prompt: |
+      This task changed the app's UI. Following `.claude/skills/ui-mockups/SKILL.md`, screenshot every
+      view it added or changed on the mock backend, in each state that matters, and leave the final PNGs
+      and `captions.md` in `.ai/cezar/em/state/screens/`. Do not change code for the screenshots.
+  - { id: shots-publish, type: check, name: Post screenshots, command: "bash .ai/cezar/em/screens-publish.sh developer" }
+  - { id: sloop, type: loop, name: Screenshot retries, max: 2 }
+  - id: shoot-again
+    type: agent
+    name: Developer retries screenshots
+    session: { continue: implement }
+    prompt: |
+      Publishing the screenshots failed:
+
+      {{nodes.shots-publish.output}}
+
+      Leave the final screenshots in `.ai/cezar/em/state/screens/`.
   - { id: fixes, type: loop, name: Fix fuse, max: 10 }
   - id: fix
     type: agent
@@ -44,7 +67,8 @@ nodes:
     prompt: |
       You are the REVIEWER of one task of a plan. Read `.ai/cezar/em/state/current-task.md`, the spec and
       the task list it points to, then the task's change: `git diff $(cat .ai/cezar/em/state/base)`.
-      Apply `CODE_REVIEW.md`. Report only real problems: wrong behaviour, a missed acceptance criterion,
+      Apply `CODE_REVIEW.md` and `.ai/cezar/em/rules.md`. Screenshots of the views the task changed, if
+      any, are in `.ai/cezar/em/state/screens-published/`: look at them. Report only real problems: wrong behaviour, a missed acceptance criterion,
       broken contract, missing tests for new logic, needless complexity. No style nits, no speculative
       edge cases. Write your findings to `.ai/cezar/em/state/review.md` (numbered, each with file:line),
       or the single line "No findings." Do not edit any other file.
@@ -58,7 +82,9 @@ nodes:
     prompt: |
       The reviewer asked for changes (full text in `.ai/cezar/em/state/review.md`). For each finding
       either fix it or explain why it is wrong or not worth it. Write your answer per finding to
-      `.ai/cezar/em/state/reply.md`. Run `bash .ai/cezar/em/verify.sh` before you finish.
+      `.ai/cezar/em/state/reply.md`. If you changed a view, take its screenshot again into
+      `.ai/cezar/em/state/screens/` (`.claude/skills/ui-mockups/SKILL.md`). Run `bash .ai/cezar/em/verify.sh`
+      before you finish.
   - { id: tests-a, type: check, name: Verify, command: "bash .ai/cezar/em/verify.sh" }
   - { id: fixes-a, type: loop, name: Fix fuse, max: 10 }
   - id: fix-a
@@ -71,7 +97,7 @@ nodes:
       {{nodes.tests-a.output}}
 
       Fix the cause, not the tests.
-  - { id: post-reply, type: check, name: Push + post reply, command: "bash .ai/cezar/em/push.sh && bash .ai/cezar/em/post-comment.sh developer .ai/cezar/em/state/reply.md" }
+  - { id: post-reply, type: check, name: Push + post reply, command: "bash .ai/cezar/em/push.sh && bash .ai/cezar/em/post-comment.sh developer .ai/cezar/em/state/reply.md && bash .ai/cezar/em/screens-publish.sh developer --optional" }
   - id: rereview
     type: agent
     name: Reviewer re-reviews
@@ -92,8 +118,8 @@ nodes:
     prompt: |
       You are the PLANNER. A human reviewed the plan on this PR; the review is in
       `.ai/cezar/em/state/human-review.md`. The plan is the spec and the tasks this branch adds
-      (`git diff --name-only origin/master...HEAD -- .ai/specs`). Follow `.ai/cezar/em/planner.md`.
-      Change the plan or explain why not, for each point, and write your answer per point to
+      (`git diff --name-only origin/master...HEAD -- .ai/specs`). Follow `.ai/cezar/em/planner.md` and
+      the repository rules in `.ai/cezar/em/rules.md`. Change the plan or explain why not, for each point, and write your answer per point to
       `.ai/cezar/em/state/answer.md`. Commit nothing.
   - { id: pvalidate, type: check, name: Validate plan, command: "bash .ai/cezar/em/validate-plan.sh" }
   - { id: ploop, type: loop, name: Format fixes, max: 3 }
@@ -133,7 +159,16 @@ edges:
   - { from: no-task.false, to: implement }
   - { from: implement.done, to: tests }
   - { from: tests.pass, to: task-pr }
-  - { from: task-pr.pass, to: review }
+  - { from: task-pr.pass, to: ui-task }
+  - { from: ui-task.pass, to: needs-shots }
+  - { from: needs-shots.true, to: shoot }
+  - { from: needs-shots.false, to: review }
+  - { from: shoot.done, to: shots-publish }
+  - { from: shots-publish.pass, to: review }
+  - { from: shots-publish.fail, to: sloop }
+  - { from: sloop.repeat, to: shoot-again }
+  - { from: sloop.exhausted, to: escalate }
+  - { from: shoot-again.done, to: shots-publish }
   - { from: tests.fail, to: fixes }
   - { from: fixes.repeat, to: fix }
   - { from: fixes.exhausted, to: escalate }

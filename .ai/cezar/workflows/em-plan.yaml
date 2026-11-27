@@ -10,7 +10,8 @@ nodes:
     verdicts: [ready, questions]
     prompt: |
       You are the PLANNER. {{task}}
-      The issue with its comments is in `.ai/cezar/em/state/issue.md`. Follow `.ai/cezar/em/planner.md`.
+      The issue with its comments is in `.ai/cezar/em/state/issue.md`. Follow `.ai/cezar/em/planner.md` and
+      the repository rules in `.ai/cezar/em/rules.md`.
       If a question blocks the plan, write the numbered questions to `.ai/cezar/em/state/questions.md`,
       write no plan, and end with verdict questions. Otherwise write the spec and the tasks and end
       with verdict ready.
@@ -30,6 +31,35 @@ nodes:
       Fix the plan files.
   - { id: open, type: check, name: Open plan PR, command: "bash .ai/cezar/em/open-pr.sh" }
 
+  # UI mockups: a designer prototypes the views the plan changes; screenshots go to the plan PR,
+  # the prototype is thrown away (reset to mock-base)
+  - { id: ui-plan, type: check, name: "UI in the plan?", command: "bash .ai/cezar/em/screens-check.sh plan" }
+  - { id: needs-mockups, type: if, name: "Mockups needed?", condition: { kind: output, ref: ui-plan.output, op: contains, value: needed } }
+  - { id: mock-base, type: check, name: Remember plan commit, command: "git rev-parse HEAD > .ai/cezar/em/state/mock-base" }
+  - id: designer
+    type: agent
+    name: Designer
+    prompt: |
+      You are the DESIGNER. {{task}}
+      The plan is the spec and the tasks this branch adds (`git diff --name-only origin/master...HEAD -- .ai/specs`).
+      Follow `.claude/skills/ui-mockups/SKILL.md` and the repository rules in `.ai/cezar/em/rules.md`: prototype every view the
+      plan adds or changes (the spec's `## UI` section), screenshot each one on the mock backend and leave
+      the final PNGs and `captions.md` in `.ai/cezar/em/state/screens/`. Do not change the plan files.
+      Your prototype is thrown away afterwards; only the screenshots are kept.
+  - { id: mock-publish, type: check, name: Post mockups, command: "bash .ai/cezar/em/screens-publish.sh designer" }
+  - { id: mloop, type: loop, name: Mockup retries, max: 2 }
+  - id: designer-again
+    type: agent
+    name: Designer retries
+    session: { continue: designer }
+    prompt: |
+      Publishing failed:
+
+      {{nodes.mock-publish.output}}
+
+      Leave the final screenshots in `.ai/cezar/em/state/screens/`.
+  - { id: mock-reset, type: check, name: Drop prototype, command: "git reset -q --hard \"$(cat .ai/cezar/em/state/mock-base)\"" }
+
   - id: preview
     type: agent
     name: Plan reviewer
@@ -38,7 +68,8 @@ nodes:
       You are the PLAN REVIEWER. {{task}}
       The issue is in `.ai/cezar/em/state/issue.md`; the plan is the spec and the tasks this branch adds
       (`git diff --name-only origin/master...HEAD -- .ai/specs`); the rules it must follow are in
-      `.ai/cezar/em/planner.md`. Check it against the actual code: requirements of the issue it misses,
+      `.ai/cezar/em/planner.md` and `.ai/cezar/em/rules.md`. If UI mockups were made, their screenshots are in
+      `.ai/cezar/em/state/screens-published/`: look at them against the spec. Check it against the actual code: requirements of the issue it misses,
       wrong paths, types or patterns, tasks that would not build or pass on their own, missed reuse of
       existing code, over-engineering. Do not re-decide product choices under "Decisions and why" unless
       they contradict the issue. Write your findings to `.ai/cezar/em/state/review.md` (numbered), or the
@@ -95,7 +126,18 @@ edges:
   - { from: vloop.exhausted, to: escalate }
   - { from: replan.done, to: validate }
   - { from: validate.pass, to: open }
-  - { from: open.pass, to: preview }
+  - { from: open.pass, to: ui-plan }
+  - { from: ui-plan.pass, to: needs-mockups }
+  - { from: needs-mockups.true, to: mock-base }
+  - { from: needs-mockups.false, to: preview }
+  - { from: mock-base.pass, to: designer }
+  - { from: designer.done, to: mock-publish }
+  - { from: mock-publish.pass, to: mock-reset }
+  - { from: mock-publish.fail, to: mloop }
+  - { from: mloop.repeat, to: designer-again }
+  - { from: mloop.exhausted, to: escalate }
+  - { from: designer-again.done, to: mock-publish }
+  - { from: mock-reset.pass, to: preview }
 
   - { from: preview.approve, to: ready }
   - { from: preview.changes, to: post-review }

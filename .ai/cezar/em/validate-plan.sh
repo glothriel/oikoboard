@@ -12,7 +12,10 @@ tasks=${plans[0]}
 spec=${tasks%.tasks.md}.md
 [ -f "$spec" ] || errors+=("missing spec $spec next to $tasks")
 if [ -f "$spec" ]; then
-  for section in "Goal" "Requirements" "Out of scope" "Decisions"; do
+  # spec.sections: the repository's required sections (comments and blank lines skipped)
+  mapfile -t sections < <(grep -vE '^\s*(#|$)' "$(dirname "$0")/spec.sections" 2>/dev/null ||
+    printf '%s\n' Goal Requirements "Out of scope" Decisions)
+  for section in "${sections[@]}"; do
     grep -qiE "^## .*$section" "$spec" || errors+=("$spec: missing section '## $section'")
   done
 fi

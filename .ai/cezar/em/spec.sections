@@ -1,0 +1,7 @@
+# Sections every spec must have (one per line, matched case-insensitively against "## <section>").
+# Repository-specific; the reasons are in rules.md.
+Goal
+Requirements
+Out of scope
+Decisions
+Backward compatibility
