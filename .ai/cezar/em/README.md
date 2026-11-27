@@ -18,7 +18,7 @@ main branch
 | Workflow | Started by | Does |
 |---|---|---|
 | `.ai/cezar/workflows/em-plan.yaml` | label `agent` on an issue | settles the intent (open questions go to the issue, see below), creates the feature branch, writes a spec + task list, mockups, AI plan review, opens the plan PR as `stage:plan` |
-| `.ai/cezar/workflows/em-pr.yaml` | a human review on a `stage:plan` / `stage:final` PR | see below |
+| `.ai/cezar/workflows/em-pr.yaml` | a human review on a `stage:plan` / `stage:final` PR, or label `resume` on the issue | see below |
 | `.ai/cezar/workflows/em-cleanup.yaml` | a `stage:plan` / `stage:final` PR merged or closed | `cleanup.sh`: once the final PR is merged or closed (or the plan PR closed unmerged), closes leftover task PRs and deletes every branch of the issue |
 
 `em-plan` starts with the intent (`intent.md`): what the issue wants, scope and assumptions. With
@@ -50,6 +50,12 @@ posts the intent for the record and goes on to the spec.
 4. `approve`: `mark-done.sh` ticks the task, squashes its commits into one `T<n>: <title>` commit
    and merges the task PR into the feature branch.
 5. Out of rounds or fixes: `escalate.sh` pushes what there is, comments and labels `needs-human`.
+   Stuck on the plan: the plan PR goes to the human as `stage:plan`. Stuck on a task: comment on the
+   task PR (or push a fix), then label the issue `resume`.
+
+**Resume** (label `resume` on the issue, after an escalation or a run that died): `em-pr` goes straight
+back into the task loop on `feature/issue-<n>`. A task whose branch still exists carries on from that
+branch; its developer reads the task PR first.
 
 The plan gets the same treatment in `em-plan`: planner and plan reviewer keep their sessions across
 rounds, and `validate-plan.sh` checks the format before any review.
