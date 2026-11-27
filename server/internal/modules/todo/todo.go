@@ -44,6 +44,8 @@ type Item struct {
 	// RecurringID/OccurrenceDate: set on tasks created from a recurring template.
 	RecurringID    *uuid.UUID `json:"recurring_id"`
 	OccurrenceDate *core.Date `json:"occurrence_date"`
+	// CommentCount: read-only, maintained by a trigger on todo_comments (migration 19).
+	CommentCount int `json:"comment_count"`
 	// Position: manual order within the list, ascending (see migration 15).
 	Position  float64   `json:"position"`
 	CreatedAt time.Time `json:"created_at"`
