@@ -45,10 +45,12 @@ type Item struct {
 	RecurringID    *uuid.UUID `json:"recurring_id"`
 	OccurrenceDate *core.Date `json:"occurrence_date"`
 	// Position: manual order within the list, ascending (see migration 15).
-	Position  float64   `json:"position"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Version   int       `json:"version" gorm:"default:1"`
+	Position float64 `json:"position"`
+	// KeepForever: exempt from the completed-task cleanup.
+	KeepForever bool      `json:"keep_forever"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	Version     int       `json:"version" gorm:"default:1"`
 }
 
 func (Item) TableName() string { return "todo_items" }
@@ -200,6 +202,7 @@ func (m Module) createItem(c *gin.Context) {
 		Due         *core.Date      `json:"due"`
 		DueTime     *core.TimeOfDay `json:"due_time"`
 		Position    *float64        `json:"position"` // default: -now, i.e. first
+		KeepForever bool            `json:"keep_forever"`
 		// uploaded files (core.Files) to attach
 		AttachmentIDs []uuid.UUID `json:"attachment_ids"`
 	}
@@ -217,7 +220,7 @@ func (m Module) createItem(c *gin.Context) {
 	row := Item{
 		ID: req.ID, HouseholdID: actor.HouseholdID, ListID: req.ListID,
 		Title: req.Title, Description: req.Description, AssigneeID: req.AssigneeID, Due: req.Due,
-		DueTime: req.DueTime, Position: -float64(time.Now().UnixMicro()) / 1e6,
+		DueTime: req.DueTime, KeepForever: req.KeepForever, Position: -float64(time.Now().UnixMicro()) / 1e6,
 	}
 	if req.Position != nil {
 		row.Position = *req.Position
@@ -256,18 +259,19 @@ func (m Module) updateItem(c *gin.Context) {
 		dueTime     core.TimeOfDay
 		position    float64
 		listID      uuid.UUID
+		keepForever bool
 	)
 	cols, err := p.Apply(map[string]any{
 		"title": &title, "description": &description, "done": &done,
 		"assignee_id": &assignee, "due": &due, "due_time": &dueTime,
-		"position": &position, "list_id": &listID,
+		"position": &position, "list_id": &listID, "keep_forever": &keepForever,
 	})
 	if err != nil {
 		core.Fail(c, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
 	clearToEmpty(cols, "description")
-	for _, col := range []string{"position", "list_id"} {
+	for _, col := range []string{"position", "list_id", "keep_forever"} {
 		if v, ok := cols[col]; ok && v == nil {
 			core.Fail(c, http.StatusBadRequest, "bad_request", col+" can't be null")
 			return

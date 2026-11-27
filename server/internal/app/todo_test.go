@@ -1,11 +1,15 @@
 package app_test
 
 import (
+	"context"
 	"net/http"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+
 	"oikoboard/server/internal/core"
+	"oikoboard/server/internal/modules/todo"
 )
 
 func TestTodoComments(t *testing.T) {
@@ -118,5 +122,94 @@ func TestTodoDescriptions(t *testing.T) {
 	}
 	if st := a.do("PATCH", "/todo/items/"+item.ID, map[string]any{"description": "- seat 12A"}, &item); st != http.StatusOK || item.Description != "- seat 12A" {
 		t.Fatalf("set task description: %d %+v", st, item)
+	}
+}
+
+func TestCleanupDone(t *testing.T) {
+	e := setup(t)
+	a := e.newFamily("Kowalscy")
+	_, lists := a.view("todo.lists", nil)
+	list := lists["todo_lists"][0]["id"]
+	mk := func(title string, extra map[string]any) string {
+		body := map[string]any{"list_id": list, "title": title}
+		for k, v := range extra {
+			body[k] = v
+		}
+		var it struct {
+			ID          string
+			KeepForever bool `json:"keep_forever"`
+		}
+		if st := a.do("POST", "/todo/items", body, &it); st != http.StatusCreated {
+			t.Fatalf("add %s: %d", title, st)
+		}
+		return it.ID
+	}
+	done := func(id string) {
+		if st := a.do("PATCH", "/todo/items/"+id, map[string]any{"done": true}, nil); st != http.StatusOK {
+			t.Fatalf("done: %d", st)
+		}
+	}
+	oldDone := mk("old done", nil)
+	kept := mk("old kept", map[string]any{"keep_forever": true})
+	recent := mk("recent done", nil)
+	openOld := mk("old open", nil)
+	for _, id := range []string{oldDone, kept, recent} {
+		done(id)
+	}
+	// done_at NULL on a done task: nothing to measure from.
+	noDoneAt := mk("done without date", nil)
+	done(noDoneAt)
+	e.db.Exec("UPDATE todo_items SET done_at = NULL WHERE id = ?", noDoneAt)
+	e.db.Exec("UPDATE todo_items SET done_at = now() - interval '40 days' WHERE id IN (?, ?)", oldDone, kept)
+	e.db.Exec("UPDATE todo_items SET created_at = now() - interval '90 days' WHERE id = ?", openOld)
+	if st := a.do("POST", "/todo/comments", map[string]any{"item_id": oldDone, "body": "x"}, nil); st != http.StatusCreated {
+		t.Fatalf("comment: %d", st)
+	}
+
+	count := func(id string) int64 {
+		var n int64
+		e.db.Raw("SELECT count(*) FROM todo_items WHERE id = ?", id).Scan(&n)
+		return n
+	}
+	ctx := context.Background()
+	if err := todo.CleanupDone(ctx, e.db, 0, nil); err != nil {
+		t.Fatal(err)
+	}
+	if count(oldDone) != 1 {
+		t.Fatal("days=0 deleted something")
+	}
+
+	w := a.ws()
+	w.sub("o", "todo.list", map[string]any{"list_id": list})
+	var changed []uuid.UUID
+	if err := todo.CleanupDone(ctx, e.db, 30, func(h uuid.UUID) { changed = append(changed, h) }); err != nil {
+		t.Fatal(err)
+	}
+	if count(oldDone) != 0 || count(kept) != 1 || count(recent) != 1 || count(openOld) != 1 || count(noDoneAt) != 1 {
+		t.Fatal("wrong set of tasks deleted")
+	}
+	var comments int64
+	e.db.Raw("SELECT count(*) FROM todo_comments WHERE item_id = ?", oldDone).Scan(&comments)
+	if comments != 0 {
+		t.Fatal("comment survived")
+	}
+	if len(changed) != 1 {
+		t.Fatalf("onChanged: %v", changed)
+	}
+	if m := w.next(); m.Entity != "todo_items" || m.ID != oldDone {
+		t.Fatalf("delete change: %+v", m)
+	}
+
+	// keep_forever: set, clear, null rejected.
+	var it struct {
+		KeepForever bool `json:"keep_forever"`
+	}
+	for _, v := range []bool{false, true} {
+		if st := a.do("PATCH", "/todo/items/"+recent, map[string]any{"keep_forever": v}, &it); st != http.StatusOK || it.KeepForever != v {
+			t.Fatalf("patch %v: %d %+v", v, st, it)
+		}
+	}
+	if st := a.do("PATCH", "/todo/items/"+recent, map[string]any{"keep_forever": nil}, nil); st != http.StatusBadRequest {
+		t.Fatalf("null: %d", st)
 	}
 }

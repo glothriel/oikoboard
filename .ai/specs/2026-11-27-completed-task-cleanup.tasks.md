@@ -1,6 +1,6 @@
 # Tasks
 
-## [ ] T1: Server: keep_forever flag and cleanup of completed tasks
+## [x] T1: Server: keep_forever flag and cleanup of completed tasks
 **Acceptance criteria:** R1–R6, R8. `cd server && gofmt -l . && go vet ./... && go test -race ./...` passes, including the new tests.
 - `server/migrations/00019_todo_keep_forever.sql` — goose Up: `ALTER TABLE todo_items ADD COLUMN keep_forever boolean NOT NULL DEFAULT false;`; Down drops the column.
 - `server/internal/modules/todo/todo.go` — add `KeepForever bool \`json:"keep_forever"\`` to `Item`; in `createItem` accept `KeepForever bool` in the request and set it on the row; in `updateItem` add `keepForever bool` to the `p.Apply` map under `"keep_forever"` and reject an explicit null (add the column to the existing `position`/`list_id` null check loop).
