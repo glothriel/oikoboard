@@ -36,13 +36,18 @@ type DBOS struct {
 	db        *gorm.DB
 	onChanged func(uuid.UUID)
 	workflow  func(dbos.Context, dbos.ScheduledWorkflowInput) (any, error)
+	cleanup   func(context.Context) error
+	cleanupWF func(dbos.Context, dbos.ScheduledWorkflowInput) (any, error)
 }
+
+const cleanupSchedule = "cleanup-done-tasks"
 
 var _ todo.Scheduler = (*DBOS)(nil)
 
 // New starts DBOS against dsn (its state lives in the "dbos" schema of that
 // database). onChanged is called after a task was created (may be nil).
-func New(parent context.Context, db *gorm.DB, dsn string, onChanged func(uuid.UUID)) (*DBOS, error) {
+// cleanup is the daily completed-task cleanup (nil = none).
+func New(parent context.Context, db *gorm.DB, dsn string, onChanged func(uuid.UUID), cleanup func(context.Context) error) (*DBOS, error) {
 	ctx, err := dbos.NewContext(parent, dbos.Config{
 		AppName:                  "oikoboard",
 		DatabaseURL:              dsn,
@@ -51,8 +56,10 @@ func New(parent context.Context, db *gorm.DB, dsn string, onChanged func(uuid.UU
 	if err != nil {
 		return nil, fmt.Errorf("dbos: %w", err)
 	}
-	d := &DBOS{ctx: ctx, db: db, onChanged: onChanged}
+	d := &DBOS{ctx: ctx, db: db, onChanged: onChanged, cleanup: cleanup}
 	d.workflow = d.run
+	d.cleanupWF = d.cleanupWorkflow
+	dbos.RegisterWorkflow(ctx, d.cleanupWF, dbos.WithWorkflowName(cleanupSchedule))
 	dbos.RegisterWorkflow(ctx, d.workflow, dbos.WithWorkflowName("generate-recurring-task"))
 	if err := dbos.Launch(ctx); err != nil {
 		return nil, fmt.Errorf("dbos launch: %w", err)
@@ -75,6 +82,33 @@ func (d *DBOS) run(ctx dbos.Context, in dbos.ScheduledWorkflowInput) (any, error
 		return todo.Generate(c, d.db, d.onChanged, sc.HouseholdID, sc.TemplateID, occ)
 	}, dbos.WithStepName("generate"))
 	return nil, err
+}
+
+// cleanupWorkflow is the daily completed-task cleanup (a durable, retried step).
+func (d *DBOS) cleanupWorkflow(ctx dbos.Context, _ dbos.ScheduledWorkflowInput) (any, error) {
+	_, err := dbos.RunAsStep(ctx, func(c context.Context) (bool, error) {
+		if d.cleanup == nil {
+			return false, nil
+		}
+		return true, d.cleanup(c)
+	}, dbos.WithStepName("cleanup"))
+	return nil, err
+}
+
+// SyncCleanup schedules the daily cleanup (03:00 UTC) or removes the schedule.
+func (d *DBOS) SyncCleanup(enabled bool) error {
+	if enabled {
+		return dbos.ApplySchedules(d.ctx, []dbos.ScheduleSpec{{
+			ScheduleName: cleanupSchedule,
+			Schedule:     "0 0 3 * * *",
+			CronTimezone: "UTC",
+			Workflow:     d.cleanupWF,
+		}})
+	}
+	if err := dbos.DeleteSchedule(d.ctx, cleanupSchedule); err != nil && !isNotFound(err) {
+		return err
+	}
+	return nil
 }
 
 func scheduleName(id uuid.UUID) string { return schedulePrefix + id.String() }
