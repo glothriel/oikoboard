@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# A human reviewed the implementation: append the review as task R<n> to the plan, so it runs through
-# the same developer/reviewer loop as every other task.
+# A human reviewed the final PR: append the review as task R<n> to the plan on the feature branch,
+# so it runs through the same task loop (own PR into the feature branch) as every other task.
 set -euo pipefail
 . "$(dirname "$0")/lib.sh"
 tasks=$(plan_tasks_files | head -1)
@@ -15,4 +15,7 @@ n=$(( $(grep -cE '^## \[[ x]\] R[0-9]+:' "$tasks" || true) + 1 ))
 } >> "$tasks"
 git add "$tasks"
 git commit -qm "R$n: review by @$(cat "$S/reviewer")"
+git push -q origin "HEAD:refs/heads/$(cat "$S/feature")"
+mv "$S/pr" "$S/final-pr"
+rm -f "$S/head-ref"
 echo "added R$n to $tasks"
