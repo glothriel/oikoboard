@@ -147,6 +147,7 @@ albo należały** do tego zbioru.
 | `todo.open`       | —               | niezrobione `todo_items` gospodarstwa               | ściana, liczniki przy listach |
 | `todo.comments`   | `item_id`       | `todo_comments` of one task (its thread)            | task editor |
 | `todo.inbox`      | `member_id`     | the member's `todo_inbox` (last 100)                | inbox in the app bar |
+| `family.members`  | —               | `members` of the household (public columns only: no `user_id`/`invite_email`; `has_account`, `picture`) | family lists, avatars |
 | `calendar.range`  | `from`, `to`    | `calendar_events` nachodzące na przedział           | miesiąc w kalendarzu, ściana |
 
 Liczby („4 do zrobienia”) liczy klient z encji, a nie serwer. Dzięki temu widoki to zwykłe filtry,
@@ -212,8 +213,13 @@ Rdzeń (listener, dispatcher, WS) się nie zmienia.
 {"t":"remove","sub":"s1","op":"update","seq":1207,"entity":"todo_items","id":"…",
  "row":{…}}   // row = ostatni stan; op=update → wypadło z widoku, op=delete → usunięte
 {"t":"error","sub":"s1","code":"bad_params","msg":"…"}
+{"t":"presence","online":["<member id>",…]}      // after ready and on every change; not a subscription
 {"t":"ping"}                                       // heartbeat every 5 s
 ```
+`presence` goes to every connection of a household: the members with at least one open connection
+(two devices of one account count once), and for 5 s (`presenceGrace`) after the last one closes, so
+reconnect blips don't flicker. It's ephemeral and in memory (`realtime/presence.go`), so it supports a
+single server instance only.
 Every 5 s the server sends an app-level `{"t":"ping"}`, because browsers don't expose control frames,
 and, separately, a WebSocket ping (no pong within 15 s → it closes the connection). Once a connection
 has delivered a heartbeat, the client treats ~12 s without any message (and any connection 10 s

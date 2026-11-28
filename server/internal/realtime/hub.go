@@ -4,6 +4,7 @@ package realtime
 
 import (
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -18,10 +19,12 @@ type Hub struct {
 
 	mu          sync.Mutex
 	dispatchers map[uuid.UUID]*dispatcher
+
+	presence *presence
 }
 
 func NewHub(db *gorm.DB, auth *core.Auth, views core.Views) *Hub {
-	return &Hub{db: db, auth: auth, views: views, dispatchers: map[uuid.UUID]*dispatcher{}}
+	return &Hub{db: db, auth: auth, views: views, dispatchers: map[uuid.UUID]*dispatcher{}, presence: newPresence()}
 }
 
 // acquire zwraca (i w razie potrzeby uruchamia) dispatcher gospodarstwa.
@@ -68,3 +71,6 @@ func (h *Hub) PokeAll() {
 		d.poke()
 	}
 }
+
+// SetPresenceGrace overrides the offline grace period (tests).
+func (h *Hub) SetPresenceGrace(d time.Duration) { h.presence.setGrace(d) }

@@ -168,12 +168,16 @@ type msg struct {
 	Row    map[string]any              `json:"row"`
 	Data   map[string][]map[string]any `json:"data"`
 	Code   string                      `json:"code"`
+	Online []string                    `json:"online"`
 }
 
 type wsClient struct {
 	t    *testing.T
 	conn *websocket.Conn
 	msgs chan msg
+	// presence messages are kept apart so they don't interleave with the
+	// view traffic other tests assert on
+	presence chan msg
 }
 
 func (c *client) ws() *wsClient {
@@ -184,13 +188,17 @@ func (c *client) ws() *wsClient {
 		c.e.t.Fatal(err)
 	}
 	conn.SetReadLimit(10 << 20)
-	w := &wsClient{t: c.e.t, conn: conn, msgs: make(chan msg, 10000)}
+	w := &wsClient{t: c.e.t, conn: conn, msgs: make(chan msg, 10000), presence: make(chan msg, 1000)}
 	go func() {
 		for {
 			var m msg
 			if err := wsjson.Read(context.Background(), conn, &m); err != nil {
 				close(w.msgs)
 				return
+			}
+			if m.T == "presence" {
+				w.presence <- m
+				continue
 			}
 			w.msgs <- m
 		}

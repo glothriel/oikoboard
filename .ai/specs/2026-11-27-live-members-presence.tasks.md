@@ -16,7 +16,7 @@
 - `server/internal/core/auth.go` — `/me` members query reads `m.picture` instead of joining `users`; `memberOut` unchanged in shape.
 - `server/internal/app/members_test.go` — websocket test: snapshot, insert via invite accept, rename via SQL, delete, second household sees nothing, no leaked fields, picture change propagates.
 
-## [ ] T2: Server: online presence
+## [x] T2: Server: online presence
 **Goal:** Connected household devices learn which members are online, live.
 **Acceptance criteria:**
 - R6, R7: presence message after `ready` and on each change; two connections of one account count once; offline only after a 5 s grace; accountless members never listed.
