@@ -59,7 +59,7 @@
 - `app/lib/modules/fitness/scale/scale_session.dart` — `FakeScaleSession` emits the waiting state and many samples; timer logic sits in a BLE-free class the test can drive.
 - `app/lib/modules/fitness/weigh_in_screen.dart` — waiting text and Done button in `_StatusCard`, unsupported error text, "Discard all" button calling `_resolve` for all pending.
 - `app/lib/modules/fitness/weigh_in_screen.dart` — replace the "Who" dropdown with a `Wrap` of `ChoiceChip(avatar: MemberAvatar)` as in `measurements_screen.dart`.
-- Mockup: `centurion-mockups/issue-84` — reuse `_StatusCard` (`onDone`, waiting/unsupported texts) and the Discard all `TextButton` in `weigh_in_screen.dart`, plus the arb keys.
+- Mockup: `centurion-mockups/issue-84` — reuse `_StatusCard` (`onDone`, waiting/unsupported), Discard all `TextButton`, the "Who" `ChoiceChip` row, arb keys.
 - `app/lib/l10n/app_en.arb`, `app/lib/l10n/app_pl.arb` — keys `fitnessWeighInWaiting`, `fitnessWeighInDoneButton`, `fitnessWeighInUnsupported`, `fitnessWeighInDiscardAll`.
 - `app/test/scale_session_test.dart` — `fakeAsync` with a fake driver: reset on activity, 60 s expiry, quiet-period finish, flush on finish; session logic factored so it runs without the BLE plugin.
 - `app/test/fitness_weigh_in_mock_test.dart` — waiting state, Done, Discard all on the mock backend.
