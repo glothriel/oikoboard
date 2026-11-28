@@ -115,6 +115,7 @@ func (h *Hub) HandleWS(c *gin.Context) {
 		return
 	}
 	defer func() {
+		h.presence.remove(conn)
 		for _, s := range conn.subs {
 			conn.d.unregister(s)
 		}
@@ -123,6 +124,7 @@ func (h *Hub) HandleWS(c *gin.Context) {
 
 	go conn.writer()
 	conn.send(readyMsg{T: "ready", MemberID: conn.actor.MemberID, HouseholdID: conn.actor.HouseholdID})
+	h.presence.add(conn)
 
 	for {
 		var msg clientMsg
