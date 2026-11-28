@@ -47,6 +47,12 @@ type Module interface {
 	Views() []View
 }
 
+// RowProjector is optionally implemented by a View whose rows must be
+// transformed (e.g. sanitized) before they are sent to clients in live changes.
+type RowProjector interface {
+	Project(entity string, row json.RawMessage) json.RawMessage
+}
+
 type Action int
 
 const (

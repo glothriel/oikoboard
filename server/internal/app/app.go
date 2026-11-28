@@ -23,6 +23,7 @@ import (
 // Modules — a new module = a new entry here (+ a migration with oiko_track).
 func Modules(db *gorm.DB, auth *core.Auth, cal *calendar.Syncer, sched todo.Scheduler) []core.Module {
 	return []core.Module{
+		core.Members{DB: db},
 		todo.Module{DB: db, OnItemsChanged: cal.TodosChanged, Scheduler: sched},
 		calendar.Module{DB: db, Auth: auth, Providers: cal.Providers, Syncer: cal},
 		fitness.Module{DB: db},

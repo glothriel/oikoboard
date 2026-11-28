@@ -1,6 +1,6 @@
 # Tasks
 
-## [ ] T1: Server: `members` in the change feed with a `family.members` view
+## [x] T1: Server: `members` in the change feed with a `family.members` view
 **Goal:** Member changes reach all household devices through a sanitized `family.members` view.
 **Acceptance criteria:**
 - R1, R2, R3: a websocket on `family.members` gets a snapshot, then upserts for insert/update and a remove for delete, only for its own household.
