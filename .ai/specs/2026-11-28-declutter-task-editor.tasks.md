@@ -9,6 +9,7 @@
 - Saving, done, delete, comments and attachments are unchanged, including edits made in a collapsed section (R5).
 - New strings exist in en and pl (R6).
 **Changes:**
+- Mockup: `centurion-mockups/issue-76` — reuse the `_TodoItemEditorState.build` rework (ExpansionTile "More options", inline assignee Wrap with icon Nobody chip) and the two l10n keys; adapt rather than copy.
 - `app/lib/modules/todo/todo_screen.dart` — rework `_TodoItemEditorState.build`: ExpansionTile (`initiallyExpanded` from item description/keepForever) holding list dropdown, keep-forever switch, MarkdownField; inline assignee Wrap.
 - `app/lib/l10n/app_en.arb` — add `todoMoreOptions` ("More options") and `todoAssignee` ("Assignee"); remove `todoWhoDoesIt` if unused.
 - `app/lib/l10n/app_pl.arb` — Polish translations of the same keys.
