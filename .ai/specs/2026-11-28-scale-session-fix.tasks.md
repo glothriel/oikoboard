@@ -52,11 +52,13 @@
 - Silence timer resets on any driver signal, expires after 60 s; `historyComplete` + 2 s quiet finishes; user Done and disconnect finish; finish calls `flush()` (R1, R2, R3).
 - States `waiting` (connected, nothing yet) and error `unsupported` exist and the screen shows them with a Done button (R2, R6).
 - An unknown scale is asked for all records; its readings all land in the pending list; "Discard all" resolves each of them (R11).
+- Each pending reading picks its member with the shared member `ChoiceChip` + `MemberAvatar` row, no dropdown (R15).
 - The end reason (idle / disconnect / user / history) is logged (R12).
 **Changes:**
 - `app/lib/modules/fitness/scale/scale_session.dart` — `ScalePhase.waiting`, `ScaleError.unsupported`, `finishNow()` on `ScaleSession`; silence/quiet timers use plain `Timer` so `fakeAsync` drives them.
 - `app/lib/modules/fitness/scale/scale_session.dart` — `FakeScaleSession` emits the waiting state and many samples; timer logic sits in a BLE-free class the test can drive.
 - `app/lib/modules/fitness/weigh_in_screen.dart` — waiting text and Done button in `_StatusCard`, unsupported error text, "Discard all" button calling `_resolve` for all pending.
+- `app/lib/modules/fitness/weigh_in_screen.dart` — replace the "Who" dropdown with a `Wrap` of `ChoiceChip(avatar: MemberAvatar)` as in `measurements_screen.dart`.
 - Mockup: `centurion-mockups/issue-84` — reuse `_StatusCard` (`onDone`, waiting/unsupported texts) and the Discard all `TextButton` in `weigh_in_screen.dart`, plus the arb keys.
 - `app/lib/l10n/app_en.arb`, `app/lib/l10n/app_pl.arb` — keys `fitnessWeighInWaiting`, `fitnessWeighInDoneButton`, `fitnessWeighInUnsupported`, `fitnessWeighInDiscardAll`.
 - `app/test/scale_session_test.dart` — `fakeAsync` with a fake driver: reset on activity, 60 s expiry, quiet-period finish, flush on finish; session logic factored so it runs without the BLE plugin.

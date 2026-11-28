@@ -19,10 +19,11 @@ The weigh-in screen reliably downloads the stored measurements from the Xiaomi M
 - R11: First connect to a never-seen scale requests all stored records; all of them appear in the pending list (save/discard each), plus one "Discard all" action.
 - R12: The app logs the BLE session (scan hit, services, variant, every write, every notification as hex, announced count, why the session ended) and sends it over the existing WebSocket as `log` messages; offline or on mock it is kept in a small ring buffer and dropped when full.
 - R13: The server exports received logs as OTLP/HTTP JSON log records, with basic auth, configured by `OIKO_OTLP_LOGS_URL`, `OIKO_OTLP_USER`, `OIKO_OTLP_PASSWORD`; without the URL logs are only written to slog. Records carry household and member ids, never tokens.
+- R15: The "Who" choice on a pending reading uses the same member `ChoiceChip`s with `MemberAvatar` as the other fitness screens, not a dropdown.
 - R14: The mock backend's `FakeScaleSession` still works and covers the new states (waiting, pick, discard all).
 
 ## UI
-- Weigh-in screen (`weigh_in_screen.dart`): new "waiting for the scale…" status with a Done button; "unsupported scale" error text; a scale picker list when several scales are found; a "Forget scale" menu item; a "Discard all" button above the pending readings.
+- Weigh-in screen (`weigh_in_screen.dart`): new "waiting for the scale…" status with a Done button; "unsupported scale" error text; a scale picker list when several scales are found; a "Forget scale" menu item; a "Discard all" button above the pending readings; the pending reading's "Who" dropdown becomes the app-wide member picker (`ChoiceChip` with `MemberAvatar`, as in `measurements_screen.dart`).
 - Mockup prototype: branch `centurion-mockups/issue-84`.
 
 ## Out of scope
@@ -38,6 +39,7 @@ The weigh-in screen reliably downloads the stored measurements from the Xiaomi M
 - The driver gets a `Stream<ScaleSignal>` (`activity`, `historyComplete`) next to `readings`, so the session never guesses from emitted readings.
 - `onlyLast` is removed from `ScaleDriver.onConnected`: the cursor already filters duplicates, and first connect now requests everything.
 - The saved scale lives in `DevicePrefs` under one key as JSON, next to the per-`remoteId` import cursor (which stays as is).
+- "Who" picker: the review asked for the shared look, so the dropdown is replaced by the `Wrap` of member `ChoiceChip`s used in `measurements_screen.dart` (no new widget).
 - The 60 s silence window and 2 s quiet period are constants in `scale_session.dart`; not configurable.
 - Fixes ship in the order of the issue's spike (logging first) so one real session log confirms the diagnosis.
 
