@@ -450,8 +450,8 @@ func (a *Auth) me(c *gin.Context) {
 			FailErr(c, err)
 			return
 		}
-		if err := db.Raw(`SELECT m.*, m.user_id IS NOT NULL AS has_account, u.picture
-			FROM members m LEFT JOIN users u ON u.id = m.user_id
+		if err := db.Raw(`SELECT m.*, m.user_id IS NOT NULL AS has_account
+			FROM members m
 			WHERE m.household_id = ? ORDER BY m.created_at`, hh.ID).Scan(&members).Error; err != nil {
 			FailErr(c, err)
 			return
