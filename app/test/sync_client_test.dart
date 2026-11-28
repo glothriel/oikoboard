@@ -1,5 +1,6 @@
 // SyncClient reconnect behaviour against a fake in-process WebSocket server.
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:oikoboard/core/api/sync_client.dart';
@@ -114,4 +115,97 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 300));
     expect(server.connections, 1);
   });
+
+  test('family.members: a snapshot, then an upsert and a remove', () async {
+    Map<String, dynamic> row(String id, String name) => {
+      'id': id,
+      'name': name,
+      'color': 0xFF1565C0,
+      'has_account': true,
+    };
+    server.behave = (n, ws) => ws.listen((raw) {
+      final msg = jsonDecode(raw as String) as Map;
+      switch (msg['t']) {
+        case 'auth':
+          ws.add(jsonEncode({'t': 'ready'}));
+        case 'sub':
+          final sub = msg['id'];
+          ws.add(
+            jsonEncode({
+              't': 'snapshot',
+              'sub': sub,
+              'seq': 1,
+              'data': {
+                'members': [row('a', 'Anna')],
+              },
+            }),
+          );
+          ws.add(
+            jsonEncode({
+              't': 'upsert',
+              'sub': sub,
+              'op': 'insert',
+              'seq': 2,
+              'entity': 'members',
+              'id': 'b',
+              'row': row('b', 'Bob'),
+            }),
+          );
+          ws.add(
+            jsonEncode({
+              't': 'remove',
+              'sub': sub,
+              'op': 'delete',
+              'seq': 3,
+              'entity': 'members',
+              'id': 'a',
+              'row': row('a', 'Anna'),
+            }),
+          );
+      }
+    });
+    final client = SyncClient(server.uri, 't');
+    addTearDown(client.dispose);
+
+    final names = <String>[];
+    final sub = client
+        .watch('family.members', const {}, (e, _) => e == 'members')
+        .listen(
+          (v) => names.add(v.rows('members').map((r) => r['name']).join(',')),
+        );
+    addTearDown(sub.cancel);
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    expect(names.last, 'Bob');
+    expect(names, contains('Anna,Bob'));
+  });
+
+  test(
+    'presence updates online and the stream; unknown types are ignored',
+    () async {
+      server.behave = (n, ws) => ws.listen((raw) {
+        if ((jsonDecode(raw as String) as Map)['t'] != 'auth') return;
+        ws.add(jsonEncode({'t': 'ready'}));
+        ws.add(jsonEncode({'t': 'whatever', 'x': 1}));
+        ws.add(
+          jsonEncode({
+            't': 'presence',
+            'online': ['a', 'b'],
+          }),
+        );
+      });
+      final client = SyncClient(server.uri, 't');
+      addTearDown(client.dispose);
+
+      final set = await client.presence.first.timeout(
+        const Duration(seconds: 5),
+      );
+      expect(set, {'a', 'b'});
+      expect(client.online, {'a', 'b'});
+      expect(client.connected, isTrue);
+
+      server.sockets.first.close();
+      await client.presence.first.timeout(const Duration(seconds: 5));
+      expect(client.online, isEmpty);
+    },
+  );
 }

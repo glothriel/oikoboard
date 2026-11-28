@@ -2,6 +2,7 @@ package realtime
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"time"
 
@@ -150,16 +151,22 @@ func (d *dispatcher) emit(s *subscription, ch *core.Change) {
 	if ch.Seq <= s.snapSeq {
 		return // już zawarte w snapshocie
 	}
+	row := func(r core.RawJSON) core.RawJSON {
+		if p, ok := s.view.(core.RowProjector); ok && r != nil {
+			return core.RawJSON(p.Project(ch.Entity, json.RawMessage(r)))
+		}
+		return r
+	}
 	switch core.Classify(s.view, s.params, ch) {
 	case core.Upsert:
 		s.conn.send(changeMsg{
 			T: "upsert", Sub: s.id, Op: ch.Op, Seq: ch.Seq, Entity: ch.Entity, ID: ch.EntityID,
-			Row: ch.After, Actor: ch.ActorID, Mutation: ch.MutationID,
+			Row: row(ch.After), Actor: ch.ActorID, Mutation: ch.MutationID,
 		})
 	case core.Remove:
 		s.conn.send(changeMsg{
 			T: "remove", Sub: s.id, Op: ch.Op, Seq: ch.Seq, Entity: ch.Entity, ID: ch.EntityID,
-			Row: ch.Before, Actor: ch.ActorID, Mutation: ch.MutationID,
+			Row: row(ch.Before), Actor: ch.ActorID, Mutation: ch.MutationID,
 		})
 	}
 }

@@ -720,7 +720,7 @@ class TodoItemTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final member = ref.watch(familyProvider).byId(item.assigneeId);
+    final member = ref.watch(familyProvider).byIdOrRemoved(item.assigneeId);
     return Dismissible(
       key: ValueKey('dismiss-${item.id}'),
       direction: DismissDirection.endToStart,
@@ -1160,19 +1160,15 @@ class TodoCommentList extends ConsumerWidget {
             key: ValueKey(c.id),
             contentPadding: EdgeInsets.zero,
             dense: true,
-            leading: family.byId(c.authorId) == null
-                ? const CircleAvatar(
-                    radius: 14,
-                    child: Icon(Icons.person_outline, size: 16),
-                  )
-                : MemberAvatar(family.byId(c.authorId)!, radius: 14),
+            leading: MemberAvatar(
+              family.byIdOrRemoved(c.authorId) ?? Member.removed(''),
+              radius: 14,
+            ),
             title: Text.rich(
               TextSpan(
                 children: [
                   TextSpan(
-                    text:
-                        family.byId(c.authorId)?.name ??
-                        l.todoCommentFormerMember,
+                    text: family.byId(c.authorId)?.name ?? l.memberRemoved,
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                   TextSpan(

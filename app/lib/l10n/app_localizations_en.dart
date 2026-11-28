@@ -509,7 +509,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get todoCommentDelete => 'Delete comment';
 
   @override
-  String get todoCommentFormerMember => 'Former member';
+  String get memberRemoved => 'Removed member';
+
+  @override
+  String get memberOnline => 'Online';
 
   @override
   String get todoDayListDue => 'List due';

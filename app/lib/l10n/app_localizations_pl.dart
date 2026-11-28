@@ -511,7 +511,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get todoCommentDelete => 'Usuń komentarz';
 
   @override
-  String get todoCommentFormerMember => 'Były członek';
+  String get memberRemoved => 'Usunięty członek';
+
+  @override
+  String get memberOnline => 'Online';
 
   @override
   String get todoDayListDue => 'Termin listy';

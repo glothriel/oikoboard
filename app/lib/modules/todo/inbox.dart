@@ -121,8 +121,8 @@ class _InboxTile extends ConsumerWidget {
     final l = context.l10n;
     final theme = Theme.of(context);
     final family = ref.watch(familyProvider);
-    final actor = family.byId(entry.actorId);
-    final name = actor?.name ?? l.todoCommentFormerMember;
+    final actor = family.byIdOrRemoved(entry.actorId);
+    final name = actor == null || actor.removed ? l.memberRemoved : actor.name;
     final text = entry.recurring
         ? l.todoInboxRecurring(entry.title)
         : switch (entry.kind) {
@@ -142,12 +142,7 @@ class _InboxTile extends ConsumerWidget {
       leading: Badge(
         isLabelVisible: entry.unread,
         smallSize: 10,
-        child: actor == null
-            ? const CircleAvatar(
-                radius: 16,
-                child: Icon(Icons.person_outline, size: 18),
-              )
-            : MemberAvatar(actor, radius: 16),
+        child: MemberAvatar(actor ?? Member.removed(''), radius: 16),
       ),
       title: Text(
         text,

@@ -968,11 +968,17 @@ abstract class AppLocalizations {
   /// **'Delete comment'**
   String get todoCommentDelete;
 
-  /// No description provided for @todoCommentFormerMember.
+  /// No description provided for @memberRemoved.
   ///
   /// In en, this message translates to:
-  /// **'Former member'**
-  String get todoCommentFormerMember;
+  /// **'Removed member'**
+  String get memberRemoved;
+
+  /// No description provided for @memberOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'Online'**
+  String get memberOnline;
 
   /// No description provided for @todoDayListDue.
   ///
