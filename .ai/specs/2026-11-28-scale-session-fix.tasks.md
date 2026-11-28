@@ -5,15 +5,15 @@
 **Acceptance criteria:**
 - A `{"t":"log","logs":[{"ts","level","msg","attrs"}]}` message from an authenticated connection reaches the exporter with household and member ids as attributes (R13).
 - With `OIKO_OTLP_LOGS_URL` set, records are POSTed as OTLP/HTTP JSON with basic auth, batched; without it they go to slog only (R13).
-- Oversized or excessive messages are truncated, never crash the connection (R13).
+- Oversized text and surplus records are truncated or dropped; a max-size message (20 records at the caps) stays under the 32 KiB read limit and keeps the socket open (R13).
 **Changes:**
 - `server/internal/otlp/otlp.go` — new package: `Exporter` (URL, user, password; `Add(Record)`, background flush every 5 s or 100 records, bounded queue, `Close`), `Record`; OTLP JSON logs payload, resource `service.name=oikoboard`.
 - `server/internal/otlp/otlp_test.go` — httptest collector: payload shape, basic auth header, batching, overflow drop.
 - `server/internal/realtime/hub.go` — `LogSink` interface (`Log(actor core.Actor, recs []LogRecord)`); `NewHub` takes it (nil = slog only).
-- `server/internal/realtime/conn.go` — `clientMsg` gets `Logs`; new `case "log"` in the read loop applies the caps (100 records, 4 KiB msg) and forwards to the sink.
+- `server/internal/realtime/conn.go` — `clientMsg` gets `Logs`; new `case "log"` in the read loop applies the caps (20 records, `msg` 512 B, `attrs` 512 B) and forwards to the sink.
 - `server/cmd/oikoboard/main.go` — read the three `OIKO_OTLP_*` vars, build the exporter, close it on shutdown; document the vars in the header comment.
 - `server/internal/app/app.go` — wire the sink into `realtime.NewHub`.
-- `server/internal/app/logs_test.go` — WebSocket test: log message arrives at a fake sink with actor ids; malformed and oversized messages keep the socket usable.
+- `server/internal/app/logs_test.go` — WebSocket test: log message arrives at a fake sink with actor ids; malformed messages and a max-size message (20 records at the caps) keep the socket open; extra records are dropped.
 - `docs/backend-realtime.md` — add the `log` message to the protocol; `README.md` env var list if it has one.
 
 ## [ ] T2: App log pipeline over the WebSocket
@@ -23,9 +23,10 @@
 - On the mock backend entries only go to the ring buffer and `debugPrint` (R12, R14).
 **Changes:**
 - `app/lib/core/app_log.dart` — `LogEntry`, `AppLog` (ring buffer, `sink` callback, `flush()`), `appLogProvider`.
-- `app/lib/core/api/sync_client.dart` — `sendLogs(List<Map>)` using `_send`, no-op while disconnected; send buffered entries on each `status` up.
+- `app/lib/core/api/sync_client.dart` — `sendLogs(List<Map>)` (at most 20 entries per call) using `_send`, no-op while disconnected; send buffered entries on each `status` up.
 - `app/lib/core/data.dart` — `appLogProvider` override wiring: in API mode batches go to `syncClientProvider.sendLogs`.
-- `app/test/app_log_test.dart` — ring-buffer bound, flush on reconnect, batching.
+- `app/test/app_log_test.dart` — ring-buffer bound, flush on reconnect, batches of at most 20.
+- `app/test/sync_client_test.dart` — an `error` frame without `sub` (older server's reply to `log`) is ignored and the connection stays up.
 
 ## [ ] T3: Driver protocol fixes and activity signals
 **Goal:** `MiScale2Driver` parses what the scale really sends and reports activity.
@@ -41,6 +42,7 @@
 - `app/lib/modules/fitness/scale/mi_scale2.dart` — one reassembly buffer, marker-aware count parsing, variant by history-characteristic service, per-variant write order.
 - `app/lib/modules/fitness/scale/mi_scale2.dart` — alternate-service retry, `userId` constructor parameter, emits signals.
 - `app/lib/modules/fitness/scale/scale_session.dart` — `FlutterBlueGattIo.serviceOf`, `isPlausibleTime` check applied in `_BaseSession.offer` (shared place).
+- `app/lib/modules/fitness/scale/scale_session.dart` — `BleScaleSession._connect` call site: pass the `ScaleLog` to `onConnected` and stop passing `onlyLast`, so T3 builds on its own.
 - `app/test/fitness_mi_scale_test.dart` — fake `GattIo` byte sequences: delayed history, fragmented frames, magic echo, v1 order, weight-only `MI SCALE2`, no service, failing time write.
 - `app/test/fitness_mi_scale_test.dart` — update existing tests for the dropped `onlyLast`.
 

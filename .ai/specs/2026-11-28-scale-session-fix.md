@@ -32,9 +32,9 @@ The weigh-in screen reliably downloads the stored measurements from the Xiaomi M
 - Logs from anything but the scale session (the transport is generic, nothing else uses it).
 
 ## Decisions and why
-- Hand-written OTLP/HTTP JSON exporter on `net/http` instead of the OpenTelemetry Go SDK: the log SDK is still unstable and pulls many dependencies for one POST; the OTLP JSON shape is small and stable. Batching: flush every 5 s or 100 records, bounded queue, drops on overflow.
+- Hand-written OTLP/HTTP JSON exporter on `net/http` instead of the OpenTelemetry Go SDK: the log SDK is still unstable and pulls many dependencies for one POST; the OTLP JSON shape is small and stable. Batching: flush every 5 s or 100 records (exporter side, independent of the per-message cap), bounded queue, drops on overflow.
 - Log transport is a new `{"t":"log","logs":[…]}` client message on the existing socket (no new endpoint), as the author asked; the server never replies.
-- Server caps a `log` message at 100 records and 4 KiB per message text, and ignores the rest, so a misbehaving client cannot flood the collector.
+- Limits are chosen to fit coder/websocket's default 32 KiB read limit (a larger message would close the socket): at most 20 records per `log` message (the app batches by 20), each record's `msg` cut to 512 bytes and its `attrs` to 512 bytes serialized (about 1.2 KiB a record, under 25 KiB a message); extra records are dropped, so a misbehaving client cannot flood the collector.
 - The driver gets a `Stream<ScaleSignal>` (`activity`, `historyComplete`) next to `readings`, so the session never guesses from emitted readings.
 - `onlyLast` is removed from `ScaleDriver.onConnected`: the cursor already filters duplicates, and first connect now requests everything.
 - The saved scale lives in `DevicePrefs` under one key as JSON, next to the per-`remoteId` import cursor (which stays as is).
@@ -42,4 +42,4 @@ The weigh-in screen reliably downloads the stored measurements from the Xiaomi M
 - Fixes ship in the order of the issue's spike (logging first) so one real session log confirms the diagnosis.
 
 ## Backward compatibility
-Additive. The new `log` client message is ignored as `bad_message` by older servers (the app only sends it when logging; errors are not acted on). The new `OIKO_OTLP_*` env vars are optional; no schema change; the saved-scale pref key is new and old installs simply have none.
+Additive. An older server answers the new `log` client message with an `error` frame without `sub`, which `SyncClient._onMessage` already ignores (no matching subscription); a test pins this. The new `OIKO_OTLP_*` env vars are optional; no schema change; the saved-scale pref key is new and old installs simply have none.
