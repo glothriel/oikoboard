@@ -4,10 +4,12 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/app_log.dart';
 import '../../../core/backend.dart';
 import 'import_cursor.dart';
 import 'registry.dart';
 import 'scale_driver.dart';
+import 'scale_log.dart';
 
 enum ScalePhase { idle, scanning, connected, error, done }
 
@@ -40,6 +42,13 @@ abstract class ScaleSession {
   Future<void> dispose();
 }
 
+/// Readings dated further than this from now are scale clock garbage.
+const _maxClockSkew = Duration(days: 365 * 20);
+
+/// Whether [t] is within 20 years of [now] (default: the current time).
+bool isPlausibleTime(DateTime t, {DateTime? now}) =>
+    t.difference(now ?? DateTime.now()).abs() <= _maxClockSkew;
+
 /// Shared state/cursor handling of the sessions.
 abstract class _BaseSession implements ScaleSession {
   final _states = StreamController<ScaleState>.broadcast();
@@ -61,6 +70,7 @@ abstract class _BaseSession implements ScaleSession {
   void offer(ScaleReading r) {
     final cursor = _cursor;
     if (_disposed || cursor == null || !cursor.isNew(r.time)) return;
+    if (!isPlausibleTime(r.time)) return;
     if (_seen.add(r.time)) _readings.add(r);
   }
 
@@ -123,6 +133,9 @@ class FakeScaleSession extends _BaseSession {
 
 /// The real thing: BLE through `flutter_blue_plus` and the matching driver.
 class BleScaleSession extends _BaseSession {
+  BleScaleSession(AppLog log) : _log = ScaleLog(log);
+
+  final ScaleLog _log;
   static const _scanTimeout = Duration(seconds: 30);
   static const _idle = Duration(seconds: 12);
 
@@ -215,8 +228,8 @@ class BleScaleSession extends _BaseSession {
     _bumpIdle();
     await driver.onConnected(
       FlutterBlueGattIo(device, services, driver),
+      _log,
       after: _cursor!.last,
-      onlyLast: !_cursor!.isKnown,
     );
   }
 
@@ -260,9 +273,11 @@ class FlutterBlueGattIo implements GattIo {
   final ScaleDriver _driver;
   final _subscribed = <String>{};
 
-  BluetoothCharacteristic _char(String uuid) {
+  BluetoothCharacteristic _char(String uuid, [String? service]) {
     final want = normalizeUuid(uuid);
+    final inService = service == null ? null : normalizeUuid(service);
     for (final s in _services) {
+      if (inService != null && normalizeUuid(s.uuid.str) != inService) continue;
       for (final c in s.characteristics) {
         if (normalizeUuid(c.uuid.str) == want) return c;
       }
@@ -274,12 +289,23 @@ class FlutterBlueGattIo implements GattIo {
   List<String> get serviceUuids => [for (final s in _services) s.uuid.str];
 
   @override
-  Future<void> write(String uuid, List<int> data) =>
-      _char(uuid).write(data, withoutResponse: false);
+  String? serviceOf(String uuid) {
+    final want = normalizeUuid(uuid);
+    for (final s in _services) {
+      for (final c in s.characteristics) {
+        if (normalizeUuid(c.uuid.str) == want) return s.uuid.str;
+      }
+    }
+    return null;
+  }
 
   @override
-  Future<void> setNotify(String uuid, bool enabled) async {
-    final c = _char(uuid);
+  Future<void> write(String uuid, List<int> data, {String? service}) =>
+      _char(uuid, service).write(data, withoutResponse: false);
+
+  @override
+  Future<void> setNotify(String uuid, bool enabled, {String? service}) async {
+    final c = _char(uuid, service);
     if (enabled && _subscribed.add(uuid)) {
       _device.cancelWhenDisconnected(
         c.onValueReceived.listen((v) => _driver.onNotify(c.uuid.str, v)),
@@ -295,6 +321,7 @@ class FlutterBlueGattIo implements GattIo {
 final scaleSessionProvider = Provider<ScaleSession Function()?>(
   (ref) => switch (ref.watch(backendProvider)) {
     MockBackend() => FakeScaleSession.new,
-    ApiBackend() => kIsWeb ? null : BleScaleSession.new,
+    ApiBackend() =>
+      kIsWeb ? null : () => BleScaleSession(ref.read(appLogProvider)),
   },
 );

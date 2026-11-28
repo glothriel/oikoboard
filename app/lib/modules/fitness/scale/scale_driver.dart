@@ -1,13 +1,21 @@
 // Transport-independent scale layer: a driver turns the bytes of one scale
 // family into [ScaleReading]s. Nothing outside a driver knows its protocol.
 
+import 'scale_log.dart';
+
 /// The GATT operations a driver needs; the BLE plugin implements it, tests fake it.
 abstract interface class GattIo {
-  /// Writes [data] to the characteristic [uuid] (found in any service).
-  Future<void> write(String uuid, List<int> data);
+  /// Writes [data] to the characteristic [uuid], in [service] when given,
+  /// otherwise in any service.
+  Future<void> write(String uuid, List<int> data, {String? service});
 
-  /// Enables or disables notifications on the characteristic [uuid].
-  Future<void> setNotify(String uuid, bool enabled);
+  /// Enables or disables notifications on the characteristic [uuid] (in
+  /// [service] when given).
+  Future<void> setNotify(String uuid, bool enabled, {String? service});
+
+  /// The UUID of the service holding the characteristic [uuid]; null when the
+  /// device has no such characteristic.
+  String? serviceOf(String uuid);
 
   /// The service UUIDs discovered on the connected device (any UUID form).
   List<String> get serviceUuids;
@@ -33,7 +41,28 @@ class ScaleReading {
   String toString() => 'ScaleReading($time, $weightKg kg, $impedance Ω)';
 }
 
+/// What a driver tells the session besides readings.
+enum ScaleSignal {
+  /// The scale sent something: it is still talking.
+  activity,
+
+  /// The scale announced the end of its stored history.
+  historyComplete,
+}
+
+/// The connected device has none of the services the driver can talk to.
+class UnsupportedScaleError implements Exception {
+  const UnsupportedScaleError(this.message);
+  final String message;
+
+  @override
+  String toString() => 'UnsupportedScaleError: $message';
+}
+
 abstract class ScaleDriver {
+  /// Stable identifier of the driver (stored with the paired scale).
+  String get id;
+
   /// Shown to the user for the connected scale.
   String get displayName;
 
@@ -43,15 +72,21 @@ abstract class ScaleDriver {
   /// belongs to this driver.
   bool matches(String name, List<String> serviceUuids);
 
-  /// Runs the connect sequence. Readings at or before [after] are dropped;
-  /// with [onlyLast] only the newest stored record is requested (first connect
-  /// to a never-seen scale).
-  Future<void> onConnected(GattIo io, {DateTime? after, bool onlyLast = false});
+  /// Runs the connect sequence, logging to [log]. Readings at or before
+  /// [after] are dropped. Throws [UnsupportedScaleError] when the device
+  /// offers nothing the driver can use.
+  Future<void> onConnected(GattIo io, ScaleLog log, {DateTime? after});
 
   /// Feeds a notification of characteristic [uuid].
   void onNotify(String uuid, List<int> bytes);
 
   Stream<ScaleReading> get readings;
+
+  /// Activity and end-of-history notices.
+  Stream<ScaleSignal> get signals;
+
+  /// Emits a record the driver still holds (the session is ending).
+  void flush();
 
   /// Releases timers and the stream.
   void dispose();

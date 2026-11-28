@@ -29,7 +29,7 @@
 - `app/test/app_log_test.dart` — ring-buffer bound, flush on reconnect, batches of at most 20.
 - `app/test/sync_client_test.dart` — an `error` frame without `sub` (older server's reply to `log`) is ignored and the connection stays up.
 
-## [ ] T3: Driver protocol fixes and activity signals
+## [x] T3: Driver protocol fixes and activity signals
 **Goal:** `MiScale2Driver` parses what the scale really sends and reports activity.
 **Acceptance criteria:**
 - Records split across notifications, 13/26-byte live frames, 16-bit and 8-bit count replies and echoed magic frames are handled as described (R4, R5).

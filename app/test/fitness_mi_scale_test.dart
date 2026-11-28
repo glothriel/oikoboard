@@ -1,27 +1,46 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:oikoboard/core/app_log.dart';
 import 'package:oikoboard/modules/fitness/scale/import_cursor.dart';
 import 'package:oikoboard/modules/fitness/scale/mi_scale2.dart';
 import 'package:oikoboard/modules/fitness/scale/registry.dart';
 import 'package:oikoboard/modules/fitness/scale/scale_driver.dart';
+import 'package:oikoboard/modules/fitness/scale/scale_log.dart';
+import 'package:oikoboard/modules/fitness/scale/scale_session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _hist = '00002a2f-0000-3512-2118-0009af100700';
 
 class FakeIo implements GattIo {
-  FakeIo(this.serviceUuids);
+  FakeIo(this.serviceUuids, {this.historyService, this.failTime = false});
   @override
   final List<String> serviceUuids;
+
+  /// What [serviceOf] answers for the history characteristic.
+  final String? historyService;
+  final bool failTime;
   final writes = <(String, List<int>)>[];
   final notify = <String>[];
 
-  @override
-  Future<void> write(String uuid, List<int> data) async =>
-      writes.add((uuid, data));
+  /// Writes and subscriptions in order: `w:<hex>` / `n`.
+  final order = <String>[];
 
   @override
-  Future<void> setNotify(String uuid, bool enabled) async => notify.add(uuid);
+  String? serviceOf(String uuid) => historyService;
+
+  @override
+  Future<void> write(String uuid, List<int> data, {String? service}) async {
+    if (failTime && uuid.startsWith('00002a2b')) throw StateError('no time');
+    writes.add((uuid, data));
+    order.add('w:${hex(data)}');
+  }
+
+  @override
+  Future<void> setNotify(String uuid, bool enabled, {String? service}) async {
+    notify.add(uuid);
+    order.add('n');
+  }
 }
 
 class OtherDriver extends ScaleDriver {
@@ -32,15 +51,17 @@ class OtherDriver extends ScaleDriver {
   @override
   bool matches(String name, List<String> s) => name == 'OTHER-1';
   @override
-  Future<void> onConnected(
-    GattIo io, {
-    DateTime? after,
-    bool onlyLast = false,
-  }) async {}
+  String get id => 'other';
+  @override
+  Future<void> onConnected(GattIo io, ScaleLog log, {DateTime? after}) async {}
   @override
   void onNotify(String uuid, List<int> bytes) {}
   @override
   Stream<ScaleReading> get readings => const Stream.empty();
+  @override
+  Stream<ScaleSignal> get signals => const Stream.empty();
+  @override
+  void flush() {}
   @override
   void dispose() {}
 }
@@ -82,18 +103,27 @@ List<int> v1rec(int status, int weight, [int minute = 8]) => [
 
 Future<(MiScale2Driver, List<ScaleReading>, FakeIo)> connect({
   List<String> services = const ['0000181b-0000-1000-8000-00805f9b34fb'],
+  String? historyService,
   DateTime? after,
-  bool onlyLast = false,
   Duration delay = Duration.zero,
+  int userId = 0,
+  bool failTime = false,
+  List<ScaleSignal>? signals,
 }) async {
   final d = MiScale2Driver(
     fallbackDelay: delay,
+    userId: userId,
     now: () => DateTime(2026, 3, 4, 10, 20, 30),
   );
   final got = <ScaleReading>[];
   d.readings.listen(got.add);
-  final io = FakeIo(services);
-  await d.onConnected(io, after: after, onlyLast: onlyLast);
+  if (signals != null) d.signals.listen(signals.add);
+  final io = FakeIo(
+    services,
+    historyService: historyService,
+    failTime: failTime,
+  );
+  await d.onConnected(io, ScaleLog(AppLog(echo: false)), after: after);
   return (d, got, io);
 }
 
@@ -133,10 +163,56 @@ void main() {
     expect(io.notify, [_hist]);
   });
 
-  test('v1 connect skips the unit write', () async {
+  test('v1 connect skips the unit write and enables history first', () async {
     final (_, _, io) = await connect(services: ['181d']);
     expect(io.writes.length, 4);
     expect(io.writes.first.$1, '00002a2b-0000-1000-8000-00805f9b34fb');
+    expect(io.order.sublist(1), [
+      'w:01 96 8a bd 62',
+      'n',
+      'w:01 ff ff 00 00',
+      'w:02',
+    ]);
+  });
+
+  test('v2 subscribes before the magic', () async {
+    final (_, _, io) = await connect();
+    expect(io.order.sublist(2, 4), ['n', 'w:01 96 8a bd 62']);
+  });
+
+  test('variant follows the history characteristic service', () async {
+    // Both services present; the history characteristic lives in 181d.
+    final (_, _, io) = await connect(
+      services: ['181b', '181d'],
+      historyService: '0000181d-0000-1000-8000-00805f9b34fb',
+    );
+    expect(io.writes.length, 4); // v1: no unit write
+  });
+
+  test('no Mi scale service is unsupported', () async {
+    await expectLater(
+      connect(services: ['180f']),
+      throwsA(isA<UnsupportedScaleError>()),
+    );
+  });
+
+  test('a failing time write is not fatal', () async {
+    final (_, _, io) = await connect(failTime: true);
+    expect(io.writes.map((w) => w.$2), [
+      [6, 4, 0, 0],
+      [1, 0x96, 0x8a, 0xbd, 0x62],
+      [1, 0xff, 0xff, 0, 0],
+      [2],
+    ]);
+  });
+
+  test('user id parameter goes into requests and acks', () async {
+    final (d, _, io) = await connect(userId: 0x0102);
+    expect(io.writes[3].$2, [1, 0xff, 0xff, 1, 2]);
+    io.writes.clear();
+    d.onNotify(_hist, [3]);
+    await pump();
+    expect(io.writes.last.$2, [4, 0xff, 0xff, 1, 2]);
   });
 
   test('falls back to all records without a count, not with one', () async {
@@ -149,10 +225,87 @@ void main() {
     d.dispose();
 
     (d, _, io) = await connect(delay: const Duration(milliseconds: 20));
-    d.onNotify(_hist, [1, 3, 0, 9]);
+    d.onNotify(_hist, [1, 3, 0, 0]);
     await Future<void>.delayed(const Duration(milliseconds: 60));
     expect(io.writes.length, 5);
     d.dispose();
+  });
+
+  test(
+    'count replies: 8-bit, 16-bit; echoes do not cancel the fallback',
+    () async {
+      for (final reply in [
+        [1, 3, 0, 0], // 8-bit
+        [1, 0x2c, 0x01, 0, 0], // 16-bit (300)
+      ]) {
+        final (d, _, io) = await connect(
+          delay: const Duration(milliseconds: 20),
+        );
+        d.onNotify(_hist, reply);
+        await Future<void>.delayed(const Duration(milliseconds: 60));
+        expect(io.writes.length, 5, reason: '$reply');
+        d.dispose();
+      }
+      for (final echo in [
+        [1, 0x96, 0x8a, 0xbd, 0x62], // the magic
+        [1, 0xff, 0xff, 0, 0], // the request
+      ]) {
+        final (d, _, io) = await connect(
+          delay: const Duration(milliseconds: 20),
+        );
+        d.onNotify(_hist, echo);
+        await Future<void>.delayed(const Duration(milliseconds: 60));
+        expect(io.writes.length, 7, reason: '$echo');
+        d.dispose();
+      }
+    },
+  );
+
+  test('notifications are signalled, end of history too', () async {
+    final signals = <ScaleSignal>[];
+    final (d, _, _) = await connect(signals: signals);
+    d.onNotify(_hist, [1, 3, 0, 0]);
+    d.onNotify(_hist, [3]);
+    await pump();
+    expect(signals, [
+      ScaleSignal.activity,
+      ScaleSignal.activity,
+      ScaleSignal.historyComplete,
+    ]);
+  });
+
+  test('records split across notifications survive (v2)', () async {
+    final (d, got, _) = await connect(delay: Duration.zero);
+    final bytes = [
+      ...frame(weight: 14000),
+      ...frame(weight: 15000, time: const [2026, 3, 5, 7, 8, 9]),
+      ...frame(weight: 16000, time: const [2026, 3, 6, 7, 8, 9]),
+    ];
+    d.onNotify(_hist, bytes.sublist(0, 20));
+    d.onNotify(_hist, bytes.sublist(20, 33));
+    d.onNotify(_hist, bytes.sublist(33));
+    await pump();
+    expect(got.map((r) => r.weightKg), [70, 75, 80]);
+  });
+
+  test('flush drains whole records and drops a torn tail', () async {
+    final (d, got, _) = await connect();
+    d.onNotify(_hist, frame().sublist(0, 7));
+    d.flush();
+    await pump();
+    expect(got, isEmpty);
+    d.onNotify(_hist, frame().sublist(7)); // starts a new, torn record
+    d.flush();
+    await pump();
+    expect(got, isEmpty);
+  });
+
+  test('plausible time: within 20 years of now', () {
+    final now = DateTime(2026, 3, 4);
+    expect(isPlausibleTime(DateTime(2026, 1, 1), now: now), isTrue);
+    expect(isPlausibleTime(DateTime(2050, 1, 1), now: now), isFalse);
+    expect(isPlausibleTime(DateTime(1999, 1, 1), now: now), isFalse);
+    expect(isPlausibleTime(DateTime(2010, 1, 1), now: now), isTrue);
   });
 
   test('03 end of transfer is answered', () async {
@@ -212,22 +365,6 @@ void main() {
     await pump();
     expect(got.length, 1);
     expect(got.single.time, DateTime(2026, 3, 4, 7, 9));
-  });
-
-  test('onlyLast keeps just the newest record, flushed at 03', () async {
-    final (d, got, io) = await connect(onlyLast: true);
-    d.onNotify(_hist, frame(time: const [2026, 3, 4, 7, 9, 0], weight: 15000));
-    d.onNotify(_hist, frame(time: const [2026, 3, 4, 7, 8, 0]));
-    await pump();
-    expect(got, isEmpty);
-    io.writes.clear();
-    d.onNotify(_hist, [3]);
-    await pump();
-    expect(got.single.weightKg, 75);
-    expect(io.writes.map((w) => w.$2), [
-      [3],
-      [4, 0xff, 0xff, 0, 0],
-    ]);
   });
 
   test('v1 records reassemble from chunks', () async {
