@@ -23,6 +23,7 @@ The weigh-in screen reliably downloads the stored measurements from the Xiaomi M
 
 ## UI
 - Weigh-in screen (`weigh_in_screen.dart`): new "waiting for the scale…" status with a Done button; "unsupported scale" error text; a scale picker list when several scales are found; a "Forget scale" menu item; a "Discard all" button above the pending readings.
+- Mockup prototype: branch `centurion-mockups/issue-84`.
 
 ## Out of scope
 - Other scale models, broadcast (advertisement-only) scales.

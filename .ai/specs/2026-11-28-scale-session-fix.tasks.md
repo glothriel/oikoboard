@@ -55,6 +55,7 @@
 - `app/lib/modules/fitness/scale/scale_session.dart` — `ScalePhase.waiting`, `ScaleError.unsupported`, `finishNow()` on `ScaleSession`; silence/quiet timers use plain `Timer` so `fakeAsync` drives them.
 - `app/lib/modules/fitness/scale/scale_session.dart` — `FakeScaleSession` emits the waiting state and many samples; timer logic sits in a BLE-free class the test can drive.
 - `app/lib/modules/fitness/weigh_in_screen.dart` — waiting text and Done button in `_StatusCard`, unsupported error text, "Discard all" button calling `_resolve` for all pending.
+- Mockup: `centurion-mockups/issue-84` — reuse `_StatusCard` (`onDone`, waiting/unsupported texts) and the Discard all `TextButton` in `weigh_in_screen.dart`, plus the arb keys.
 - `app/lib/l10n/app_en.arb`, `app/lib/l10n/app_pl.arb` — keys `fitnessWeighInWaiting`, `fitnessWeighInDoneButton`, `fitnessWeighInUnsupported`, `fitnessWeighInDiscardAll`.
 - `app/test/scale_session_test.dart` — `fakeAsync` with a fake driver: reset on activity, 60 s expiry, quiet-period finish, flush on finish; session logic factored so it runs without the BLE plugin.
 - `app/test/fitness_weigh_in_mock_test.dart` — waiting state, Done, Discard all on the mock backend.
@@ -70,6 +71,7 @@
 - `app/lib/modules/fitness/scale/registry.dart` — `driverById(String)`; `driverFor` stays the only name matcher.
 - `app/lib/modules/fitness/scale/scale_session.dart` — saved-scale connect path, filtered scan fallback, `ScalePhase.choosing` with `candidates`, `choose(candidate)`, `forget()`; `FakeScaleSession` supports them.
 - `app/lib/modules/fitness/weigh_in_screen.dart` — candidate list card and the "Forget scale" overflow action.
+- Mockup: `centurion-mockups/issue-84` — reuse the candidates `Card` of `ListTile`s, the `PopupMenuButton` in `FitnessHeader.actions`, and the `choose`/`forget` session API.
 - `app/lib/l10n/app_en.arb`, `app/lib/l10n/app_pl.arb` — keys `fitnessWeighInPick`, `fitnessWeighInForget`.
 - `app/test/saved_scale_test.dart` — round-trip, forget; `app/test/fitness_weigh_in_mock_test.dart` — pick and forget flows on the mock.
 
