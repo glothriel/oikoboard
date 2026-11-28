@@ -19,6 +19,19 @@ Flutter app (web + Android)                    Go server                        
   written by its own member only. Body composition is computed on the device and stored at save time; scale access sits
   behind a `ScaleDriver` interface (Android only). Body data is sensitive: delegated (OAuth/MCP) clients get 403 on the
   `fitness.*` views and `/fitness/` routes.
+- **Scale layer** (`modules/fitness/scale/`): a `ScaleDriver` only speaks one scale's BLE protocol (variant
+  detection, writes, parsing; one reassembly buffer for both Mi scale variants) and emits `readings` plus
+  `ScaleSignal`s (`activity`, `historyComplete`). `ScaleSession` owns the lifecycle and never guesses from readings:
+  activity resets a silence timer, and it finishes on silence, a disconnect, end-of-history plus a short quiet period,
+  or the user's Done. Implausible dates are dropped in this shared layer. The paired scale (remote id, driver id, name)
+  is remembered in `DevicePrefs` and reconnected directly (autoConnect, then a scan filtered to its id); the
+  per-scale import cursor is kept separately, and a never-seen scale imports all stored records.
+- **Logging:** the server's default `slog` logger is built by `internal/logging`: a decorator handler keeps the console
+  output and also exports every record as OTLP/HTTP JSON (hand-written, batched, bounded queue) to
+  `OIKO_OTLP_LOGS_URL` with basic auth `OIKO_OTLP_USER` / `OIKO_OTLP_PASSWORD`; without the URL it is console only.
+  The app's `AppLog` batches records into `{"t":"log"}` messages on the existing WebSocket (ring buffer while
+  offline); the hub re-emits them through the same logger (`source=app`, household and member ids, never tokens), with
+  per-message limits so one client cannot flood the collector.
 - **Accounts vs members:** a user (who signs in) can be a member of several households; a member needn't have an
   account (children). Sign-in is Google OIDC done by the backend. Details: [auth.md](auth.md).
 - **External data is mirrored, not proxied:** the calendar lives at providers (Google; CalDAV later). Our writes go to

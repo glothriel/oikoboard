@@ -80,7 +80,7 @@
 - `app/lib/l10n/app_en.arb`, `app/lib/l10n/app_pl.arb` — keys `fitnessWeighInPick`, `fitnessWeighInForget`.
 - `app/test/saved_scale_test.dart` — round-trip, forget; `app/test/fitness_weigh_in_mock_test.dart` — pick and forget flows on the mock.
 
-## [ ] T6: Docs
+## [x] T6: Docs
 **Goal:** Architecture docs describe the scale session and the log path.
 **Acceptance criteria:**
 - `docs/architecture.md` states: scale layer (driver/session split, signals), remembered scale, and the server logging decorator (slog → console + OTLP) and the app logs → WebSocket → same logger path, with the env vars (R13).
