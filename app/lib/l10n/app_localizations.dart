@@ -1885,6 +1885,246 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Never deleted automatically, even when completed'**
   String get todoKeepForeverHint;
+
+  /// No description provided for @fitnessModuleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Fitness'**
+  String get fitnessModuleTitle;
+
+  /// No description provided for @fitnessMeasurementsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Measurements'**
+  String get fitnessMeasurementsTitle;
+
+  /// No description provided for @fitnessLatest.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest: {weight} kg'**
+  String fitnessLatest(String weight);
+
+  /// No description provided for @fitnessNoMeasurements.
+  ///
+  /// In en, this message translates to:
+  /// **'No measurements yet'**
+  String get fitnessNoMeasurements;
+
+  /// No description provided for @fitnessNoMeasurementsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a weight by hand to start tracking.'**
+  String get fitnessNoMeasurementsHint;
+
+  /// No description provided for @fitnessAddMeasurement.
+  ///
+  /// In en, this message translates to:
+  /// **'Add measurement'**
+  String get fitnessAddMeasurement;
+
+  /// No description provided for @fitnessWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight (kg)'**
+  String get fitnessWeight;
+
+  /// No description provided for @fitnessWeightInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a weight between 10 and 500 kg'**
+  String get fitnessWeightInvalid;
+
+  /// No description provided for @fitnessWho.
+  ///
+  /// In en, this message translates to:
+  /// **'Who'**
+  String get fitnessWho;
+
+  /// No description provided for @fitnessWhen.
+  ///
+  /// In en, this message translates to:
+  /// **'When'**
+  String get fitnessWhen;
+
+  /// No description provided for @fitnessFatPct.
+  ///
+  /// In en, this message translates to:
+  /// **'Fat {value}%'**
+  String fitnessFatPct(String value);
+
+  /// No description provided for @fitnessWaterPct.
+  ///
+  /// In en, this message translates to:
+  /// **'Water {value}%'**
+  String fitnessWaterPct(String value);
+
+  /// No description provided for @fitnessMusclePct.
+  ///
+  /// In en, this message translates to:
+  /// **'Muscle {value} kg'**
+  String fitnessMusclePct(String value);
+
+  /// No description provided for @fitnessBmi.
+  ///
+  /// In en, this message translates to:
+  /// **'BMI {value}'**
+  String fitnessBmi(String value);
+
+  /// No description provided for @fitnessWallTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight'**
+  String get fitnessWallTitle;
+
+  /// No description provided for @fitnessWallNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No weight yet'**
+  String get fitnessWallNone;
+
+  /// No description provided for @fitnessProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Fitness profile'**
+  String get fitnessProfileTitle;
+
+  /// No description provided for @fitnessProfileAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit profile'**
+  String get fitnessProfileAction;
+
+  /// No description provided for @fitnessProfileHintTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete your profile'**
+  String get fitnessProfileHintTitle;
+
+  /// No description provided for @fitnessProfileHintBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your sex, birth date and height to get body composition from the scale.'**
+  String get fitnessProfileHintBody;
+
+  /// No description provided for @fitnessSex.
+  ///
+  /// In en, this message translates to:
+  /// **'Sex'**
+  String get fitnessSex;
+
+  /// No description provided for @fitnessSexMale.
+  ///
+  /// In en, this message translates to:
+  /// **'Male'**
+  String get fitnessSexMale;
+
+  /// No description provided for @fitnessSexFemale.
+  ///
+  /// In en, this message translates to:
+  /// **'Female'**
+  String get fitnessSexFemale;
+
+  /// No description provided for @fitnessBirthDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Birth date'**
+  String get fitnessBirthDate;
+
+  /// No description provided for @fitnessBirthDateInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a birth date in the past'**
+  String get fitnessBirthDateInvalid;
+
+  /// No description provided for @fitnessHeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Height (cm)'**
+  String get fitnessHeight;
+
+  /// No description provided for @fitnessHeightInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a height between 50 and 250 cm'**
+  String get fitnessHeightInvalid;
+
+  /// No description provided for @fitnessWeighIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Weigh in'**
+  String get fitnessWeighIn;
+
+  /// No description provided for @fitnessWeighInScanning.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking for your scale… Step on it to wake it up.'**
+  String get fitnessWeighInScanning;
+
+  /// No description provided for @fitnessWeighInConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected to {scale}'**
+  String fitnessWeighInConnected(String scale);
+
+  /// No description provided for @fitnessWeighInDone.
+  ///
+  /// In en, this message translates to:
+  /// **'{scale}: all readings received'**
+  String fitnessWeighInDone(String scale);
+
+  /// No description provided for @fitnessWeighInNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No new readings'**
+  String get fitnessWeighInNone;
+
+  /// No description provided for @fitnessWeighInNoneHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Step on the scale, then scan again.'**
+  String get fitnessWeighInNoneHint;
+
+  /// No description provided for @fitnessWeighInScanAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan again'**
+  String get fitnessWeighInScanAgain;
+
+  /// No description provided for @fitnessWeighInBluetoothOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Bluetooth is off. Turn it on and try again.'**
+  String get fitnessWeighInBluetoothOff;
+
+  /// No description provided for @fitnessWeighInPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Bluetooth permission was denied. Allow it in the system settings and try again.'**
+  String get fitnessWeighInPermissionDenied;
+
+  /// No description provided for @fitnessWeighInNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No supported scale found nearby. Step on the scale to wake it up and try again.'**
+  String get fitnessWeighInNotFound;
+
+  /// No description provided for @fitnessWeighInFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not talk to the scale. Try again.'**
+  String get fitnessWeighInFailed;
+
+  /// No description provided for @fitnessWeighInImpedance.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} Ω'**
+  String fitnessWeighInImpedance(int value);
+
+  /// No description provided for @fitnessWeighInDiscard.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard'**
+  String get fitnessWeighInDiscard;
 }
 
 class _AppLocalizationsDelegate

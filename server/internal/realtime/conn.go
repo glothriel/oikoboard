@@ -172,6 +172,10 @@ func (c *Conn) subscribe(msg clientMsg) {
 		c.send(errorMsg{T: "error", Sub: msg.ID, Code: "unknown_view", Msg: "nieznany widok: " + msg.View})
 		return
 	}
+	if !core.ViewAllowed(c.actor, v.Name()) {
+		c.send(errorMsg{T: "error", Sub: msg.ID, Code: "forbidden", Msg: "not available to connected apps"})
+		return
+	}
 	params, err := v.ParseParams(msg.Params)
 	if err != nil {
 		c.send(errorMsg{T: "error", Sub: msg.ID, Code: "bad_params", Msg: err.Error()})
@@ -289,6 +293,10 @@ func (c *Conn) pinger() {
 // snapshot co przez WS, do debugowania curl-em.
 func (h *Hub) HandleViewSnapshot(c *gin.Context) {
 	v, ok := h.views[c.Param("name")]
+	if ok && !core.ViewAllowed(core.ActorOf(c), v.Name()) {
+		core.Fail(c, http.StatusForbidden, "forbidden", "not available to connected apps")
+		return
+	}
 	if !ok {
 		core.Fail(c, http.StatusNotFound, "unknown_view", "nieznany widok")
 		return

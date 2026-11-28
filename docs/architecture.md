@@ -15,6 +15,10 @@ Flutter app (web + Android)                    Go server                        
   `pg_notify` after commit. Handlers never push to clients themselves.
 - **Modules** own their tables, routes and views; the core (households, members, auth, change feed) is generic.
   Every table is scoped by `household_id`.
+- **Fitness module** (`measurements`, `fitness_profiles`): any member records weigh-ins for any member, a profile is
+  written by its own member only. Body composition is computed on the device and stored at save time; scale access sits
+  behind a `ScaleDriver` interface (Android only). Body data is sensitive: delegated (OAuth/MCP) clients get 403 on the
+  `fitness.*` views and `/fitness/` routes.
 - **Accounts vs members:** a user (who signs in) can be a member of several households; a member needn't have an
   account (children). Sign-in is Google OIDC done by the backend. Details: [auth.md](auth.md).
 - **External data is mirrored, not proxied:** the calendar lives at providers (Google; CalDAV later). Our writes go to
