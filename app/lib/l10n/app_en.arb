@@ -304,6 +304,8 @@
   "todoSetTime": "Add time",
   "todoRemoveTime": "Remove time",
   "todoTask": "Task",
+  "todoAssignee": "Assignee",
+  "todoMoreOptions": "More options",
   "todoWhoDoesIt": "Who will do it?",
   "todoSetDue": "Set due date",
   "todoRemoveDue": "Remove due date",

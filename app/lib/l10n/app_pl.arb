@@ -134,6 +134,8 @@
   "todoSetTime": "Dodaj godzinę",
   "todoRemoveTime": "Usuń godzinę",
   "todoTask": "Zadanie",
+  "todoAssignee": "Przypisane do",
+  "todoMoreOptions": "Więcej opcji",
   "todoWhoDoesIt": "Kto się tym zajmie?",
   "todoSetDue": "Ustaw termin",
   "todoRemoveDue": "Usuń termin",

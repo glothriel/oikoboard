@@ -902,6 +902,18 @@ abstract class AppLocalizations {
   /// **'Task'**
   String get todoTask;
 
+  /// No description provided for @todoAssignee.
+  ///
+  /// In en, this message translates to:
+  /// **'Assignee'**
+  String get todoAssignee;
+
+  /// No description provided for @todoMoreOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'More options'**
+  String get todoMoreOptions;
+
   /// No description provided for @todoWhoDoesIt.
   ///
   /// In en, this message translates to:

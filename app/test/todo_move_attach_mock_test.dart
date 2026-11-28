@@ -67,6 +67,8 @@ void main() {
     await start(tester);
     await tester.tap(find.text('Mleko'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('More options'));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byType(DropdownButtonFormField<String>));
     await tester.pumpAndSettle();
