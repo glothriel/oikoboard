@@ -11,6 +11,7 @@ import 'package:oikoboard/core/session.dart';
 import 'package:oikoboard/modules/fitness/composition.dart';
 import 'package:oikoboard/modules/fitness/models.dart';
 import 'package:oikoboard/modules/fitness/repository.dart';
+import 'package:oikoboard/modules/fitness/scale/saved_scale.dart';
 import 'package:oikoboard/modules/fitness/scale/scale_driver.dart';
 import 'package:oikoboard/modules/fitness/scale/scale_session.dart';
 import 'package:oikoboard/modules/fitness/weigh_in_screen.dart';
@@ -317,5 +318,44 @@ void main() {
     await tester.tap(find.text('Zważ się'));
     await tester.pumpAndSettle();
     expect(find.text('71.0 kg'), findsNothing);
+  });
+
+  const two = [
+    ScaleCandidate(id: 'aa', name: 'MI SCALE2', driverId: 'mi_scale2'),
+    ScaleCandidate(id: 'bb', name: 'MIBFS', driverId: 'mi_scale2'),
+  ];
+
+  testWidgets('weigh in: several scales, pick one, it is remembered', (
+    tester,
+  ) async {
+    await openWeighIn(tester, () => FakeScaleSession(candidates: two));
+    await tester.pumpAndSettle();
+    expect(find.text('Znaleziono kilka wag. Wybierz swoją:'), findsOneWidget);
+    expect(find.text('83.4 kg'), findsNothing);
+    await tester.tap(find.text('MIBFS'));
+    await tester.pumpAndSettle();
+    expect(find.text('83.4 kg'), findsOneWidget);
+    final saved = await SavedScale.load();
+    expect(saved?.remoteId, 'bb');
+    // The next session connects without asking.
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Zważ się'));
+    await tester.pumpAndSettle();
+    expect(find.text('Znaleziono kilka wag. Wybierz swoją:'), findsNothing);
+  });
+
+  testWidgets('weigh in: forget scale returns to choosing', (tester) async {
+    await openWeighIn(tester, () => FakeScaleSession(candidates: two));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('MI SCALE2'));
+    await tester.pumpAndSettle();
+    expect((await SavedScale.load())?.remoteId, 'aa');
+    await tester.tap(find.byType(PopupMenuButton<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Zapomnij wagę'));
+    await tester.pumpAndSettle();
+    expect(await SavedScale.load(), isNull);
+    expect(find.text('Znaleziono kilka wag. Wybierz swoją:'), findsOneWidget);
   });
 }

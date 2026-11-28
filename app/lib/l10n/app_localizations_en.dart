@@ -1300,4 +1300,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fitnessWeighInDiscardAll => 'Discard all';
+
+  @override
+  String get fitnessWeighInPick => 'Several scales found. Pick yours:';
+
+  @override
+  String get fitnessWeighInForget => 'Forget scale';
 }

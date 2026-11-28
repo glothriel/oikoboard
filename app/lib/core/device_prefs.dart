@@ -16,4 +16,10 @@ abstract final class DevicePrefs {
       await (await SharedPreferences.getInstance()).setString(key, value);
     } catch (_) {}
   }
+
+  static Future<void> remove(String key) async {
+    try {
+      await (await SharedPreferences.getInstance()).remove(key);
+    } catch (_) {}
+  }
 }

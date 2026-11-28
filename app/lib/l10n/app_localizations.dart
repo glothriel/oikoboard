@@ -2167,6 +2167,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Discard all'**
   String get fitnessWeighInDiscardAll;
+
+  /// No description provided for @fitnessWeighInPick.
+  ///
+  /// In en, this message translates to:
+  /// **'Several scales found. Pick yours:'**
+  String get fitnessWeighInPick;
+
+  /// No description provided for @fitnessWeighInForget.
+  ///
+  /// In en, this message translates to:
+  /// **'Forget scale'**
+  String get fitnessWeighInForget;
 }
 
 class _AppLocalizationsDelegate

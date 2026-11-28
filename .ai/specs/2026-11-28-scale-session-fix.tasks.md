@@ -65,7 +65,7 @@
 - `app/test/scale_session_test.dart` — `fakeAsync` with a fake driver: reset on activity, 60 s expiry, quiet-period finish, flush on finish; session logic factored so it runs without the BLE plugin.
 - `app/test/fitness_weigh_in_mock_test.dart` — waiting state, Done, Discard all on the mock backend.
 
-## [ ] T5: Remembered scale
+## [x] T5: Remembered scale
 **Goal:** The app remembers the paired scale and connects to it directly.
 **Acceptance criteria:**
 - After the first successful session the scale is saved; the next session connects by remote id with `autoConnect`, scanning (filtered to that id) only as fallback (R9).
