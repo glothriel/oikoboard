@@ -105,6 +105,20 @@ class SyncClient {
   /// true = connected and authenticated.
   Stream<bool> get status => _status.stream;
 
+  /// Ids of the household's members online (the server's `presence`
+  /// message); empty while disconnected.
+  Set<String> online = const {};
+  final _presence = StreamController<Set<String>>.broadcast();
+
+  /// The [online] set after each change.
+  Stream<Set<String>> get presence => _presence.stream;
+
+  void _setOnline(Set<String> v) {
+    if (online.length == v.length && online.containsAll(v)) return;
+    online = v;
+    _presence.add(v);
+  }
+
   /// Subscribes to a view. Cancelling the stream sends `unsub`.
   ///
   /// [accept] lets pending mutations add rows to the view (creates, or
@@ -205,6 +219,7 @@ class SyncClient {
     } catch (_) {}
     _channel = null;
     _setConnected(false);
+    _setOnline(const {});
   }
 
   void _reconnect({bool immediately = false}) {
@@ -253,6 +268,10 @@ class SyncClient {
     if (type == 'ready') {
       _backoff = _minBackoff;
       _setConnected(true);
+      return;
+    }
+    if (type == 'presence') {
+      _setOnline({...(msg['online'] as List? ?? const []).cast<String>()});
       return;
     }
     final sub = _subs[msg['sub']];
@@ -377,5 +396,6 @@ class SyncClient {
     }
     _subs.clear();
     _status.close();
+    _presence.close();
   }
 }

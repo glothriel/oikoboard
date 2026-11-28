@@ -321,6 +321,7 @@
   "todoCommentSend": "Send",
   "todoCommentDelete": "Delete comment",
   "memberRemoved": "Removed member",
+  "memberOnline": "Online",
   "todoDayListDue": "List due",
   "calendarModuleTitle": "Calendar",
   "calendarViewDay": "Day",

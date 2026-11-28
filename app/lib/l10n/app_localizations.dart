@@ -962,6 +962,12 @@ abstract class AppLocalizations {
   /// **'Removed member'**
   String get memberRemoved;
 
+  /// No description provided for @memberOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'Online'**
+  String get memberOnline;
+
   /// No description provided for @todoDayListDue.
   ///
   /// In en, this message translates to:

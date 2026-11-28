@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'avatar_cache.dart';
 import 'backend.dart';
 import 'data.dart';
+import 'l10n.dart';
 import 'session.dart';
 
 class Member {
@@ -115,17 +116,38 @@ final currentMemberProvider = Provider<String>(
   (ref) => ref.watch(sessionProvider)?.memberId ?? '',
 );
 
-class MemberAvatar extends StatelessWidget {
+/// Ids of the members online right now. API: the server's `presence`; mock:
+/// the store's set plus the signed-in member.
+final onlineMembersProvider = StreamProvider<Set<String>>((ref) async* {
+  final backend = ref.watch(backendProvider);
+  if (backend is MockBackend) {
+    final me = ref.watch(currentMemberProvider);
+    final store = backend.store;
+    yield {...store.online, me};
+    yield* store.onlineChanges.map((s) => {...s, me});
+    return;
+  }
+  if (ref.watch(sessionProvider) == null) return;
+  final client = ref.watch(syncClientProvider);
+  yield client.online;
+  yield* client.presence;
+});
+
+class MemberAvatar extends ConsumerWidget {
   const MemberAvatar(this.member, {super.key, this.radius = 18});
   final Member member;
   final double radius;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final online =
+        member.hasAccount &&
+        !member.removed &&
+        (ref.watch(onlineMembersProvider).value?.contains(member.id) ?? false);
     final picture = member.picture;
     // A stored picture shows (almost) at once: no initial flashing under it.
     final stored = picture == null ? null : AvatarCache.cached(picture);
-    return CircleAvatar(
+    final avatar = CircleAvatar(
       radius: radius,
       backgroundColor: member.color,
       foregroundImage: picture == null ? null : AvatarCache.image(picture),
@@ -143,6 +165,33 @@ class MemberAvatar extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
+    );
+    if (!online) return avatar;
+    final dot = (radius * 0.55).clamp(7.0, 12.0);
+    return Semantics(
+      label: context.l10n.memberOnline,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          avatar,
+          Positioned(
+            right: -1,
+            bottom: -1,
+            child: Container(
+              width: dot,
+              height: dot,
+              decoration: BoxDecoration(
+                color: const Color(0xFF2E7D32),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.surface,
+                  width: 1.5,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
