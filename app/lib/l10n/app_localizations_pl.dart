@@ -508,6 +508,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get memberRemoved => 'Usunięty członek';
 
   @override
+  String get memberOnline => 'Online';
+
+  @override
   String get todoDayListDue => 'Termin listy';
 
   @override

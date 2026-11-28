@@ -506,6 +506,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memberRemoved => 'Removed member';
 
   @override
+  String get memberOnline => 'Online';
+
+  @override
   String get todoDayListDue => 'List due';
 
   @override

@@ -178,4 +178,34 @@ void main() {
     expect(names.last, 'Bob');
     expect(names, contains('Anna,Bob'));
   });
+
+  test(
+    'presence updates online and the stream; unknown types are ignored',
+    () async {
+      server.behave = (n, ws) => ws.listen((raw) {
+        if ((jsonDecode(raw as String) as Map)['t'] != 'auth') return;
+        ws.add(jsonEncode({'t': 'ready'}));
+        ws.add(jsonEncode({'t': 'whatever', 'x': 1}));
+        ws.add(
+          jsonEncode({
+            't': 'presence',
+            'online': ['a', 'b'],
+          }),
+        );
+      });
+      final client = SyncClient(server.uri, 't');
+      addTearDown(client.dispose);
+
+      final set = await client.presence.first.timeout(
+        const Duration(seconds: 5),
+      );
+      expect(set, {'a', 'b'});
+      expect(client.online, {'a', 'b'});
+      expect(client.connected, isTrue);
+
+      server.sockets.first.close();
+      await client.presence.first.timeout(const Duration(seconds: 5));
+      expect(client.online, isEmpty);
+    },
+  );
 }

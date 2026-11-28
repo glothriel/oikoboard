@@ -41,6 +41,8 @@ class FamilySimulator extends Notifier<bool> {
         .toList();
     if (others.isEmpty) return;
     final actor = others[_random.nextInt(others.length)];
+    final toggled = others[_random.nextInt(others.length)].id;
+    backend.store.setOnline(toggled, !backend.store.online.contains(toggled));
     final module = modules[_random.nextInt(modules.length)];
     module.simulate(backend.store, _random, actor.id);
   }

@@ -18,6 +18,20 @@ class MockStore {
 
   Stream<Change> get changes => _changes.stream;
 
+  final _online = <String>{'ola'};
+  final _onlineCtrl = StreamController<Set<String>>.broadcast();
+
+  /// Members online besides the signed-in one (mock presence).
+  Set<String> get online => Set.of(_online);
+
+  /// [online] after each change.
+  Stream<Set<String>> get onlineChanges => _onlineCtrl.stream;
+
+  void setOnline(String memberId, bool on) {
+    if (on ? !_online.add(memberId) : !_online.remove(memberId)) return;
+    _onlineCtrl.add(online);
+  }
+
   String newId() =>
       '${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}${(_idSeq++).toRadixString(36)}';
 

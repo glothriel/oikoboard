@@ -42,7 +42,7 @@
 - `app/test/family_live_mock_test.dart` — widget test on the mock backend: a provider override feeding a new member makes it appear in the assignee picker; an unknown assignee id renders the placeholder without exceptions.
 - `app/test/sync_client_test.dart` — a `family.members` snapshot then upsert/remove updates the watched state (existing fake-socket pattern).
 
-## [ ] T4: App: online dot on `MemberAvatar`
+## [x] T4: App: online dot on `MemberAvatar`
 **Goal:** Online members show a green dot on their avatar everywhere, live.
 **Acceptance criteria:**
 - R8: members in the online set show the dot; others and accountless members do not; it updates on a `presence` message; mock mode shows a seeded online member.
