@@ -963,6 +963,7 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
             ),
           ),
         ],
+        AttachButton(uploads: _uploads),
       ],
       primary: ListenableBuilder(
         listenable: _uploads,
@@ -995,51 +996,39 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
             ),
           ],
         ),
-        if (lists.length > 1) ...[
-          const SizedBox(height: 16),
-          DropdownButtonFormField<String>(
-            initialValue: _listId,
-            isExpanded: true,
-            decoration: InputDecoration(labelText: l.todoListChip),
-            items: [
-              for (final list in lists)
-                DropdownMenuItem(
-                  value: list.id,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ColorDot(Color(list.color)),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(list.name, overflow: TextOverflow.ellipsis),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-            onChanged: (id) => setState(() => _listId = id ?? _listId),
-          ),
-        ],
-        const SizedBox(height: 20),
-        Text(l.todoWhoDoesIt, style: theme.textTheme.labelLarge),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
+        const SizedBox(height: 16),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ChoiceChip(
-              label: Text(l.commonNobody),
-              selected: _assignee == null,
-              onSelected: (_) => setState(() => _assignee = null),
+            Padding(
+              padding: const EdgeInsets.only(top: 8, right: 12),
+              child: Text(l.todoAssignee, style: theme.textTheme.labelLarge),
             ),
-            for (final m in ref.watch(familyProvider).members)
-              ChoiceChip(
-                avatar: MemberAvatar(m, radius: 10),
-                label: Text(m.name),
-                selected: _assignee == m.id,
-                showCheckmark: false,
-                onSelected: (_) => setState(() => _assignee = m.id),
+            Expanded(
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  Tooltip(
+                    message: l.commonNobody,
+                    child: ChoiceChip(
+                      label: const Icon(Icons.person_off_outlined, size: 18),
+                      showCheckmark: false,
+                      selected: _assignee == null,
+                      onSelected: (_) => setState(() => _assignee = null),
+                    ),
+                  ),
+                  for (final m in ref.watch(familyProvider).members)
+                    ChoiceChip(
+                      avatar: MemberAvatar(m, radius: 10),
+                      label: Text(m.name),
+                      selected: _assignee == m.id,
+                      showCheckmark: false,
+                      onSelected: (_) => setState(() => _assignee = m.id),
+                    ),
+                ],
               ),
+            ),
           ],
         ),
         const SizedBox(height: 16),
@@ -1054,22 +1043,54 @@ class _TodoItemEditorState extends ConsumerState<_TodoItemEditor> {
           onPickTime: _pickDueTime,
           onClearTime: () => setState(() => _dueTime = null),
         ),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: Text(l.todoKeepForever),
-          subtitle: Text(l.todoKeepForeverHint),
-          value: _keepForever,
-          onChanged: (v) => setState(() => _keepForever = v),
-        ),
-        const SizedBox(height: 16),
-        MarkdownField(controller: _description, label: l.todoDescription),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Text(l.attachments, style: theme.textTheme.labelLarge),
-            const Spacer(),
-            AttachButton(uploads: _uploads),
-          ],
+        Theme(
+          data: theme.copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            childrenPadding: EdgeInsets.zero,
+            initiallyExpanded:
+                _description.text.trim().isNotEmpty || _keepForever,
+            title: Text(l.todoMoreOptions, style: theme.textTheme.labelLarge),
+            children: [
+              if (lists.length > 1) ...[
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  initialValue: _listId,
+                  isExpanded: true,
+                  decoration: InputDecoration(labelText: l.todoListChip),
+                  items: [
+                    for (final list in lists)
+                      DropdownMenuItem(
+                        value: list.id,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ColorDot(Color(list.color)),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                list.name,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                  onChanged: (id) => setState(() => _listId = id ?? _listId),
+                ),
+              ],
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(l.todoKeepForever),
+                subtitle: Text(l.todoKeepForeverHint),
+                value: _keepForever,
+                onChanged: (v) => setState(() => _keepForever = v),
+              ),
+              const SizedBox(height: 16),
+              MarkdownField(controller: _description, label: l.todoDescription),
+            ],
+          ),
         ),
         ListenableBuilder(
           listenable: _uploads,

@@ -64,6 +64,8 @@ void main() {
       find.widgetWithText(TextField, 'Task'),
       'Odebrać paczkę',
     );
+    await tester.tap(find.text('More options'));
+    await tester.pumpAndSettle();
     await tester.enterText(inSheet(find.byType(TextField)).last, 'Kod 1234');
     await tester.tap(inSheet(find.text('Mama')));
     await tester.tap(find.text('Save'));

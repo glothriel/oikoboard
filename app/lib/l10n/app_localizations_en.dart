@@ -474,6 +474,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get todoTask => 'Task';
 
   @override
+  String get todoAssignee => 'Assignee';
+
+  @override
+  String get todoMoreOptions => 'More options';
+
+  @override
   String get todoWhoDoesIt => 'Who will do it?';
 
   @override
