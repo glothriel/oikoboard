@@ -17,7 +17,7 @@
 - `server/internal/app/logs_test.go` — WebSocket test: log message reaches a fake handler with actor ids; malformed and max-size messages keep the socket open; extra records are dropped.
 - `docs/backend-realtime.md` — add the `log` message to the protocol; `README.md` env var list if it has one.
 
-## [ ] T2: App log pipeline over the WebSocket
+## [x] T2: App log pipeline over the WebSocket
 **Goal:** The app has a generic structured logger that forwards to the server.
 **Acceptance criteria:**
 - `AppLog.info/debug/warn(source, msg, attrs)` entries are sent as `log` messages when connected, kept in a 500-entry ring buffer otherwise, oldest dropped first (R12).
