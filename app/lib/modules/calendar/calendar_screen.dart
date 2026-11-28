@@ -827,7 +827,7 @@ class EventCard extends StatelessWidget {
                           children: [
                             for (final m
                                 in event.memberIds
-                                    .map(familyOf(context).byId)
+                                    .map(familyOf(context).byIdOrRemoved)
                                     .nonNulls)
                               Padding(
                                 padding: const EdgeInsets.only(right: 4),

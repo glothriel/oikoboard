@@ -143,7 +143,7 @@
   "todoCommentHint": "Dodaj komentarz…",
   "todoCommentSend": "Wyślij",
   "todoCommentDelete": "Usuń komentarz",
-  "todoCommentFormerMember": "Były członek",
+  "memberRemoved": "Usunięty członek",
   "todoDayListDue": "Termin listy",
   "calendarModuleTitle": "Kalendarz",
   "calendarViewDay": "Dzień",

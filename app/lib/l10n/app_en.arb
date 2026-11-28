@@ -320,7 +320,7 @@
   "todoCommentHint": "Add a comment…",
   "todoCommentSend": "Send",
   "todoCommentDelete": "Delete comment",
-  "todoCommentFormerMember": "Former member",
+  "memberRemoved": "Removed member",
   "todoDayListDue": "List due",
   "calendarModuleTitle": "Calendar",
   "calendarViewDay": "Day",

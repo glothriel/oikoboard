@@ -432,7 +432,7 @@ class WallTaskTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final i = item;
-    final assignee = ref.watch(familyProvider).byId(i.assigneeId);
+    final assignee = ref.watch(familyProvider).byIdOrRemoved(i.assigneeId);
     return ListTile(
       dense: true,
       contentPadding: EdgeInsets.zero,

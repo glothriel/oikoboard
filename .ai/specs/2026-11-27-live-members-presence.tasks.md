@@ -27,7 +27,7 @@
 - `server/internal/app/presence_test.go` — two accounts in one household: A connects → B sees A online; A reconnects within grace → no offline broadcast; A leaves → offline after the (shortened) grace; other household unaffected.
 - `docs/backend-realtime.md` — add the `family.members` view row and the `presence` message to the protocol; one line on the single-instance limit.
 
-## [ ] T3: App: family follows `family.members`; removed-member placeholder
+## [x] T3: App: family follows `family.members`; removed-member placeholder
 **Goal:** Members added/edited/removed show up in the running app and dangling member ids never crash.
 **Acceptance criteria:**
 - R4: in API mode `familyProvider` reflects `family.members` upserts/removes; before the first snapshot it uses the session's members.

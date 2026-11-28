@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'core/backend.dart';
+import 'core/family.dart';
 import 'core/l10n.dart';
 import 'core/login_screen.dart';
 import 'core/onboarding_screen.dart';
@@ -87,6 +88,7 @@ class _LoggedInAppState extends State<_LoggedInApp> {
       onGenerateTitle: (context) => context.l10n.appName,
       debugShowCheckedModeBanner: false,
       routerConfig: _router,
+      builder: (context, child) => FamilyScope(child: child!),
       theme: _theme(Brightness.light),
       darkTheme: _theme(Brightness.dark),
       localeResolutionCallback: (_, _) =>
