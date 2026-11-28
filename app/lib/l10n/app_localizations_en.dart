@@ -1136,4 +1136,146 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get todoKeepForeverHint =>
       'Never deleted automatically, even when completed';
+
+  @override
+  String get fitnessModuleTitle => 'Fitness';
+
+  @override
+  String get fitnessMeasurementsTitle => 'Measurements';
+
+  @override
+  String fitnessLatest(String weight) {
+    return 'Latest: $weight kg';
+  }
+
+  @override
+  String get fitnessNoMeasurements => 'No measurements yet';
+
+  @override
+  String get fitnessNoMeasurementsHint =>
+      'Add a weight by hand to start tracking.';
+
+  @override
+  String get fitnessAddMeasurement => 'Add measurement';
+
+  @override
+  String get fitnessWeight => 'Weight (kg)';
+
+  @override
+  String get fitnessWeightInvalid => 'Enter a weight between 10 and 500 kg';
+
+  @override
+  String get fitnessWho => 'Who';
+
+  @override
+  String get fitnessWhen => 'When';
+
+  @override
+  String fitnessFatPct(String value) {
+    return 'Fat $value%';
+  }
+
+  @override
+  String fitnessWaterPct(String value) {
+    return 'Water $value%';
+  }
+
+  @override
+  String fitnessMusclePct(String value) {
+    return 'Muscle $value kg';
+  }
+
+  @override
+  String fitnessBmi(String value) {
+    return 'BMI $value';
+  }
+
+  @override
+  String get fitnessWallTitle => 'Weight';
+
+  @override
+  String get fitnessWallNone => 'No weight yet';
+
+  @override
+  String get fitnessProfileTitle => 'Fitness profile';
+
+  @override
+  String get fitnessProfileAction => 'Edit profile';
+
+  @override
+  String get fitnessProfileHintTitle => 'Complete your profile';
+
+  @override
+  String get fitnessProfileHintBody =>
+      'Add your sex, birth date and height to get body composition from the scale.';
+
+  @override
+  String get fitnessSex => 'Sex';
+
+  @override
+  String get fitnessSexMale => 'Male';
+
+  @override
+  String get fitnessSexFemale => 'Female';
+
+  @override
+  String get fitnessBirthDate => 'Birth date';
+
+  @override
+  String get fitnessBirthDateInvalid => 'Pick a birth date in the past';
+
+  @override
+  String get fitnessHeight => 'Height (cm)';
+
+  @override
+  String get fitnessHeightInvalid => 'Enter a height between 50 and 250 cm';
+
+  @override
+  String get fitnessWeighIn => 'Weigh in';
+
+  @override
+  String get fitnessWeighInScanning =>
+      'Looking for your scale… Step on it to wake it up.';
+
+  @override
+  String fitnessWeighInConnected(String scale) {
+    return 'Connected to $scale';
+  }
+
+  @override
+  String fitnessWeighInDone(String scale) {
+    return '$scale: all readings received';
+  }
+
+  @override
+  String get fitnessWeighInNone => 'No new readings';
+
+  @override
+  String get fitnessWeighInNoneHint => 'Step on the scale, then scan again.';
+
+  @override
+  String get fitnessWeighInScanAgain => 'Scan again';
+
+  @override
+  String get fitnessWeighInBluetoothOff =>
+      'Bluetooth is off. Turn it on and try again.';
+
+  @override
+  String get fitnessWeighInPermissionDenied =>
+      'Bluetooth permission was denied. Allow it in the system settings and try again.';
+
+  @override
+  String get fitnessWeighInNotFound =>
+      'No supported scale found nearby. Step on the scale to wake it up and try again.';
+
+  @override
+  String get fitnessWeighInFailed => 'Could not talk to the scale. Try again.';
+
+  @override
+  String fitnessWeighInImpedance(int value) {
+    return '$value Ω';
+  }
+
+  @override
+  String get fitnessWeighInDiscard => 'Discard';
 }

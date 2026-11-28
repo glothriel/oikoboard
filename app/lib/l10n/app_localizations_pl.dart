@@ -1156,4 +1156,147 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get todoKeepForeverHint =>
       'Nigdy nie jest usuwany automatycznie, nawet po ukończeniu';
+
+  @override
+  String get fitnessModuleTitle => 'Fitness';
+
+  @override
+  String get fitnessMeasurementsTitle => 'Pomiary';
+
+  @override
+  String fitnessLatest(String weight) {
+    return 'Ostatni: $weight kg';
+  }
+
+  @override
+  String get fitnessNoMeasurements => 'Brak pomiarów';
+
+  @override
+  String get fitnessNoMeasurementsHint =>
+      'Dodaj wagę ręcznie, aby zacząć śledzenie.';
+
+  @override
+  String get fitnessAddMeasurement => 'Dodaj pomiar';
+
+  @override
+  String get fitnessWeight => 'Waga (kg)';
+
+  @override
+  String get fitnessWeightInvalid => 'Podaj wagę od 10 do 500 kg';
+
+  @override
+  String get fitnessWho => 'Kto';
+
+  @override
+  String get fitnessWhen => 'Kiedy';
+
+  @override
+  String fitnessFatPct(String value) {
+    return 'Tłuszcz $value%';
+  }
+
+  @override
+  String fitnessWaterPct(String value) {
+    return 'Woda $value%';
+  }
+
+  @override
+  String fitnessMusclePct(String value) {
+    return 'Mięśnie $value kg';
+  }
+
+  @override
+  String fitnessBmi(String value) {
+    return 'BMI $value';
+  }
+
+  @override
+  String get fitnessWallTitle => 'Waga';
+
+  @override
+  String get fitnessWallNone => 'Brak wagi';
+
+  @override
+  String get fitnessProfileTitle => 'Profil fitness';
+
+  @override
+  String get fitnessProfileAction => 'Edytuj profil';
+
+  @override
+  String get fitnessProfileHintTitle => 'Uzupełnij profil';
+
+  @override
+  String get fitnessProfileHintBody =>
+      'Podaj płeć, datę urodzenia i wzrost, aby wagę rozbić na skład ciała.';
+
+  @override
+  String get fitnessSex => 'Płeć';
+
+  @override
+  String get fitnessSexMale => 'Mężczyzna';
+
+  @override
+  String get fitnessSexFemale => 'Kobieta';
+
+  @override
+  String get fitnessBirthDate => 'Data urodzenia';
+
+  @override
+  String get fitnessBirthDateInvalid => 'Wybierz datę urodzenia z przeszłości';
+
+  @override
+  String get fitnessHeight => 'Wzrost (cm)';
+
+  @override
+  String get fitnessHeightInvalid => 'Podaj wzrost od 50 do 250 cm';
+
+  @override
+  String get fitnessWeighIn => 'Zważ się';
+
+  @override
+  String get fitnessWeighInScanning =>
+      'Szukam wagi… Wejdź na nią, aby ją obudzić.';
+
+  @override
+  String fitnessWeighInConnected(String scale) {
+    return 'Połączono z: $scale';
+  }
+
+  @override
+  String fitnessWeighInDone(String scale) {
+    return '$scale: odebrano wszystkie odczyty';
+  }
+
+  @override
+  String get fitnessWeighInNone => 'Brak nowych odczytów';
+
+  @override
+  String get fitnessWeighInNoneHint => 'Wejdź na wagę i skanuj ponownie.';
+
+  @override
+  String get fitnessWeighInScanAgain => 'Skanuj ponownie';
+
+  @override
+  String get fitnessWeighInBluetoothOff =>
+      'Bluetooth jest wyłączony. Włącz go i spróbuj ponownie.';
+
+  @override
+  String get fitnessWeighInPermissionDenied =>
+      'Brak zgody na Bluetooth. Zezwól w ustawieniach systemu i spróbuj ponownie.';
+
+  @override
+  String get fitnessWeighInNotFound =>
+      'Nie znaleziono obsługiwanej wagi w pobliżu. Wejdź na wagę, aby ją obudzić, i spróbuj ponownie.';
+
+  @override
+  String get fitnessWeighInFailed =>
+      'Nie udało się połączyć z wagą. Spróbuj ponownie.';
+
+  @override
+  String fitnessWeighInImpedance(int value) {
+    return '$value Ω';
+  }
+
+  @override
+  String get fitnessWeighInDiscard => 'Odrzuć';
 }
