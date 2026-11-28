@@ -126,10 +126,10 @@ class _TodoDaySheetState extends ConsumerState<_TodoDaySheet> {
                                 Text(lists[i.listId]!.name),
                               ],
                             ),
-                      trailing: family.byId(i.assigneeId) == null
+                      trailing: i.assigneeId == null
                           ? null
                           : MemberAvatar(
-                              family.byId(i.assigneeId)!,
+                              family.byIdOrRemoved(i.assigneeId)!,
                               radius: 14,
                             ),
                       onTap: () => showTodoItemEditor(context, i),

@@ -117,9 +117,8 @@ class _MentionBuilder extends MarkdownElementBuilder {
     TextStyle? preferredStyle,
     TextStyle? parentStyle,
   ) {
-    final name =
-        familyOf(context).byId(element.attributes['id'])?.name ??
-        element.textContent;
+    final member = familyOf(context).byId(element.attributes['id']);
+    final name = member?.name ?? element.textContent;
     return Text.rich(
       TextSpan(
         text: '@$name',
