@@ -10,7 +10,7 @@
 - Saving, done, delete, comments and attachments are unchanged, including edits made in a collapsed section (R5).
 - New strings exist in en and pl (R6).
 **Changes:**
-- Mockup: `centurion-mockups/issue-76` — reuse the `_TodoItemEditorState.build` rework (ExpansionTile "More options", inline assignee Wrap with icon Nobody chip) and the two l10n keys; adapt rather than copy.
+- Mockup: `centurion-mockups/issue-76` — reuse `_TodoItemEditorState.build` (More options ExpansionTile, inline assignee Wrap, header `AttachButton`) and the l10n keys; adapt, don't copy.
 - `app/lib/modules/todo/todo_screen.dart` — rework `_TodoItemEditorState.build`: ExpansionTile (`initiallyExpanded` from item description/keepForever) holding list dropdown, keep-forever switch, MarkdownField; inline assignee Wrap.
 - `app/lib/modules/todo/todo_screen.dart` — move `AttachButton` into `EditorSheet.actions` before Comments and Delete (also for new tasks); drop the Attachments label row, keep `AttachmentStrip`.
 - `app/lib/l10n/app_en.arb` — add `todoMoreOptions` ("More options") and `todoAssignee` ("Assignee"); remove `todoWhoDoesIt` if unused.
