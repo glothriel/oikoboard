@@ -21,11 +21,12 @@ import (
 // --- protokół (opis w docs/backend-realtime.md) ---
 
 type clientMsg struct {
-	T      string          `json:"t"` // auth | sub | unsub
+	T      string          `json:"t"` // auth | sub | unsub | log
 	ID     string          `json:"id,omitempty"`
 	Token  string          `json:"token,omitempty"`
 	View   string          `json:"view,omitempty"`
 	Params json.RawMessage `json:"params,omitempty"`
+	Logs   json.RawMessage `json:"logs,omitempty"` // t=log: [{"ts","level","msg","attrs"}]
 }
 
 type readyMsg struct {
@@ -139,6 +140,8 @@ func (h *Hub) HandleWS(c *gin.Context) {
 			conn.subscribe(msg)
 		case "unsub":
 			conn.unsubscribe(msg.ID)
+		case "log":
+			conn.handleLogs(msg.Logs)
 		default:
 			conn.send(errorMsg{T: "error", Code: "bad_message", Msg: "nieznany typ: " + msg.T})
 		}

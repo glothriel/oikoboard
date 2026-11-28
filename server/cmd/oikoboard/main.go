@@ -21,6 +21,8 @@
 //	OIKO_STORAGE_QUOTA_MB       uploaded files a family may store (default 1024)
 //	OIKO_DONE_RETENTION_DAYS    days after completion a task is deleted unless "keep forever" (default 30, 0 = never)
 //	OIKO_WEB_DIR                built web app to serve on / (the production image sets it)
+//	OIKO_OTLP_LOGS_URL          OTLP/HTTP logs endpoint; every log record (the app's too) is exported there (default: console only)
+//	OIKO_OTLP_USER/PASSWORD     basic auth for it
 //	OIKO_SEED=1                 add a sample family when the database is empty — LOCAL ONLY
 //	OIKO_SEED_EMAILS            e.g. "Tata=someone@gmail.com,Mama=..." for the seed
 package main
@@ -43,6 +45,7 @@ import (
 
 	"oikoboard/server/internal/app"
 	"oikoboard/server/internal/core"
+	"oikoboard/server/internal/logging"
 	"oikoboard/server/internal/modules/todo"
 	"oikoboard/server/internal/recurring"
 	"oikoboard/server/internal/seed"
@@ -107,8 +110,16 @@ func authConfig() core.AuthConfig {
 	return cfg
 }
 
+// closeLogs flushes the log exporter; set by main so fatal can flush before os.Exit.
+var closeLogs = func() {}
+
 func main() {
 	loadDotEnv(".env")
+	_, cl := logging.Setup(logging.Config{
+		OTLPURL: env("OIKO_OTLP_LOGS_URL", ""), OTLPUser: env("OIKO_OTLP_USER", ""), OTLPPassword: env("OIKO_OTLP_PASSWORD", ""),
+	})
+	closeLogs = cl
+	defer closeLogs()
 	dsn := env("OIKO_DATABASE_URL", "postgres://oiko:oiko@localhost:5433/oiko?sslmode=disable")
 	addr := env("OIKO_ADDR", ":8090")
 	cmd := "serve"
@@ -240,5 +251,6 @@ func seedEmpty(ctx context.Context, db *gorm.DB) {
 
 func fatal(what string, err error) {
 	slog.Error(what, "err", err)
+	closeLogs()
 	os.Exit(1)
 }
