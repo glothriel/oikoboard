@@ -144,6 +144,17 @@ class _WeighInState extends ConsumerState<WeighInScreen> {
     if (mounted) setState(() => _pending.remove(p));
   }
 
+  Future<void> _forget() async {
+    await _session?.forget();
+    _scan();
+  }
+
+  Future<void> _discardAll() async {
+    for (final p in List.of(_pending)) {
+      await _resolve(p);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
@@ -151,21 +162,65 @@ class _WeighInState extends ConsumerState<WeighInScreen> {
     final family = ref.watch(familyProvider);
     final fmt = DateFormat.MMMEd().add_Hm();
     final scanning = _state.phase == ScalePhase.scanning;
+    final active =
+        _state.phase == ScalePhase.waiting ||
+        _state.phase == ScalePhase.connected;
     return Scaffold(
       body: Column(
         children: [
-          FitnessHeader(title: l.fitnessWeighIn, back: '/fitness/measurements'),
+          FitnessHeader(
+            title: l.fitnessWeighIn,
+            back: '/fitness/measurements',
+            actions: [
+              PopupMenuButton<String>(
+                onSelected: (_) => _forget(),
+                itemBuilder: (_) => [
+                  PopupMenuItem(
+                    value: 'forget',
+                    child: Text(l.fitnessWeighInForget),
+                  ),
+                ],
+              ),
+            ],
+          ),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               children: [
                 _StatusCard(
                   state: _state,
-                  onRetry: _state.phase == ScalePhase.idle || scanning
+                  onRetry:
+                      _state.phase == ScalePhase.idle ||
+                          scanning ||
+                          active ||
+                          _state.phase == ScalePhase.choosing
                       ? null
                       : _scan,
+                  onDone: active ? () => _session?.finishNow() : null,
                 ),
                 const SizedBox(height: 8),
+                if (_state.phase == ScalePhase.choosing)
+                  Card(
+                    child: Column(
+                      children: [
+                        for (final c in _state.candidates)
+                          ListTile(
+                            key: ValueKey('scale-${c.id}'),
+                            leading: const Icon(Icons.monitor_weight_outlined),
+                            title: Text(c.name),
+                            onTap: () => _session?.choose(c),
+                          ),
+                      ],
+                    ),
+                  ),
+                if (_pending.length > 1)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _discardAll,
+                      child: Text(l.fitnessWeighInDiscardAll),
+                    ),
+                  ),
                 if (_state.phase == ScalePhase.done && _pending.isEmpty)
                   Padding(
                     padding: const EdgeInsets.all(24),
@@ -217,23 +272,21 @@ class _WeighInState extends ConsumerState<WeighInScreen> {
                             style: TextStyle(color: theme.colorScheme.outline),
                           ),
                           const SizedBox(height: 12),
-                          DropdownButtonFormField<String>(
+                          Text(l.fitnessWho, style: theme.textTheme.labelLarge),
+                          const SizedBox(height: 8),
+                          Wrap(
                             key: ValueKey('member-${p.reading.time}'),
-                            initialValue: p.member,
-                            decoration: InputDecoration(
-                              labelText: l.fitnessWho,
-                              border: const OutlineInputBorder(),
-                            ),
-                            items: [
+                            spacing: 8,
+                            children: [
                               for (final m in family.members)
-                                DropdownMenuItem(
-                                  value: m.id,
-                                  child: Text(m.name),
+                                ChoiceChip(
+                                  avatar: MemberAvatar(m, radius: 10),
+                                  label: Text(m.name),
+                                  selected: m.id == p.member,
+                                  onSelected: (_) =>
+                                      setState(() => p.member = m.id),
                                 ),
                             ],
-                            onChanged: (v) {
-                              if (v != null) setState(() => p.member = v);
-                            },
                           ),
                           const SizedBox(height: 8),
                           Row(
@@ -264,9 +317,14 @@ class _WeighInState extends ConsumerState<WeighInScreen> {
 }
 
 class _StatusCard extends StatelessWidget {
-  const _StatusCard({required this.state, required this.onRetry});
+  const _StatusCard({
+    required this.state,
+    required this.onRetry,
+    required this.onDone,
+  });
   final ScaleState state;
   final VoidCallback? onRetry;
+  final VoidCallback? onDone;
 
   @override
   Widget build(BuildContext context) {
@@ -276,17 +334,21 @@ class _StatusCard extends StatelessWidget {
     final isError = state.phase == ScalePhase.error;
     final text = switch (state.phase) {
       ScalePhase.idle || ScalePhase.scanning => l.fitnessWeighInScanning,
+      ScalePhase.choosing => l.fitnessWeighInPick,
+      ScalePhase.waiting => l.fitnessWeighInWaiting,
       ScalePhase.connected => l.fitnessWeighInConnected(name),
       ScalePhase.done => l.fitnessWeighInDone(name),
       ScalePhase.error => switch (state.error) {
         ScaleError.bluetoothOff => l.fitnessWeighInBluetoothOff,
         ScaleError.permissionDenied => l.fitnessWeighInPermissionDenied,
         ScaleError.notFound => l.fitnessWeighInNotFound,
+        ScaleError.unsupported => l.fitnessWeighInUnsupported,
         _ => l.fitnessWeighInFailed,
       },
     };
     final busy =
         state.phase == ScalePhase.scanning ||
+        state.phase == ScalePhase.waiting ||
         state.phase == ScalePhase.connected;
     return Card(
       color: isError ? scheme.errorContainer : scheme.secondaryContainer,
@@ -308,6 +370,11 @@ class _StatusCard extends StatelessWidget {
                   ),
             const SizedBox(width: 12),
             Expanded(child: Text(text)),
+            if (onDone != null)
+              TextButton(
+                onPressed: onDone,
+                child: Text(l.fitnessWeighInDoneButton),
+              ),
             if (onRetry != null)
               TextButton(
                 onPressed: onRetry,

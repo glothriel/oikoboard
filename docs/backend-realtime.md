@@ -201,7 +201,15 @@ Rdzeń (listener, dispatcher, WS) się nie zmienia.
 {"t":"sub","id":"s1","view":"todo.list","params":{"list_id":"…"}}
 {"t":"sub","id":"s2","view":"todo.open","params":{},"since":1180} // (przyszłość) wznowienie
 {"t":"unsub","id":"s1"}
+{"t":"log","logs":[{"ts":"<RFC 3339>","level":"info","msg":"…","attrs":{…}}]}  // app diagnostics, never answered
 ```
+`log` records are re-emitted through the server's `slog` logger (so they reach the console and the OTLP
+export of `internal/logging`) with `source=app` and the connection's `household_id`/`member_id`. Limits
+keep a message under the 32 KiB read limit: at most 20 records (surplus dropped), `msg` cut to 512 bytes,
+`attrs` to 512 bytes serialized (extra keys dropped, counted in `attrs_dropped`). Malformed `log` messages
+are ignored and the socket stays open. `OIKO_OTLP_LOGS_URL` / `OIKO_OTLP_USER` / `OIKO_OTLP_PASSWORD`
+configure the export (OTLP/HTTP JSON, basic auth, batched every 5 s or 100 records); without the URL the
+logger is console-only.
 
 **Serwer → klient**
 ```jsonc

@@ -251,6 +251,16 @@ class SyncClient {
     }
   }
 
+  /// Sends log records as `log` messages, at most 20 per message. Returns
+  /// false (sending nothing) while disconnected; the server never replies.
+  bool sendLogs(List<Map<String, dynamic>> logs) {
+    if (!connected || _channel == null) return false;
+    for (var i = 0; i < logs.length; i += 20) {
+      _send({'t': 'log', 'logs': logs.sublist(i, min(i + 20, logs.length))});
+    }
+    return true;
+  }
+
   void _sendSub(String id) {
     final s = _subs[id];
     if (s == null) return;

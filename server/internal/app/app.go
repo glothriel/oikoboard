@@ -57,7 +57,7 @@ func New(db *gorm.DB, cfg core.AuthConfig) *App {
 		Interval: 2 * time.Minute, TodoDelay: 2 * time.Second}
 	recurring := &todo.LateScheduler{}
 	mods := Modules(db, auth, syncer, recurring)
-	hub := realtime.NewHub(db, auth, core.CollectViews(mods))
+	hub := realtime.NewHub(db, auth, core.CollectViews(mods), slog.Default().Handler())
 	files := core.NewFiles(db, mods)
 
 	r := gin.New()
