@@ -3,6 +3,7 @@
 package realtime
 
 import (
+	"log/slog"
 	"sync"
 	"time"
 
@@ -21,10 +22,20 @@ type Hub struct {
 	dispatchers map[uuid.UUID]*dispatcher
 
 	presence *presence
+
+	// appLogs receives the records the apps send as "log" messages; nil = the slog default handler.
+	appLogs slog.Handler
 }
 
-func NewHub(db *gorm.DB, auth *core.Auth, views core.Views) *Hub {
-	return &Hub{db: db, auth: auth, views: views, dispatchers: map[uuid.UUID]*dispatcher{}, presence: newPresence()}
+func NewHub(db *gorm.DB, auth *core.Auth, views core.Views, appLogs slog.Handler) *Hub {
+	return &Hub{db: db, auth: auth, views: views, dispatchers: map[uuid.UUID]*dispatcher{}, presence: newPresence(), appLogs: appLogs}
+}
+
+func (h *Hub) logHandler() slog.Handler {
+	if h.appLogs != nil {
+		return h.appLogs
+	}
+	return slog.Default().Handler()
 }
 
 // acquire zwraca (i w razie potrzeby uruchamia) dispatcher gospodarstwa.
@@ -74,3 +85,6 @@ func (h *Hub) PokeAll() {
 
 // SetPresenceGrace overrides the offline grace period (tests).
 func (h *Hub) SetPresenceGrace(d time.Duration) { h.presence.setGrace(d) }
+
+// SetLogHandler overrides where app logs go (tests).
+func (h *Hub) SetLogHandler(l slog.Handler) { h.appLogs = l }

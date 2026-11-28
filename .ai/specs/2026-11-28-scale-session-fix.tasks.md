@@ -1,6 +1,6 @@
 # Tasks
 
-## [ ] T1: Server logging infrastructure and app log ingest
+## [x] T1: Server logging infrastructure and app log ingest
 **Goal:** All server logs, and logs sent by the app, are exported as OTLP logs through one decorated `slog` logger.
 **Acceptance criteria:**
 - With `OIKO_OTLP_LOGS_URL` set, every `slog` record (existing call sites included) is POSTed as OTLP/HTTP JSON with basic auth, batched; without it behaviour is the plain console logger (R13).
