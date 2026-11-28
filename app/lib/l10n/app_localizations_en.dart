@@ -1287,4 +1287,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fitnessWeighInDiscard => 'Discard';
+
+  @override
+  String get fitnessWeighInWaiting =>
+      'Connected. Waiting for the scale… Step on it if nothing arrives.';
+
+  @override
+  String get fitnessWeighInDoneButton => 'Done';
+
+  @override
+  String get fitnessWeighInUnsupported => 'This scale is not supported.';
+
+  @override
+  String get fitnessWeighInDiscardAll => 'Discard all';
 }

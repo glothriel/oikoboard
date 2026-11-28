@@ -888,5 +888,9 @@
       }
     }
   },
-  "fitnessWeighInDiscard": "Discard"
+  "fitnessWeighInDiscard": "Discard",
+  "fitnessWeighInWaiting": "Connected. Waiting for the scale… Step on it if nothing arrives.",
+  "fitnessWeighInDoneButton": "Done",
+  "fitnessWeighInUnsupported": "This scale is not supported.",
+  "fitnessWeighInDiscardAll": "Discard all"
 }

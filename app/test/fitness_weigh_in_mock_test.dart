@@ -82,7 +82,7 @@ void main() {
       if (!d.toString().contains('CupertinoLocalizations')) onError?.call(d);
     };
     addTearDown(() => FlutterError.onError = onError);
-    tester.view.physicalSize = const Size(400, 900);
+    tester.view.physicalSize = const Size(400, 1800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
 
@@ -186,7 +186,7 @@ void main() {
       if (!d.toString().contains('CupertinoLocalizations')) onError?.call(d);
     };
     addTearDown(() => FlutterError.onError = onError);
-    tester.view.physicalSize = const Size(400, 900);
+    tester.view.physicalSize = const Size(400, 1800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
 
@@ -222,5 +222,100 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Zważ się'), findsNothing);
     expect(find.byTooltip('Dodaj pomiar'), findsOneWidget);
+  });
+
+  Future<void> openWeighIn(
+    WidgetTester tester,
+    ScaleSession Function() make,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    await initializeDateFormatting('pl');
+    Intl.defaultLocale = 'pl';
+    final onError = FlutterError.onError;
+    FlutterError.onError = (d) {
+      if (!d.toString().contains('CupertinoLocalizations')) onError?.call(d);
+    };
+    addTearDown(() => FlutterError.onError = onError);
+    tester.view.physicalSize = const Size(400, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final store = MockStore(latency: Duration.zero);
+    for (final m in modules) {
+      m.seedMock(store);
+    }
+    final container = ProviderContainer(
+      overrides: [
+        backendProvider.overrideWithValue(MockBackend(store)),
+        scaleSessionProvider.overrideWithValue(make),
+      ],
+    );
+    addTearDown(container.dispose);
+    container
+        .read(sessionProvider.notifier)
+        .set(await MockAuthApi().mockLogin('tata'));
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const OikoboardApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.text('Fitness'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pomiary'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Zważ się'));
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+  }
+
+  testWidgets('weigh in: waiting state ends with Done', (tester) async {
+    await openWeighIn(
+      tester,
+      () => FakeScaleSession(delay: const Duration(hours: 1)),
+    );
+    expect(find.textContaining('Czekam na wagę'), findsOneWidget);
+    expect(find.text('83.4 kg'), findsNothing);
+    await tester.tap(find.text('Gotowe'));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.textContaining('Czekam na wagę'), findsNothing);
+    expect(find.text('Gotowe'), findsNothing);
+    expect(find.text('Brak nowych odczytów'), findsOneWidget);
+  });
+
+  testWidgets('weigh in: discard all resolves every pending reading', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    final base = DateTime(now.year, now.month, now.day);
+    ScaleSession make() => FakeScaleSession(
+      samples: [
+        for (var i = 1; i <= 8; i++)
+          ScaleReading(
+            time: base.subtract(Duration(days: i)),
+            weightKg: 70.0 + i,
+          ),
+      ],
+    );
+    await openWeighIn(tester, make);
+    await tester.pumpAndSettle();
+    expect(find.text('Odrzuć wszystkie'), findsOneWidget);
+    expect(find.byType(ChoiceChip), findsWidgets);
+    await tester.tap(find.text('Odrzuć wszystkie'));
+    await tester.pumpAndSettle();
+    expect(find.text('71.0 kg'), findsNothing);
+    expect(find.text('Odrzuć wszystkie'), findsNothing);
+    // A new session on the same scale gets none of them back.
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Zważ się'));
+    await tester.pumpAndSettle();
+    expect(find.text('71.0 kg'), findsNothing);
   });
 }
