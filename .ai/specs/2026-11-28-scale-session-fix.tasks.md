@@ -1,19 +1,20 @@
 # Tasks
 
-## [ ] T1: Server log ingest and OTLP export
-**Goal:** The server accepts `log` messages on the WebSocket and exports them as OTLP logs.
+## [ ] T1: Server logging infrastructure and app log ingest
+**Goal:** All server logs, and logs sent by the app, are exported as OTLP logs through one decorated `slog` logger.
 **Acceptance criteria:**
-- A `{"t":"log","logs":[{"ts","level","msg","attrs"}]}` message from an authenticated connection reaches the exporter with household and member ids as attributes (R13).
-- With `OIKO_OTLP_LOGS_URL` set, records are POSTed as OTLP/HTTP JSON with basic auth, batched; without it they go to slog only (R13).
+- With `OIKO_OTLP_LOGS_URL` set, every `slog` record (existing call sites included) is POSTed as OTLP/HTTP JSON with basic auth, batched; without it behaviour is the plain console logger (R13).
+- A `{"t":"log","logs":[{"ts","level","msg","attrs"}]}` message from an authenticated connection is re-emitted through the logger with household and member ids as attributes (R13).
 - Oversized text and surplus records are truncated or dropped; a max-size message (20 records at the caps) stays under the 32 KiB read limit and keeps the socket open (R13).
 **Changes:**
-- `server/internal/otlp/otlp.go` — new package: `Exporter` (URL, user, password; `Add(Record)`, background flush every 5 s or 100 records, bounded queue, `Close`), `Record`; OTLP JSON logs payload, resource `service.name=oikoboard`.
-- `server/internal/otlp/otlp_test.go` — httptest collector: payload shape, basic auth header, batching, overflow drop.
-- `server/internal/realtime/hub.go` — `LogSink` interface (`Log(actor core.Actor, recs []LogRecord)`); `NewHub` takes it (nil = slog only).
-- `server/internal/realtime/conn.go` — `clientMsg` gets `Logs`; new `case "log"` in the read loop applies the caps (20 records, `msg` 512 B, `attrs` 512 B) and forwards to the sink.
-- `server/cmd/oikoboard/main.go` — read the three `OIKO_OTLP_*` vars, build the exporter, close it on shutdown; document the vars in the header comment.
-- `server/internal/app/app.go` — wire the sink into `realtime.NewHub`.
-- `server/internal/app/logs_test.go` — WebSocket test: log message arrives at a fake sink with actor ids; malformed messages and a max-size message (20 records at the caps) keep the socket open; extra records are dropped.
+- `server/internal/logging/logging.go` — new package: `Setup(Config) (*slog.Logger, func())` builds the console handler plus decorator `fanout` handler, calls `slog.SetDefault`, returns a close func that flushes.
+- `server/internal/logging/otlp.go` — `otlpHandler` (`slog.Handler`: groups/attrs aware) feeding an exporter: background flush every 5 s or 100 records, bounded queue, OTLP JSON logs payload, resource `service.name=oikoboard`.
+- `server/internal/logging/logging_test.go` — httptest collector: payload shape, basic auth header, batching, overflow drop, no-URL mode, attrs from `With`.
+- `server/internal/realtime/hub.go` — `NewHub` takes a `slog.Handler` for app logs (nil = `slog.Default().Handler()`).
+- `server/internal/realtime/conn.go` — `clientMsg` gets `Logs`; new `case "log"` applies the caps (20 records, `msg` 512 B, `attrs` 512 B) and calls `Handle` with the client's time, level and `source=app`, household and member ids.
+- `server/cmd/oikoboard/main.go` — read the three `OIKO_OTLP_*` vars, call `logging.Setup` first thing, defer the close; document the vars in the header comment.
+- `server/internal/app/app.go` — pass the handler to `realtime.NewHub`.
+- `server/internal/app/logs_test.go` — WebSocket test: log message reaches a fake handler with actor ids; malformed and max-size messages keep the socket open; extra records are dropped.
 - `docs/backend-realtime.md` — add the `log` message to the protocol; `README.md` env var list if it has one.
 
 ## [ ] T2: App log pipeline over the WebSocket
@@ -82,6 +83,6 @@
 ## [ ] T6: Docs
 **Goal:** Architecture docs describe the scale session and the log path.
 **Acceptance criteria:**
-- `docs/architecture.md` states: scale layer (driver/session split, signals), remembered scale, and logs → WebSocket → OTLP, with the env vars (R13).
+- `docs/architecture.md` states: scale layer (driver/session split, signals), remembered scale, and the server logging decorator (slog → console + OTLP) and the app logs → WebSocket → same logger path, with the env vars (R13).
 **Changes:**
 - `docs/architecture.md` — short paragraph for each of the three points above; no changelog text.

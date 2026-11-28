@@ -3,7 +3,7 @@
 Source: issue #84.
 
 ## Goal
-The weigh-in screen reliably downloads the stored measurements from the Xiaomi Mi scale (today it finds the scale but receives nothing). The BLE session logs reach an OpenTelemetry backend through the oikoboard server, so failures can be diagnosed without the device in hand.
+The weigh-in screen reliably downloads the stored measurements from the Xiaomi Mi scale (today it finds the scale but receives nothing). The server gets general logging infrastructure: every `slog` record of the backend, and the logs the app forwards (first user: the BLE session), reach an OpenTelemetry backend, so failures can be diagnosed without the device in hand.
 
 ## Requirements
 - R1: The session does not end while the scale is still talking: any driver activity (notification) resets the silence timer; the window is 60 s of silence.
@@ -18,7 +18,7 @@ The weigh-in screen reliably downloads the stored measurements from the Xiaomi M
 - R10: With no saved scale and several matching devices in range, the user picks one; a "Forget scale" action clears the saved one.
 - R11: First connect to a never-seen scale requests all stored records; all of them appear in the pending list (save/discard each), plus one "Discard all" action.
 - R12: The app logs the BLE session (scan hit, services, variant, every write, every notification as hex, announced count, why the session ended) and sends it over the existing WebSocket as `log` messages; offline or on mock it is kept in a small ring buffer and dropped when full.
-- R13: The server exports received logs as OTLP/HTTP JSON log records, with basic auth, configured by `OIKO_OTLP_LOGS_URL`, `OIKO_OTLP_USER`, `OIKO_OTLP_PASSWORD`; without the URL logs are only written to slog. Records carry household and member ids, never tokens.
+- R13: The server's `slog` default logger is wrapped by one logging package: a decorator handler keeps the usual console output and also exports every record as an OTLP/HTTP JSON log record, with basic auth, configured by `OIKO_OTLP_LOGS_URL`, `OIKO_OTLP_USER`, `OIKO_OTLP_PASSWORD`; without the URL it is a plain console logger. App `log` messages are re-emitted through the same logger (so the whole backend and the app share one path). Records carry household and member ids, never tokens.
 - R15: The "Who" choice on a pending reading uses the same member `ChoiceChip`s with `MemberAvatar` as the other fitness screens, not a dropdown.
 - R14: The mock backend's `FakeScaleSession` still works and covers the new states (waiting, pick, discard all).
 
@@ -30,11 +30,13 @@ The weigh-in screen reliably downloads the stored measurements from the Xiaomi M
 - Other scale models, broadcast (advertisement-only) scales.
 - An in-app log viewer or share sheet (replaced by OTel export).
 - A bulk "save all" action.
-- Logs from anything but the scale session (the transport is generic, nothing else uses it).
+- New log statements in the backend, and migrating existing `debugPrint`/app logging to `AppLog`: only the scale session is instrumented now (it is the diagnosis the issue needs); the infrastructure is generic, other code adopts it later.
+- The OpenTelemetry Go SDK and traces/metrics: logs only.
 
 ## Decisions and why
-- Hand-written OTLP/HTTP JSON exporter on `net/http` instead of the OpenTelemetry Go SDK: the log SDK is still unstable and pulls many dependencies for one POST; the OTLP JSON shape is small and stable. Batching: flush every 5 s or 100 records (exporter side, independent of the per-message cap), bounded queue, drops on overflow.
-- Log transport is a new `{"t":"log","logs":[…]}` client message on the existing socket (no new endpoint), as the author asked; the server never replies.
+- General server logging infrastructure (review): a `server/internal/logging` package builds the `slog` default logger as a decorator (`slog.Handler` wrapping the console handler and fanning records out to an OTLP exporter), so existing `slog` calls across the backend are exported with no call-site changes and no artificial new logs. Backends other than OTLP can be added as further handlers.
+- Hand-written OTLP/HTTP JSON exporter on `net/http` inside that package, not the OpenTelemetry Go SDK: its log SDK is still unstable and pulls many dependencies; the OTLP JSON shape is small and stable, and the handler is the single place to swap in the SDK later. Batching: flush every 5 s or 100 records, bounded queue, drops on overflow.
+- Log transport is a new `{"t":"log","logs":[…]}` client message on the existing socket (no new endpoint), as the author asked; the server never replies. The hub re-emits each record through the logger's handler (original timestamp and level, `source=app`, household/member ids as attributes).
 - Limits are chosen to fit coder/websocket's default 32 KiB read limit (a larger message would close the socket): at most 20 records per `log` message (the app batches by 20), each record's `msg` cut to 512 bytes and its `attrs` to 512 bytes serialized (about 1.2 KiB a record, under 25 KiB a message); extra records are dropped, so a misbehaving client cannot flood the collector.
 - The driver gets a `Stream<ScaleSignal>` (`activity`, `historyComplete`) next to `readings`, so the session never guesses from emitted readings.
 - `onlyLast` is removed from `ScaleDriver.onConnected`: the cursor already filters duplicates, and first connect now requests everything.
