@@ -1,6 +1,6 @@
 # Tasks
 
-## [ ] T1: Compact assignee row and collapsible "More options" in the task editor
+## [x] T1: Compact assignee row and collapsible "More options" in the task editor
 **Goal:** Declutter the task editor sheet by hiding rare fields and compacting the assignee choice.
 **Acceptance criteria:**
 - List selector, Keep forever and Description are inside a "More options" section after the due date; it starts expanded only if the description is non-empty or Keep forever is on (R1, R2).

@@ -476,6 +476,12 @@ class AppLocalizationsPl extends AppLocalizations {
   String get todoTask => 'Zadanie';
 
   @override
+  String get todoAssignee => 'Przypisane do';
+
+  @override
+  String get todoMoreOptions => 'Więcej opcji';
+
+  @override
   String get todoWhoDoesIt => 'Kto się tym zajmie?';
 
   @override
