@@ -47,7 +47,7 @@
 - `app/test/fitness_mi_scale_test.dart` — fake `GattIo` byte sequences: delayed history, fragmented frames, magic echo, v1 order, weight-only `MI SCALE2`, no service, failing time write.
 - `app/test/fitness_mi_scale_test.dart` — update existing tests for the dropped `onlyLast`.
 
-## [ ] T4: Session timing, waiting state and first import
+## [x] T4: Session timing, waiting state and first import
 **Goal:** The session waits for the scale and imports everything on first connect.
 **Acceptance criteria:**
 - Silence timer resets on any driver signal, expires after 60 s; `historyComplete` + 2 s quiet finishes; user Done and disconnect finish; finish calls `flush()` (R1, R2, R3).

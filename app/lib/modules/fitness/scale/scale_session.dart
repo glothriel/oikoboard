@@ -11,9 +11,16 @@ import 'registry.dart';
 import 'scale_driver.dart';
 import 'scale_log.dart';
 
-enum ScalePhase { idle, scanning, connected, error, done }
+/// [waiting]: connected, the scale has not sent anything yet.
+enum ScalePhase { idle, scanning, waiting, connected, error, done }
 
-enum ScaleError { bluetoothOff, permissionDenied, notFound, failed }
+enum ScaleError {
+  bluetoothOff,
+  permissionDenied,
+  notFound,
+  unsupported,
+  failed,
+}
 
 /// What the weigh-in screen shows about the session.
 class ScaleState {
@@ -39,7 +46,89 @@ abstract class ScaleSession {
   /// Marks [reading] handled (saved or discarded): it never comes back.
   Future<void> resolve(ScaleReading reading);
 
+  /// The user is done: ends the session now (readings held by the driver are
+  /// flushed first).
+  Future<void> finishNow();
+
   Future<void> dispose();
+}
+
+/// Why a session ended; logged.
+enum FinishReason { idle, disconnect, user, history }
+
+/// No driver signal for this long ends the session.
+const scaleSilenceTimeout = Duration(seconds: 60);
+
+/// Quiet period after the end-of-history notice that ends the session.
+const scaleQuietPeriod = Duration(seconds: 2);
+
+/// The session's timing rules, free of BLE so tests can drive them: any
+/// signal resets the silence timer, end-of-history plus a quiet period (or
+/// silence, the user, a disconnect) finishes once and flushes the driver.
+class ScaleFinisher {
+  ScaleFinisher({
+    required Stream<ScaleSignal> signals,
+    required this.flush,
+    required this.onFinish,
+    this.onActivity,
+    this.silence = scaleSilenceTimeout,
+    this.quiet = scaleQuietPeriod,
+  }) {
+    _sub = signals.listen(_onSignal);
+    _silenceTimer = Timer(silence, () => finish(FinishReason.idle));
+  }
+
+  final void Function() flush;
+  final void Function(FinishReason) onFinish;
+
+  /// Called on every signal (e.g. to leave the waiting state).
+  final void Function()? onActivity;
+  final Duration silence;
+  final Duration quiet;
+
+  late final StreamSubscription<ScaleSignal> _sub;
+  Timer? _silenceTimer;
+  Timer? _quietTimer;
+  bool _historyDone = false;
+  bool _finished = false;
+
+  bool get finished => _finished;
+
+  void _onSignal(ScaleSignal s) {
+    if (_finished) return;
+    onActivity?.call();
+    if (s == ScaleSignal.historyComplete) _historyDone = true;
+    bump();
+  }
+
+  /// Something happened (a signal, an emitted reading): restart the timer.
+  void bump() {
+    if (_finished) return;
+    _silenceTimer?.cancel();
+    _quietTimer?.cancel();
+    if (_historyDone) {
+      _quietTimer = Timer(quiet, () => finish(FinishReason.history));
+    } else {
+      _silenceTimer = Timer(silence, () => finish(FinishReason.idle));
+    }
+  }
+
+  void finish(FinishReason reason) {
+    if (_finished) return;
+    _finished = true;
+    _silenceTimer?.cancel();
+    _quietTimer?.cancel();
+    _sub.cancel();
+    flush();
+    onFinish(reason);
+  }
+
+  void cancel() {
+    _finished = true;
+    _silenceTimer?.cancel();
+    _quietTimer?.cancel();
+    _sub.cancel();
+  }
 }
 
 /// Readings dated further than this from now are scale clock garbage.
@@ -92,7 +181,12 @@ class FakeScaleSession extends _BaseSession {
     : samples = samples ?? defaultSamples();
 
   final List<ScaleReading> samples;
+
+  /// How long the session waits for the "scale" before it sends [samples];
+  /// [finishNow] ends the wait early.
   final Duration delay;
+  final _finish = Completer<bool>();
+  bool _userDone = false;
 
   static const scaleId = 'fake-scale';
 
@@ -121,13 +215,28 @@ class FakeScaleSession extends _BaseSession {
   Future<void> start() async {
     emitState(const ScaleState(ScalePhase.scanning));
     _cursor = await ImportCursor.load(scaleId);
-    if (delay > Duration.zero) await Future<void>.delayed(delay);
     final name = scaleDrivers.first.displayName;
-    emitState(ScaleState(ScalePhase.connected, scaleName: name));
-    for (final r in samples) {
-      offer(r);
+    emitState(ScaleState(ScalePhase.waiting, scaleName: name));
+    if (delay > Duration.zero) {
+      final timer = Timer(delay, () {
+        if (!_finish.isCompleted) _finish.complete(true);
+      });
+      await _finish.future;
+      timer.cancel();
+    }
+    if (!_userDone && !_disposed) {
+      emitState(ScaleState(ScalePhase.connected, scaleName: name));
+      for (final r in samples) {
+        offer(r);
+      }
     }
     emitState(ScaleState(ScalePhase.done, scaleName: name));
+  }
+
+  @override
+  Future<void> finishNow() async {
+    _userDone = true;
+    if (!_finish.isCompleted) _finish.complete(false);
   }
 }
 
@@ -137,11 +246,10 @@ class BleScaleSession extends _BaseSession {
 
   final ScaleLog _log;
   static const _scanTimeout = Duration(seconds: 30);
-  static const _idle = Duration(seconds: 12);
 
   BluetoothDevice? _device;
   ScaleDriver? _driver;
-  Timer? _idleTimer;
+  ScaleFinisher? _finisher;
   final _subs = <StreamSubscription<Object?>>[];
 
   @override
@@ -218,35 +326,53 @@ class BleScaleSession extends _BaseSession {
     );
     _subs.add(
       device.connectionState.listen((s) {
-        if (s == BluetoothConnectionState.disconnected) _finish();
+        if (s == BluetoothConnectionState.disconnected) {
+          _finish(FinishReason.disconnect);
+        }
       }),
     );
     final services = await device.discoverServices();
-    emitState(ScaleState(ScalePhase.connected, scaleName: driver.displayName));
+    final name = driver.displayName;
+    emitState(ScaleState(ScalePhase.waiting, scaleName: name));
     _subs.add(driver.readings.listen(offer));
-    _subs.add(_readings.stream.listen((_) => _bumpIdle()));
-    _bumpIdle();
-    await driver.onConnected(
-      FlutterBlueGattIo(device, services, driver),
-      _log,
-      after: _cursor!.last,
+    final finisher = _finisher = ScaleFinisher(
+      signals: driver.signals,
+      flush: driver.flush,
+      onActivity: () =>
+          emitState(ScaleState(ScalePhase.connected, scaleName: name)),
+      onFinish: _finished,
     );
+    _subs.add(_readings.stream.listen((_) => finisher.bump()));
+    try {
+      await driver.onConnected(
+        FlutterBlueGattIo(device, services, driver),
+        _log,
+        after: _cursor!.last,
+      );
+    } on UnsupportedScaleError catch (e) {
+      _log.warn('unsupported scale', {'reason': e.message});
+      _fail(ScaleError.unsupported);
+    }
   }
 
-  void _bumpIdle() {
-    _idleTimer?.cancel();
-    _idleTimer = Timer(_idle, _finish);
-  }
+  void _finish(FinishReason reason) => _finisher?.finish(reason);
 
-  void _finish() {
+  @override
+  Future<void> finishNow() async => _finish(FinishReason.user);
+
+  Future<void> _finished(FinishReason reason) async {
     if (_disposed || _device == null) return;
+    _log.info('session ended', {'reason': reason.name});
     final name = _driver?.displayName;
+    // Let readings flushed by the driver reach their listeners first.
+    await Future<void>.delayed(Duration.zero);
     _teardown();
     emitState(ScaleState(ScalePhase.done, scaleName: name));
   }
 
   void _teardown() {
-    _idleTimer?.cancel();
+    _finisher?.cancel();
+    _finisher = null;
     for (final s in _subs) {
       s.cancel();
     }

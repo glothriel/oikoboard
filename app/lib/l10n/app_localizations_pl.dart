@@ -1308,4 +1308,17 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get fitnessWeighInDiscard => 'Odrzuć';
+
+  @override
+  String get fitnessWeighInWaiting =>
+      'Połączono. Czekam na wagę… Wejdź na nią, jeśli nic nie przychodzi.';
+
+  @override
+  String get fitnessWeighInDoneButton => 'Gotowe';
+
+  @override
+  String get fitnessWeighInUnsupported => 'Ta waga nie jest obsługiwana.';
+
+  @override
+  String get fitnessWeighInDiscardAll => 'Odrzuć wszystkie';
 }

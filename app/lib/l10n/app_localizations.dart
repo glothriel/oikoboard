@@ -2143,6 +2143,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Discard'**
   String get fitnessWeighInDiscard;
+
+  /// No description provided for @fitnessWeighInWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected. Waiting for the scale… Step on it if nothing arrives.'**
+  String get fitnessWeighInWaiting;
+
+  /// No description provided for @fitnessWeighInDoneButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get fitnessWeighInDoneButton;
+
+  /// No description provided for @fitnessWeighInUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'This scale is not supported.'**
+  String get fitnessWeighInUnsupported;
+
+  /// No description provided for @fitnessWeighInDiscardAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard all'**
+  String get fitnessWeighInDiscardAll;
 }
 
 class _AppLocalizationsDelegate

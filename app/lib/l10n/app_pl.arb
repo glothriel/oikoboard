@@ -340,5 +340,9 @@
   "fitnessWeighInNotFound": "Nie znaleziono obsługiwanej wagi w pobliżu. Wejdź na wagę, aby ją obudzić, i spróbuj ponownie.",
   "fitnessWeighInFailed": "Nie udało się połączyć z wagą. Spróbuj ponownie.",
   "fitnessWeighInImpedance": "{value} Ω",
-  "fitnessWeighInDiscard": "Odrzuć"
+  "fitnessWeighInDiscard": "Odrzuć",
+  "fitnessWeighInWaiting": "Połączono. Czekam na wagę… Wejdź na nią, jeśli nic nie przychodzi.",
+  "fitnessWeighInDoneButton": "Gotowe",
+  "fitnessWeighInUnsupported": "Ta waga nie jest obsługiwana.",
+  "fitnessWeighInDiscardAll": "Odrzuć wszystkie"
 }
