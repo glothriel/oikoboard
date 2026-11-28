@@ -208,4 +208,34 @@ void main() {
       expect(client.online, isEmpty);
     },
   );
+
+  test('sendLogs sends log messages of at most 20; an error without sub '
+      'is ignored', () async {
+    final got = <Map>[];
+    server.behave = (n, ws) {
+      ws.listen((raw) {
+        final m = jsonDecode(raw as String) as Map;
+        if (m['t'] == 'auth') {
+          ws.add(
+            jsonEncode({'t': 'ready', 'member_id': 'm', 'household_id': 'h'}),
+          );
+        } else if (m['t'] == 'log') {
+          got.add(m);
+          // an older server's reply to an unknown message
+          ws.add(jsonEncode({'t': 'error', 'code': 'bad', 'msg': 'unknown'}));
+        }
+      });
+    };
+    final client = SyncClient(server.uri, 't');
+    addTearDown(client.dispose);
+    final rec = {'ts': 't', 'level': 'info', 'msg': 'm', 'attrs': {}};
+    expect(client.sendLogs([rec]), isFalse); // not connected yet
+
+    await client.status.firstWhere((c) => c);
+    expect(client.sendLogs(List.filled(45, rec)), isTrue);
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    expect(got.map((m) => (m['logs'] as List).length), [20, 20, 5]);
+    expect(client.connected, isTrue);
+    expect(server.connections, 1);
+  });
 }
