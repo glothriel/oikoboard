@@ -199,7 +199,10 @@ class BleScaleSession extends _BaseSession {
     _device = device;
     _driver = driver;
     _cursor = await ImportCursor.load(device.remoteId.str);
-    await device.connect(timeout: const Duration(seconds: 20));
+    await device.connect(
+      license: License.nonprofit,
+      timeout: const Duration(seconds: 20),
+    );
     _subs.add(
       device.connectionState.listen((s) {
         if (s == BluetoothConnectionState.disconnected) _finish();
