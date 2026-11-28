@@ -16,3 +16,11 @@ ScaleDriver? driverFor(
   }
   return null;
 }
+
+/// The driver with [id], or null when it is no longer supported.
+ScaleDriver? driverById(String id, {List<ScaleDriver>? drivers}) {
+  for (final d in drivers ?? scaleDrivers) {
+    if (d.id == id) return d;
+  }
+  return null;
+}

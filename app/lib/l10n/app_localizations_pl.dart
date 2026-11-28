@@ -1321,4 +1321,10 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get fitnessWeighInDiscardAll => 'Odrzuć wszystkie';
+
+  @override
+  String get fitnessWeighInPick => 'Znaleziono kilka wag. Wybierz swoją:';
+
+  @override
+  String get fitnessWeighInForget => 'Zapomnij wagę';
 }

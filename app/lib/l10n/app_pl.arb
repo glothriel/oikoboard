@@ -344,5 +344,7 @@
   "fitnessWeighInWaiting": "Połączono. Czekam na wagę… Wejdź na nią, jeśli nic nie przychodzi.",
   "fitnessWeighInDoneButton": "Gotowe",
   "fitnessWeighInUnsupported": "Ta waga nie jest obsługiwana.",
-  "fitnessWeighInDiscardAll": "Odrzuć wszystkie"
+  "fitnessWeighInDiscardAll": "Odrzuć wszystkie",
+  "fitnessWeighInPick": "Znaleziono kilka wag. Wybierz swoją:",
+  "fitnessWeighInForget": "Zapomnij wagę"
 }
